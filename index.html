@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amount Calculator</title>
+ </head>
+<body>
+
+
+    <div class="container">
+	<button id="refreshButton" onclick="refreshPage()">⟳ Refresh</button>
+
+	
+	    <div class="converter">
+        <h2>Kg to Gram Converter</h2>
+        <label for="kgInput">Enter Kilograms:</label>
+        <input type="number" id="kgInput" placeholder="e.g., 1.25" oninput="convertKgToGram()">
+		<p></p>
+		<div id="gramOutput">Equivalent in grams: 0 g</div>
+    </div>
+	
+	
+        <h2>Weight to Price Converter</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Price per Kg (₹)</th>
+                    <th>100g Price (₹)</th>
+                    <th>Weight (g)</th>
+                    <th>Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Price</td>
+                    <td><input type="number" value="" id="milaguPrice" step="0.01" oninput="updateRow('milagu')"></td>
+                    <td id="milagu100g">75.00</td>
+                    <td><input type="number" value="100" id="milaguWeight" step="0.01" oninput="updateRow('milagu')"></td>
+                    <td id="milaguAmount">75.00</td>
+                </tr>
+           <!--     <tr>
+                    <td>Thordall</td>
+                    <td><input type="number" value="450" id="thordallPrice" oninput="updateRow('thordall')"></td>
+                    <td id="thordall100g">45.00</td>
+                    <td><input type="number" value="100" id="thordallWeight" oninput="updateRow('thordall')"></td>
+                    <td id="thordallAmount">45.00</td>
+                </tr>
+                <tr>
+                    <td>Cummin</td>
+                    <td><input type="number" value="200" id="cumminPrice" oninput="updateRow('cummin')"></td>
+                    <td id="cummin100g">20.00</td>
+                    <td><input type="number" value="100" id="cumminWeight" oninput="updateRow('cummin')"></td>
+                    <td id="cumminAmount">20.00</td>
+                </tr>
+                <tr>
+                    <td>Rice</td>
+                    <td><input type="number" value="60" id="ricePrice" oninput="updateRow('rice')"></td>
+                    <td id="rice100g">6.00</td>
+                    <td><input type="number" value="100" id="riceWeight" oninput="updateRow('rice')"></td>
+                    <td id="riceAmount">6.00</td>
+                </tr>-->
+				
+            </tbody>
+        </table>
+
+    <h2>Price and Weight Converter</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Price (₹)</th>
+                <th>Weight (g)</th>
+                <th>100g Price (₹)</th>
+                <th>Price per Kg (₹)</th>
+                
+                
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Price</td>
+                <td><input type="number" value="" id="price" step="0.01" oninput="calculate()"></td>
+                <td><input type="number" value="" id="weight" step="0.01" oninput="calculate()"></td>
+                <td id="pricePer100g">-</td>
+                <td id="pricePerKg">-</td>
+                
+                
+            </tr>
+        </tbody>
+    </table>
+	
+   <h1>Item Counter</h1>
+    
+    <div class="input-section">
+        <label for="itemValue">Enter Item Value: </label>
+        <input 
+            type="number" 
+            id="itemValue" 
+			step="0.01"
+            placeholder="Enter a value" 
+            onkeypress="handleKeyPress(event)">
+        <button onclick="addItem()">Add Item</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody id="itemTables">
+            <!-- JavaScript will populate this table -->
+        </tbody>
+    </table>
+    <br/>
+    <div>
+        <strong>Total Items:</strong> <span id="totalItems">0</span><br>
+        <strong>Total Value:</strong> <span id="totalValue">0</span>
+    </div>
+
+<br/>
+        <h2>Milk Calculator</h2>
+		<p id="dateTimeRow" ></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Price per <br/>Item (₹)</th>
+                    <th>No. of <br/>Items</th>
+                    <th>Total (₹)</th>
+                </tr>
+            </thead>
+<tbody id="itemTable">
+    <tr>
+        <td>FCM</td>
+        <td><input type="number" value="34" id="fcmPrice" oninput="updateItemRow('fcm')"></td>
+        <td><input type="number" value="" id="fcmCount" oninput="updateItemRow('fcm')"></td>
+        <td id="fcmTotal">0.00</td>
+    </tr>
+    <tr>
+        <td>Orange</td>
+        <td><input type="number" value="30" id="orangePrice" oninput="updateItemRow('orange')"></td>
+        <td><input type="number" value="" id="orangeCount" oninput="updateItemRow('orange')"></td>
+        <td id="orangeTotal">0.00</td>
+    </tr>
+    <tr>
+        <td>Green</td>
+        <td><input type="number" value="22" id="greenPrice" oninput="updateItemRow('green')"></td>
+        <td><input type="number" value="" id="greenCount" oninput="updateItemRow('green')"></td>
+        <td id="greenTotal">0.00</td>
+    </tr>
+    <tr>
+        <td>Blue</td>
+        <td><input type="number" value="20" id="bluePrice" oninput="updateItemRow('blue')"></td>
+        <td><input type="number" value="" id="blueCount" oninput="updateItemRow('blue')"></td>
+        <td id="blueTotal">0.00</td>
+    </tr>
+    <tr>
+        <td>10 (₹) Curd</td>
+        <td><input type="number" value="8.5" id="curdPrice" oninput="updateItemRow('curd')"></td>
+        <td><input type="number" value="" id="curdCount" oninput="updateItemRow('curd')"></td>
+        <td id="curdTotal">0.00</td>
+    </tr>
+    <tr>
+        <td>10 (₹) Milk</td>
+        <td><input type="number" value="9" id="milkPrice" oninput="updateItemRow('milk')"></td>
+        <td><input type="number" value="" id="milkCount" oninput="updateItemRow('milk')"></td>
+        <td id="milkTotal">0.00</td>
+    </tr>
+    <!-- Dummy rows -->
+    <tr>
+        <td>1/2 L Curd</td>
+        <td><input type="number" value="" id="dummy1Price" oninput="updateItemRow('dummy1')"></td>
+        <td><input type="number" value="" id="dummy1Count" oninput="updateItemRow('dummy1')"></td>
+        <td id="dummy1Total">0.00</td>
+    </tr>
+    <tr>
+        <td>Tea Packet</td>
+        <td><input type="number" value="" id="dummy2Price" oninput="updateItemRow('dummy2')"></td>
+        <td><input type="number" value="" id="dummy2Count" oninput="updateItemRow('dummy2')"></td>
+        <td id="dummy2Total">0.00</td>
+    </tr>
+    <tr>
+        <td>Extra</td>
+        <td><input type="number" value="" id="dummy3Price" oninput="updateItemRow('dummy3')"></td>
+        <td><input type="number" value="" id="dummy3Count" oninput="updateItemRow('dummy3')"></td>
+        <td id="dummy3Total">0.00</td>
+    </tr>
+</tbody>
+
+
+            </tbody>
+            <tfoot>
+                <tr>
+				
+                    <td colspan="3" style="text-align: right;">Total</td>
+                    <td id="itemGrandTotal">0.00</td>
+                </tr>
+            </tfoot>
+        </table>
+    
+
+	
+	</div>
+
+
+
+</body>
+</html>

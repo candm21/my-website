@@ -1,0 +1,53 @@
+       body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: row;
+			
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px;
+        }
+        .converter {
+            margin-right: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid lightblue;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+		
+	input[type="number"] {
+    width: 70px; /* Adjust the width as per your requirement */
+    padding: 2px; /* Optional: Add some padding for better appearance */
+    font-size: 14px; /* Optional: Adjust the font size for better readability */
+    box-sizing: border-box; /* Ensure padding doesn't affect the total width */
+}
+
+    #refreshButton {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+
+    #refreshButton:hover {
+        background-color: #0056b3;
+    }
