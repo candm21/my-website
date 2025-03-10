@@ -148,3 +148,26 @@ displayDateTime();
                 document.getElementById("amount").innerText = "-";
             }
         }
+
+
+// script.js
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to style custom tags
+    function styleCustomTags(tagName, style) {
+        const elements = document.querySelectorAll(tagName);
+        
+        elements.forEach(function(el) {
+            const span = document.createElement('span');
+            span.style[style] = style === 'fontWeight' ? 'bold' : 'italic';  // Set style
+            span.innerHTML = el.innerHTML;    // Copy text content
+            
+            // Replace the custom tag with the new <span>
+            el.parentNode.replaceChild(span, el);
+        });
+    }
+    
+    // Apply styles to <italic> and <bold> tags
+    styleCustomTags('italic', 'fontStyle');
+    styleCustomTags('bold', 'fontWeight');
+});
+
