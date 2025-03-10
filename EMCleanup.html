@@ -102,9 +102,10 @@
 <script src="script.js"></script>
 <h1>Emxpert Conversion</h1>
 <div><button onclick="copyToClipboard('output')">Copy ID Clip</button>
-
 <button onclick="copyToClipboard('source-code-output')">Copy 3b2 Clip</button>
+<button onclick="clearClipboard()">Clear Input</button>
 </div>
+
 
 <div id="editor" contenteditable="true"  placeholder="Enter text or paste content here"></div>
 
@@ -2041,6 +2042,7 @@ function processContent() {
     // Ensure empty <p> elements do not convert into <p><bold></bold></p>
     tempDiv.innerHTML = tempDiv.innerHTML.replace(/<p>\s*<\/p>/g, ''); // Keeps proper line breaks
     tempDiv.innerHTML = tempDiv.innerHTML.replace(/<p[^>]*>/g, '<p>'); // Keeps proper line breaks
+    tempDiv.innerHTML = tempDiv.innerHTML.replace(/<p><bold><\/bold><\/p>/g, ''); // Keeps proper line breaks
 
     // Replace unnecessary span, ins, and anchor tags
     tempDiv.innerHTML = tempDiv.innerHTML.replace(/<span[^>]*>/g, '').replace(/<\/span>/g, '');
@@ -2073,14 +2075,29 @@ function processContent() {
     document.getElementById('source-code-output').textContent = convertedContent;
 }
 
-	    function copyToClipboard(elementId) {
-        var content = document.getElementById(elementId).textContent || document.getElementById(elementId).innerText;
-        navigator.clipboard.writeText(content).then(function() {
-            //alert('Content copied to clipboard!');
-        }, function(err) {
-            alert('Failed to copy: ', err);
-        });
-    }
+function copyToClipboard(elementId) {
+    var content = document.getElementById(elementId).textContent || document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(content).then(function() {
+        alert('Content copied to clipboard!');
+    }, function(err) {
+        alert('Failed to copy: ', err);
+    });
+}
+
+// Function to clear clipboard content
+function clearClipboard() {
+    // Clear clipboard content
+    navigator.clipboard.writeText("").then(function() {
+        // Clear the editor, output, and source code areas
+        document.getElementById('editor').innerHTML = "";
+        document.getElementById('output').innerHTML = "";
+        document.getElementById('source-code-output').textContent = "";
+
+   //     alert('Clipboard and content cleared!');
+    }, function(err) {
+        alert('Failed to clear clipboard: ', err);
+    });
+}
 	
 </script>
 <script src="script.js"></script>
