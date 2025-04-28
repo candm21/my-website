@@ -1,215 +1,787 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Journal Instructions Manager</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 50;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.6);
-    }
-    .modal-content {
-      background-color: #fefefe;
-      margin: 5% auto;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Journal Instruction Tracker</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f9f9f9;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            margin-top: 30px;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        #filterInput {
+            margin-top: 20px;
+            padding: 8px;
+            width: 300px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Journal Instructions Manager</h1>
 
-    <div class="flex justify-between mb-4">
-      <label class="flex items-center space-x-2">
-        <input type="checkbox" id="isTL" onchange="renderJournals()" />
-        <span class="text-sm text-gray-700">Enable Edit Mode</span>
-      </label>
-      <label class="flex items-center space-x-2">
-        <input type="checkbox" id="showAllJournals" onchange="renderJournals()" />
-        <span class="text-sm text-gray-700">Show All Journals</span>
-      </label>
+<body>
+
+    <h2>📚 Journal Instruction Tracker</h2>
+
+    <br><br>
+
+    <input type="text" id="filterInput" placeholder="Filter journals..." onkeyup="filterTable()">
+
+    <div id="resultArea" style="margin-top:30px; display:none;">
+        <h3>Journal Details</h3>
+        <div><b>Journal Name:</b> <span id="journalName"></span></div>
+        <div><b>Journal Alpha:</b> <span id="journalAlpha"></span></div>
+        <br>
+        <label><b>Instructions / Comments:</b></label><br>
+        <textarea id="journalComment" rows="10" placeholder="Type instructions here..."></textarea><br>
+        <button onclick="manualUpdate()">Update Comment</button>
+        <p id="statusMessage" style="color: green; margin-top: 10px;"></p>
     </div>
 
-    <input id="searchInput" type="text" placeholder="Search for journals..." 
-      class="w-full px-4 py-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-      oninput="renderJournals()">
+    <table id="journalTable">
+      <thead>
+        <tr>
+          <th>Journal Name</th>
+          <th>Journal Alpha</th>
+          <th>Comment</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>JDPS</td>
+          <td>DPS</td>
+          <td class="comment-cell">Example comment here...</td>
+          <td>
+            <button onclick="editComment(this)">Edit</button>
+            <button onclick="deleteRow(this)" style="background-color: red;">Delete</button>
+          </td>
+        </tr>
+      </thead>
+  <tbody>
+ <tr><td>JDPS</td><td>DPS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMS</td><td>CMS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JLD</td><td>JLD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JME</td><td>JME</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAPNA</td><td>JAP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PLT</td><td>PLT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FOCUS</td><td>FOA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JVD</td><td>JVD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RCB</td><td>RCB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOU</td><td>JOU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MCS</td><td>MCS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CAC</td><td>CAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CR</td><td>CRX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RASE</td><td>RSE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JMCQ</td><td>JMQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBS</td><td>JBS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JMCE</td><td>JMC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TDR</td><td>TDR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AEQ</td><td>AEQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CRS</td><td>CRS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CJB</td><td>CJB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JFI</td><td>JFI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AAS</td><td>AAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TECSE</td><td>TEC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAC</td><td>JAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPBI</td><td>PBI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSPR</td><td>PSR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JSED</td><td>SED</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BMOD</td><td>BMO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LDQ</td><td>LDQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CDTEI</td><td>CDE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CJSP</td><td>CJS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHHE</td><td>JHH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BBS</td><td>BBS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCMO</td><td>JMO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HRDR</td><td>HRD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RSM</td><td>RSM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GSP</td><td>GSP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CSCM</td><td>CSC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPER</td><td>JPE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MIA</td><td>MIA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPA</td><td>JPA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJSP</td><td>IJS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>URO</td><td>URO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EID</td><td>EID</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRQ</td><td>PRQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JEA</td><td>JEA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJO</td><td>IJO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCCP</td><td>JCC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HS</td><td>HS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SMO</td><td>SMO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AEX</td><td>AEX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FC</td><td>FCX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GCT</td><td>GCT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GPH</td><td>GPH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JEE</td><td>JEE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MCQ</td><td>MCQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MCRR</td><td>MCR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PMJ</td><td>PMJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CAD</td><td>CAD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CART</td><td>CAR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PPM</td><td>PPM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IMP</td><td>IMP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOP</td><td>JOP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TEJ</td><td>TEJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BUA</td><td>BUA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MCU</td><td>MCU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SMS</td><td>SMS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ACS</td><td>ACS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JMED</td><td>JMD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AOR</td><td>AOR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JLOS</td><td>JLO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RAC</td><td>RAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SJS</td><td>SJS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOAA</td><td>JOA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ABS</td><td>ABS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EJI</td><td>EJI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJI</td><td>IJI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JRA</td><td>JRA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHA</td><td>JHA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMP</td><td>CMP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ICS</td><td>ICS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AJMH</td><td>JMH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BUL</td><td>BUL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CCS</td><td>CCS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>YJJ</td><td>YJJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ARPA</td><td>ARP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJPP</td><td>HIJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MWC</td><td>MWC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GMC</td><td>GMC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJH</td><td>IJH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ESJ</td><td>ESJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EUS</td><td>EUS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JSSI</td><td>JSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BBX</td><td>BBX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BHD</td><td>BDX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCU</td><td>SCU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>INQ</td><td>INQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LAL</td><td>LAL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRI</td><td>PRI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EAB</td><td>EAB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SRI</td><td>SRI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>APJPH</td><td>APH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JRE</td><td>JRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCX</td><td>SC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JUH</td><td>JUH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LSJ</td><td>LSJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NVSQ</td><td>NVS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OAE</td><td>OAE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TPJ</td><td>TPJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPX</td><td>SP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HPQ</td><td>HPQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AOP</td><td>AOP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HIC</td><td>HIC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBP</td><td>JBP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PMT</td><td>PMT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CNR</td><td>CNR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ICT</td><td>ICT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PT</td><td>PTX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ROPPA</td><td>ROA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>YAS</td><td>YAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOD</td><td>JOD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAH</td><td>JAH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAR</td><td>JAR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GQN</td><td>GQN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MLQ</td><td>MLQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHTR</td><td>JHT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WJNR</td><td>WJN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>UEX</td><td>UE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HJBS</td><td>HJB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHP</td><td>JHP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TESE</td><td>TES</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ASMNT</td><td>ASM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ESP</td><td>ESP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CGJ</td><td>CGJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCVA</td><td>SCV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BAS</td><td>BAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GGM</td><td>GGM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>APR</td><td>APR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ISP</td><td>ISP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IRE</td><td>IRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GOM</td><td>GOM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JASS</td><td>JAX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CPJ</td><td>CLP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TCN</td><td>TCN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TVNM</td><td>TVN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CCR</td><td>CCR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EEG</td><td>EEG</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EP</td><td>EPX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JABS</td><td>JAB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NRO</td><td>NRO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CCP</td><td>CCP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EJW</td><td>EJW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NMS</td><td>NMS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CRW</td><td>CRW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCS</td><td>JCS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FBR</td><td>FBR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CBR</td><td>CBR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ADHR</td><td>ADH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TRE</td><td>TRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PWMP</td><td>PWM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EUR</td><td>EUR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CRJ</td><td>CRJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TRR</td><td>TRR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ORG</td><td>ORG</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EUC</td><td>EUC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FIS</td><td>FIS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MEN</td><td>MEN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JLSP</td><td>JLS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JRLE</td><td>JRL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JMI</td><td>JMI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SA</td><td>SA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPC</td><td>JPC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCEL</td><td>JEL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SGO</td><td>SGO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CCJ</td><td>CCJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JSIE</td><td>JSI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAS</td><td>JAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CQ</td><td>CQX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JVU</td><td>JVU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>REA</td><td>REA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BSTS</td><td>BST</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TOU</td><td>TOU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHC</td><td>JHC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HPX</td><td>HPX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJM</td><td>IJM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SAP</td><td>SAP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JTR</td><td>JTR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MAP</td><td>MAP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IJB</td><td>IJB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ACI</td><td>ACI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WFR</td><td>WFR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RAP</td><td>RAP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>END</td><td>END</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCO</td><td>SCO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LCH</td><td>LCH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SAC</td><td>SAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AJMQ</td><td>AJM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EJD</td><td>EJD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CHD</td><td>CHD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IPT</td><td>IPT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EHI</td><td>EHI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IDR</td><td>IDR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCE</td><td>SCE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CDY</td><td>CDY</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BMI</td><td>BMI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>UIX</td><td>UIX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HIS</td><td>HIS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>INS</td><td>INS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GRS</td><td>GRS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BII</td><td>BII</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>THP</td><td>THP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ICR</td><td>ICR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HEA</td><td>HEA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BIC</td><td>BIC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMW</td><td>CMW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RCI</td><td>RCI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MBI</td><td>MBI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RGP</td><td>RGP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>QHR</td><td>QHR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BCB</td><td>BCB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EVI</td><td>EVI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SOQ</td><td>SOQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AJLM</td><td>AJL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SGR</td><td>SGR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WCX</td><td>WCX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAJ</td><td>TAJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EDQ</td><td>EDQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CIC</td><td>CIC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TRN</td><td>TRN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EVB</td><td>EVB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NNR</td><td>NNR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SLR</td><td>SLR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BCI</td><td>BCI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WHE</td><td>WHE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TRI</td><td>TRI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMG</td><td>CMG</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CIX</td><td>CIX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>REH</td><td>REH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ONC</td><td>ONC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PDI</td><td>PDI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GAE</td><td>GAE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>POSS</td><td>POSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PAT</td><td>PAT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMU</td><td>CMU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OTJ</td><td>OTJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CNS</td><td>CNS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CRE</td><td>CRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AMD</td><td>AMD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CRA</td><td>CRA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FLA</td><td>FLA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>VCA</td><td>VCA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ASW</td><td>ASW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TCR</td><td>TCR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPPQ</td><td>SPA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PEV</td><td>PEV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BBI</td><td>BBI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>REL</td><td>REL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AEI</td><td>AEI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RRPE</td><td>RRP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BEC</td><td>BEC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DTI</td><td>DTI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BDX</td><td>BDX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ENT</td><td>ENT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSY</td><td>PSY</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WIH</td><td>WIH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JEBD</td><td>EBX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPM</td><td>JPM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WOM</td><td>WOM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LIS</td><td>LIS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EJO</td><td>EJO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HPI</td><td>HPI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RTU</td><td>RTU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GPI</td><td>GPI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MRE</td><td>MRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ALN</td><td>ALN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>COS</td><td>COS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EXN</td><td>EXN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CTP</td><td>CTP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHN</td><td>JHN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PPH</td><td>PPH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OCS</td><td>OCS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NMI</td><td>NMI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CLA</td><td>CLA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>III</td><td>III</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GCQ</td><td>GCQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EJT</td><td>EJT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>URJ</td><td>URJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JNP</td><td>JNP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MIS</td><td>MIS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPS</td><td>SPS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HOL</td><td>HOL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LAS</td><td>LAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EAQ</td><td>EAQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LTJ</td><td>LTJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JSO</td><td>JSO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DVR</td><td>DVR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HKJ</td><td>HKJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MDE</td><td>MDE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CIE</td><td>CIE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JVI</td><td>JVI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBM</td><td>JBM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EJP</td><td>EJP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JIP</td><td>JIP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ANM</td><td>ANM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AUM</td><td>AUM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAO</td><td>JAO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BNA</td><td>BNA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JVA</td><td>JVA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBF</td><td>JBF</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GJH</td><td>GJH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GSC</td><td>GSC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRS</td><td>PRS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RSQ</td><td>RSQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSH</td><td>PSH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NVW</td><td>NVW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAP</td><td>TAP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PHP</td><td>PHP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SAT</td><td>SAT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JEVT</td><td>JET</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TMJ</td><td>TMJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TUI</td><td>TUI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CSI</td><td>CSI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IRS</td><td>IRS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ALX</td><td>ALX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IPS</td><td>IPS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LTR</td><td>LTR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GHP</td><td>GHP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CER</td><td>CER</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TRY</td><td>TRY</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>VRT</td><td>VRT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>POM</td><td>POM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAU</td><td>TAU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAG</td><td>TAG</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAM</td><td>TAM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAE</td><td>TAE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAH</td><td>TAH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAI</td><td>TAI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAK</td><td>TAK</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAN</td><td>TAN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAR</td><td>TAR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAV</td><td>TAV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAW</td><td>TAW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TAB</td><td>TAB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OED</td><td>OED</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TPP</td><td>TPP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AJSM</td><td>AJS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JEI</td><td>JEI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOB</td><td>JOB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRV</td><td>PRV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HSS</td><td>HSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CTY</td><td>CTY</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IPX</td><td>IPX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FAI</td><td>FAI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>VJSM</td><td>VJS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ATR</td><td>ATR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GUT</td><td>GUT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHL</td><td>JHL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MLI</td><td>MLI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FAO</td><td>FAO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TCZ</td><td>TCZ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HPP</td><td>HPP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPPS</td><td>SPP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PHR</td><td>PHR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>LAP</td><td>LAP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RPO</td><td>RPO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>VET</td><td>VET</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TPX</td><td>TPX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CLL</td><td>CLL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AAT</td><td>AAT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ANN</td><td>ANN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SIR(E)</td><td>SIR(E)</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SIR(F)</td><td>SIR(F)</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCP(E)</td><td>SCP(E)</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SCP(F)</td><td>SCP(F)</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RAM</td><td>RAM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RME</td><td>RME</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCO</td><td>JCO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EPF</td><td>EPF</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RCP</td><td>RCP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AFS</td><td>AFS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CPP</td><td>CPP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PHJ</td><td>PHJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TUP</td><td>TUP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JIV</td><td>JIV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TUS</td><td>TUS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>VRD</td><td>VRD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TVA</td><td>TVA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HHCMP</td><td>HHCMP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>INV</td><td>INV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ETP</td><td>ETP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOR</td><td>JOR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SLGR</td><td>SLGR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PST</td><td>PST</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TEE</td><td>TEE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PCR</td><td>PCR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TRD</td><td>TRD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JEF</td><td>JEF</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CHL</td><td>CHL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ADE</td><td>ADE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IMJ</td><td>IMJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PDP</td><td>PDP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EAS</td><td>EAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IDX</td><td>IDX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SAJ</td><td>SAJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WHS</td><td>WHS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSPI</td><td>PSI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NHA</td><td>NHA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EAR</td><td>EAR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RRR</td><td>RRR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CUS</td><td>CUS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HIM</td><td>HIM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DMJ</td><td>DMJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PPS</td><td>PPS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MHS</td><td>MHS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ECR</td><td>ECR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MSS</td><td>MSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CJX</td><td>CJX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FAS</td><td>FAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MSJ</td><td>MSJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EPM</td><td>EPM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAAF</td><td>JAF</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WIE</td><td>WIE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>QI</td><td>QIX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PIC</td><td>PIC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCL</td><td>JCL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBC</td><td>JBC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JFS</td><td>JFS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HPY</td><td>HPY</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IRV</td><td>IRV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ASQ</td><td>ASQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ABX</td><td>ABX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JENGL</td><td>ENG</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAD</td><td>JAD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CRU</td><td>CRU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JRI</td><td>JRI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBR</td><td>JBR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ISB</td><td>ISB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ALH</td><td>ALH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HOS</td><td>HOS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PUS</td><td>PUS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JFN</td><td>JFN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JCE</td><td>JCE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MC</td><td>MCX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NSQ</td><td>NSQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SSS</td><td>SSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMC</td><td>CMC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JES</td><td>JES</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JGME</td><td>GMT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BSX</td><td>BSX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MAC</td><td>MAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SHM</td><td>SHM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IVI</td><td>IVI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OJSM</td><td>OJS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CDPS</td><td>CDP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JNT</td><td>JNT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>STA</td><td>STA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MIO</td><td>MIO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ANP</td><td>ANP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BRQ</td><td>BRQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BPI</td><td>BPI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BOD</td><td>BOD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SRD</td><td>SRD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EEPS</td><td>EEP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CDQ</td><td>CDQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>FAC</td><td>FAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ISY</td><td>ISY</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>USJ</td><td>USJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRJ</td><td>PRJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ITQ</td><td>ITQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ISS</td><td>ISS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CNC</td><td>CNC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SOE</td><td>SOE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPC</td><td>SPC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PTJ</td><td>PTJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOO</td><td>JOO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BJM</td><td>BJM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DMS</td><td>DMS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EER</td><td>EER</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TCS</td><td>TCS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DST</td><td>DST</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JRME</td><td>JRM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NRJ</td><td>NRJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JIX</td><td>JIX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>POL</td><td>POL</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AUT</td><td>AUT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SSR</td><td>SSR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CARJ</td><td>CAJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HTC</td><td>HTC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ASR</td><td>ASR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BCQ</td><td>BCQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CJK</td><td>CJK</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CPH</td><td>CPH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GAS</td><td>GAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WSO</td><td>WSO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JDMS</td><td>JDM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHSB</td><td>HSB</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JMTE</td><td>JMT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JAPA</td><td>APA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MTR</td><td>MTR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MPP</td><td>MPP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MDM</td><td>MDM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPQ</td><td>SPQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SMH</td><td>SMH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SM</td><td>SMX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ST</td><td>STX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SRE</td><td>SRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TEC</td><td>TCX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TS</td><td>TSO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>UPDATE</td><td>UPD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>YEC</td><td>YEC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AIM</td><td>AIM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ANZ</td><td>ANZ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>BJO</td><td>BJO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CTJ</td><td>CTJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ESO</td><td>ESO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>GAQ</td><td>GAQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HUM</td><td>HUM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JBD</td><td>JBD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ISW</td><td>ISW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JIS</td><td>JIS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MSX</td><td>MSX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OSS</td><td>OSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OTT</td><td>OTT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSX</td><td>PSX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSW</td><td>PSW</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRD</td><td>PRD</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>QJP</td><td>QJP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RAE</td><td>RAE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TDE</td><td>TDE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SSI</td><td>SSI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SRJ</td><td>SRJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TSJ</td><td>TSJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ULT</td><td>ULT</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WMR</td><td>WMR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SOC</td><td>SOC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>WES</td><td>WES</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPR</td><td>JPR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPJ</td><td>SPJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SDI</td><td>SDI</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EPN</td><td>EPN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOS</td><td>JOS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JOM</td><td>JOM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SPH</td><td>SPH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>IYA</td><td>IYA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>INC</td><td>INC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CYE</td><td>CYE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PAQ</td><td>PAQ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSE</td><td>PSE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>STP</td><td>STP</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PFM</td><td>PFM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PSYS</td><td>PSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ENJ</td><td>ENJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ERO</td><td>ERO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EdR</td><td>EdR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>OHN</td><td>OHN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RRE</td><td>RRE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>AERJ</td><td>AER</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RER</td><td>RER</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EEPA</td><td>EPA</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JFM</td><td>JFM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CMR</td><td>CMR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EAU</td><td>EAU</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JHX</td><td>JHX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PRO</td><td>PRO</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DAS</td><td>DAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>EUV</td><td>EUV</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DCM</td><td>DCM</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>PPJ</td><td>PPJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>DIS</td><td>DIS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>RAC</td><td>RAC</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>TSS</td><td>TSS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SOR</td><td>SOR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>MPX</td><td>MPX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>HAS</td><td>HAS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JSF</td><td>JSF</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>ANG</td><td>ANG</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CLS</td><td>CLS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JSR</td><td>JSR</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JPH</td><td>JPH</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>JRN</td><td>JRN</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>NJE</td><td>NJE</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>VCJ</td><td>VCJ</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>CPX</td><td>CPX</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	<tr><td>SNS</td><td>SNS</td><td class="comment-cell"></td><td><button onclick="editComment(this)">Edit</button><button class="delete-btn" onclick="deleteRow(this)">Delete</button></td></tr>
+	
+	</tbody>  </table>
 
-    <div id="addJournalSection" class="flex gap-2 mb-4" style="display: none;">
-      <input id="journalIdInput" type="text" placeholder="Journal ID"
-        class="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-      <input id="journalAlphaInput" type="text" placeholder="Journal Alpha"
-        class="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-      <button onclick="addJournal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add</button>
-    </div>
+  <h3>Add Journal</h3>
+  <input type="text" id="journalName" placeholder="Journal Name" />
+  <input type="text" id="journalAlpha" placeholder="Journal Alpha" />
+  <textarea id="journalComment" placeholder="Comment"></textarea>
+  <button onclick="addJournal()">Add</button>
 
-    <div class="flex justify-end mb-4">
-      <button onclick="exportHTML()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
-        Export HTML
-      </button>
-    </div>
 
-    <div id="journalList" class="space-y-4"></div>
-  </div>
-
-  <div id="popupModal" class="modal">
-    <div class="modal-content">
-      <span onclick="closeModal()" class="float-right text-2xl cursor-pointer">&times;</span>
-      <h2 id="popupTitle" class="text-xl font-bold mb-4"></h2>
-      <p id="popupComment" class="text-gray-700 whitespace-pre-wrap"></p>
-    </div>
-  </div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
 <script>
-  let journals = JSON.parse(localStorage.getItem("journals") || "[]");
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCNTrlOKHPuPBrS1oeOJg_irupy28wL07A",
+    authDomain: "journal-tracker-cm.firebaseapp.com",
+    databaseURL: "https://journal-tracker-cm-default-rtdb.firebaseio.com",
+    projectId: "journal-tracker-cm",
+    storageBucket: "journal-tracker-cm.firebasestorage.app",
+    messagingSenderId: "1004712376795",
+    appId: "1:1004712376795:web:7184c4093afa32bbbd4ffe"
+  };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database().ref("journals");
 
-  function renderJournals() {
-    const container = document.getElementById("journalList");
-    container.innerHTML = "";
-    const filter = document.getElementById("searchInput").value.toLowerCase();
-    const showAll = document.getElementById("showAllJournals").checked;
-    const isTL = document.getElementById("isTL").checked;
+        let currentJournalKey = null;
+        let typingTimer;
+        const doneTypingInterval = 2000;
 
-    document.getElementById("addJournalSection").style.display = isTL ? "flex" : "none";
+        function findJournal() {
+            const search = document.getElementById('searchInput').value.trim().toLowerCase();
+            const resultArea = document.getElementById('resultArea');
+            const journalNameField = document.getElementById('journalName');
+            const journalAlphaField = document.getElementById('journalAlpha');
+            const journalCommentField = document.getElementById('journalComment');
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.innerText = "";
 
-    const filtered = journals
-      .filter(j => (showAll || j.id.toLowerCase().includes(filter) || j.alpha.toLowerCase().includes(filter)))
-      .sort((a, b) => a.id.localeCompare(b.id));
+            db.once('value', snapshot => {
+                let found = false;
+                snapshot.forEach(childSnapshot => {
+                    const journal = childSnapshot.val();
+                    const key = childSnapshot.key;
+                    if (journal.name.toLowerCase() === search || journal.alpha.toLowerCase() === search) {
+                        journalNameField.textContent = journal.name;
+                        journalAlphaField.textContent = journal.alpha;
+                        journalCommentField.value = journal.comment || "";
+                        resultArea.style.display = "block";
+                        currentJournalKey = key;
+                        found = true;
+                    }
+                });
+                if (!found) {
+                    alert("Journal not found!");
+                    resultArea.style.display = "none";
+                    currentJournalKey = null;
+                }
+            });
+        }
 
-    if (!showAll && !filter) return;
+        function manualUpdate() {
+            if (!currentJournalKey) return;
+            const updatedComment = document.getElementById('journalComment').value.trim();
+            db.child(currentJournalKey).update({ comment: updatedComment })
+              .then(() => {
+                  document.getElementById('statusMessage').innerText = "Comment updated successfully!";
+              })
+              .catch(error => {
+                  console.error("Error updating comment:", error);
+              });
+        }
 
-    filtered.forEach(journal => {
-      const card = document.createElement("div");
-      card.className = "bg-white rounded-xl shadow p-4";
+        function editComment(button) {
+            const commentCell = button.parentNode.parentNode.querySelector('.comment-cell');
+            const currentText = commentCell.innerText;
+            const newText = prompt("Edit Comment:", currentText);
+            if (newText !== null) {
+                commentCell.innerText = newText;
+            }
+        }
 
-      card.innerHTML = `
-        <div class="flex justify-between items-center mb-2">
-          <div>
-            <h2 class="text-lg font-bold text-gray-800">ID: ${journal.id}</h2>
-            <p class="text-sm text-gray-600">Alpha: ${journal.alpha}</p>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="openModal('${journal.id}')" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">
-              View
-            </button>
-            ${isTL ? `
-              <button onclick="deleteJournal('${journal.id}')" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition">
-                Delete
-              </button>` : ''}
-          </div>
-        </div>
-        <textarea class="w-full p-2 text-sm border border-gray-300 rounded mb-2 resize-none" 
-          ${isTL ? '' : 'readonly'} placeholder="Add instruction..." oninput="updateComment('${journal.id}', this.value)">${journal.comment || ""}</textarea>
-        ${isTL ? `
-          <button onclick="saveComment('${journal.id}')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Save</button>
-          <button onclick="clearComment('${journal.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 ml-2">Clear Comment</button>
-        ` : ''}
-      `;
-      container.appendChild(card);
-    });
-  }
+        function deleteRow(button) {
+            if (confirm("Are you sure you want to delete this row?")) {
+                const row = button.parentNode.parentNode;
+                row.remove();
+            }
+        }
 
-  function addJournal() {
-    const id = document.getElementById("journalIdInput").value.trim().toUpperCase();
-    const alpha = document.getElementById("journalAlphaInput").value.trim().toUpperCase();
+        function filterTable() {
+            const filter = document.getElementById('filterInput').value.toLowerCase();
+            const table = document.getElementById('journalTable');
+            const rows = table.getElementsByTagName('tr');
 
-    if (!id || !alpha) {
-      alert("Please enter both Journal ID and Alpha.");
-      return;
-    }
-
-    if (journals.find(j => j.id === id)) {
-      alert("Journal ID already exists!");
-      return;
-    }
-
-    journals.push({ id, alpha, comment: "" });
-    localStorage.setItem("journals", JSON.stringify(journals));
-    renderJournals();
-    document.getElementById("journalIdInput").value = "";
-    document.getElementById("journalAlphaInput").value = "";
-  }
-
-  function updateComment(id, value) {
-    const journal = journals.find(j => j.id === id);
-    if (journal) {
-      journal.comment = value;
-    }
-  }
-
-  function saveComment(id) {
-    localStorage.setItem("journals", JSON.stringify(journals));
-    alert("Instruction saved!");
-    renderJournals();
-  }
-
-  function clearComment(id) {
-    const journal = journals.find(j => j.id === id);
-    if (journal) {
-      journal.comment = "";
-      localStorage.setItem("journals", JSON.stringify(journals));
-      renderJournals();
-    }
-  }
-
-  function deleteJournal(id) {
-    if (confirm("Are you sure you want to delete this journal?")) {
-      journals = journals.filter(j => j.id !== id);
-      localStorage.setItem("journals", JSON.stringify(journals));
-      renderJournals();
-    }
-  }
-
-  function openModal(id) {
-    const journal = journals.find(j => j.id === id);
-    if (journal) {
-      document.getElementById("popupTitle").textContent = `Instruction for ${journal.id}`;
-      document.getElementById("popupComment").textContent = journal.comment || "No Instruction Available.";
-      document.getElementById("popupModal").style.display = "block";
-    }
-  }
-
-  function closeModal() {
-    document.getElementById("popupModal").style.display = "none";
-  }
-
-  function exportHTML() {
-    const htmlContent = `
-      <html><head><title>Journal Instructions</title></head><body>
-      <h1>Journal Instructions</h1>
-      ${journals.map(j => `
-        <div>
-          <h2>Journal ID: ${j.id}</h2>
-          <p><strong>Alpha:</strong> ${j.alpha}</p>
-          <p><strong>Instruction:</strong><br>${j.comment || 'No Instruction Available.'}</p>
-          <hr/>
-        </div>
-      `).join('')}
-      </body></html>
-    `;
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'journal_instructions.html';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  renderJournals();
-</script>
+            for (let i = 1; i < rows.length; i++) {
+                const journalName = rows[i].cells[0].textContent.toLowerCase();
+                const journalAlpha = rows[i].cells[1].textContent.toLowerCase();
+                if (journalName.includes(filter) || journalAlpha.includes(filter)) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+    </script>
 
 </body>
 </html>
+
+<!--https://console.firebase.google.com/project/journal-tracker-cm/settings/general/web:ZTFlODMyZjUtYmRjMy00NTgxLWJkMmYtMWZhNjhlYmNiMjcz!-->
