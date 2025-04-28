@@ -761,6 +761,53 @@
                 row.remove();
             }
         }
+		
+		
+		function editComment(button) {
+    const tdComment = button.parentElement.parentElement.querySelector('.comment-cell');
+
+    if (button.textContent === "Edit") {
+        // Start editing
+        const currentText = tdComment.textContent.trim();
+        const textarea = document.createElement('textarea');
+        textarea.value = currentText;
+        textarea.style.width = "100%";
+        textarea.rows = 6;
+        tdComment.innerHTML = ''; // Clear the cell
+        tdComment.appendChild(textarea);
+        button.textContent = "Save";
+    } else {
+        // Save updated comment
+        const textarea = tdComment.querySelector('textarea');
+        if (textarea) {
+            tdComment.textContent = textarea.value.trim();
+        }
+        button.textContent = "Edit";
+
+        // OPTIONAL: Save to Firebase if needed
+        saveCommentToFirebase(tdComment.parentElement);
+    }
+}
+
+// (Optional) Saving comment to Firebase
+function saveCommentToFirebase(row) {
+    const journalName = row.children[0].textContent.trim();
+    const journalAlpha = row.children[1].textContent.trim();
+    const comment = row.children[2].textContent.trim();
+
+    var db = firebase.database();
+    var ref = db.ref('journals/' + journalAlpha);
+
+    ref.set({
+        journalName: journalName,
+        journalAlpha: journalAlpha,
+        comment: comment
+    }).then(() => {
+        console.log("Saved successfully!");
+    }).catch((error) => {
+        console.error("Error saving:", error);
+    });
+}
 
         function filterTable() {
             const filter = document.getElementById('filterInput').value.toLowerCase();
