@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Sage Edit</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-accent: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border: #dee2e6;
+            --shadow: rgba(0,0,0,0.1);
+            --blue: #0d6efd;
+            --blue-hover: #0b5ed7;
+            --green: #198754;
+            --red: #dc3545;
+            --yellow: #ffc107;
+            --panel-height: 820px;
+            --preview-width: 75%;
+            --summary-width: 25%;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-accent: #404040;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+            --border: #555555;
+            --shadow: rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            padding: 20px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            background: var(--blue);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: var(--blue-hover);
+            transform: translateY(-1px);
+        }
+
+        .theme-toggle {
+            background: var(--bg-accent);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        .theme-toggle:hover {
+            background: var(--border);
+            transform: translateY(-1px);
+        }
+
+        .clear-btn {
+            background: var(--red);
+        }
+
+        .clear-btn:hover {
+            background: #c82333;
+        }
+
+        .status {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+            font-size: 15px;
+        }
+
+        .status.success {
+            background: #d1e7dd;
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        [data-theme="dark"] .status.success {
+            background: #0f5132;
+            color: #75b798;
+            border-color: #75b798;
+        }
+
+        [data-theme="dark"] .status.error {
+            background: #842029;
+            color: #ea868f;
+            border-color: #ea868f;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .stat-number {
+            color: var(--blue);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 25px;
+            flex-grow: 1;
+            min-height: 0;
+        }
+
+        .preview-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 12px var(--shadow);
+            display: flex;
+            flex-direction: column;
+            height: var(--panel-height);
+            width: var(--preview-width);
+        }
+
+        .summary-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 12px var(--shadow);
+            display: flex;
+            flex-direction: column;
+            height: var(--panel-height);
+            width: var(--summary-width);
+        }
+
+        .panel-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--blue);
+            color: var(--text-primary);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .preview-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            overflow-y: auto;
+            font-family: inherit;
+            flex-grow: 1;
+            font-size: 16px;
+            line-height: 1.7;
+            color: var(--text-primary);
+        }
+
+        .edit-list {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .edit-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 4px solid;
+            position: relative;
+        }
+
+        .edit-item:hover {
+            transform: translateX(3px);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .edit-item.insert {
+            border-left-color: var(--green);
+        }
+
+        .edit-item.delete {
+            border-left-color: var(--red);
+        }
+
+        .edit-item.comment {
+            border-left-color: var(--yellow);
+        }
+
+        .edit-item.clicked {
+            background: var(--bg-accent);
+            box-shadow: 0 0 0 2px var(--blue);
+        }
+
+        .edit-content {
+            font-size: 15px;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .edit-type {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .edit-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .small-btn {
+            background: var(--bg-accent);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .small-btn:hover {
+            background: var(--border);
+            transform: translateY(-1px);
+        }
+
+        /* Preview styling */
+        .preview-box ins {
+            background: rgba(25, 135, 84, 0.2);
+            color: var(--green);
+            text-decoration: none;
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid var(--green);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .preview-box ins:hover {
+            background: rgba(25, 135, 84, 0.3);
+            transform: scale(1.02);
+        }
+
+        .preview-box ins.clicked {
+            background: var(--blue) !important;
+            color: white !important;
+            border-color: var(--blue-hover) !important;
+        }
+
+        .preview-box del {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--red);
+            padding: 2px 4px;
+            border-radius: 3px;
+            border: 1px solid var(--red);
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: line-through;
+            transition: all 0.3s ease;
+        }
+
+        .preview-box del:hover {
+            background: rgba(220, 53, 69, 0.3);
+            transform: scale(1.02);
+        }
+
+        .preview-box del.clicked {
+            background: #6f42c1 !important;
+            color: white !important;
+            border-color: #5a32a3 !important;
+        }
+
+        .preview-box .ice-comment {
+            background: rgba(255, 193, 7, 0.2);
+            color: var(--yellow);
+            border: 1px solid var(--yellow);
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preview-box .ice-comment:hover {
+            background: rgba(255, 193, 7, 0.3);
+        }
+
+        .preview-box .ice-comment.clicked {
+            background: #fd7e14 !important;
+            color: white !important;
+            border-color: #dc6502 !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-style: italic;
+            font-size: 16px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--green);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px var(--shadow);
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-weight: 600;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-accent);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Width control buttons */
+        .width-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .width-btn {
+            background: var(--bg-accent);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .width-btn:hover {
+            background: var(--border);
+        }
+
+        .width-btn.active {
+            background: var(--blue);
+            color: white;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .preview-panel, .summary-panel {
+                width: 100%;
+                height: 500px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .container {
+                height: calc(100vh - 30px);
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+            
+            .controls {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+            
+            .stats {
+                gap: 10px;
+            }
+            
+            .stat-item {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            
+            .preview-panel, .summary-panel {
+                padding: 15px;
+            }
+            
+            .preview-box {
+                padding: 15px;
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                gap: 15px;
+            }
+            
+            .preview-panel, .summary-panel {
+                height: 400px;
+            }
+            
+            .title {
+                font-size: 24px;
+            }
+            
+            button {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🔥 Simple Sage Edit</div>
+            <div class="controls">
+                <button id="themeToggle" class="theme-toggle">
+                    <span id="themeIcon">🌙</span> <span id="themeText">Dark</span>
+                </button>
+                <button id="readClipBtn">
+                    📋 Read Clipboard
+                </button>
+                <button id="clearBtn" class="clear-btn">
+                    🗑️ Clear
+                </button>
+            </div>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <div id="stats" class="stats" style="display: none;">
+            <div class="stat-item">
+                <span class="stat-number" id="insertCount">0</span> Insertions
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="deleteCount">0</span> Deletions
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="commentCount">0</span> Comments
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="totalCount">0</span> Total Elements
+            </div>
+        </div>
+
+        <div class="width-controls">
+            <button class="width-btn active" onclick="setPanelWidth(75, 25)">Default (75%/25%)</button>
+            <button class="width-btn" onclick="setPanelWidth(70, 30)">Wider Preview (70%/30%)</button>
+            <button class="width-btn" onclick="setPanelWidth(80, 20)">Max Preview (80%/20%)</button>
+            <button class="width-btn" onclick="setPanelWidth(60, 40)">Balanced (60%/40%)</button>
+        </div>
+
+        <div class="main-content">
+            <div class="preview-panel">
+                <div class="panel-title">📄 HTML Preview</div>
+                <div id="htmlPreview" class="preview-box">
+                    <div class="empty-state">HTML preview will appear here after reading clipboard</div>
+                </div>
+            </div>
+            
+            <div class="summary-panel">
+                <div class="panel-title">📝 Edit Summary</div>
+                <div id="editSummary" class="edit-list">
+                    <div class="empty-state">Edit summary will appear here after analysis</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification">Content copied to clipboard!</div>
+
+    <script>
+        let currentTheme = 'light';
+        let editElements = [];
+        let clickCounts = {
+            insert: 0,
+            delete: 0,
+            comment: 0
+        };
+        let currentlyHighlightedElement = null;
+        let currentlyHighlightedSummaryItem = null;
+        let originalHTML = '';
+        let currentEditIndex = -1; // Track current position for keyboard navigation
+
+        // Theme toggle
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+            
+            if (currentTheme === 'dark') {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = ' Light';
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = ' Dark';
+            }
+            
+            localStorage.setItem('theme', currentTheme);
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                currentTheme = 'light'; // Set opposite first
+                toggleTheme(); // Then toggle to get correct state
+            }
+        }
+
+        // Panel width control
+        function setPanelWidth(previewWidth, summaryWidth) {
+            document.documentElement.style.setProperty('--preview-width', `${previewWidth}%`);
+            document.documentElement.style.setProperty('--summary-width', `${summaryWidth}%`);
+            
+            // Update active button state
+            document.querySelectorAll('.width-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function showNotification(message = 'Content copied to clipboard!') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 2000);
+        }
+
+        function extractTextareaContent(html) {
+            const regex = /<textarea[^>]*id="EmboxEditor"[^>]*>(.*?)<\/textarea>/gis;
+            const match = regex.exec(html);
+            return match ? match[1] : '';
+        }
+
+        function isHTMLContent(text) {
+            return /<[a-z][\s\S]*>/i.test(text) || /<!DOCTYPE/i.test(text);
+        }
+
+        function cleanHTML(html) {
+            return html
+                .replace(/\s*data-[^=]*="[^"]*"/gi, '')
+                .replace(/\s*readonly="[^"]*"/gi, '')
+                .replace(/\s*id="[^"]*"/gi, '')
+                .replace(/\s+/g, ' ')
+                .replace(/>\s+</g, '><');
+        }
+
+        function processHTML(html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            editElements = [];
+            let editIndex = 0;
+            
+            // Process all elements in order
+            const walker = document.createTreeWalker(
+                tempDiv,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: function(node) {
+                        if (node.nodeName === 'INS' || node.nodeName === 'DEL') {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                },
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                const id = `edit-${editIndex++}`;
+                let type = node.nodeName === 'INS' ? 'insert' : 'delete';
+                let content = node.textContent;
+                
+                // Check for ICE comments
+                if (node.classList.contains('ice-ins') && node.classList.contains('ice-cts')) {
+                    type = 'comment';
+                    const commentSpan = node.querySelector('span.cmnt-ins');
+                    if (commentSpan) {
+                        content = commentSpan.getAttribute('title') || 'ICE Comment';
+                    }
+                    node.classList.add('ice-comment');
+                }
+                
+                editElements.push({ id, type, content, node: node.cloneNode(true) });
+                node.setAttribute('id', id);
+                node.setAttribute('onclick', `handleElementClick('${id}', '${type}')`);
+            }
+            
+            return tempDiv.innerHTML;
+        }
+
+        function updateStats() {
+            const stats = editElements.reduce((acc, item) => {
+                acc[item.type] = (acc[item.type] || 0) + 1;
+                return acc;
+            }, {});
+            
+            document.getElementById('insertCount').textContent = clickCounts.insert;
+            document.getElementById('deleteCount').textContent = clickCounts.delete;
+            document.getElementById('commentCount').textContent = clickCounts.comment;
+            document.getElementById('totalCount').textContent = editElements.length;
+            
+            document.getElementById('stats').style.display = editElements.length > 0 ? 'flex' : 'none';
+        }
+
+        function displayEditSummary() {
+            const summaryEl = document.getElementById('editSummary');
+            
+            if (editElements.length === 0) {
+                summaryEl.innerHTML = '<div class="empty-state">No edits found</div>';
+                return;
+            }
+            
+            // Display in the same order as they appear in the HTML
+            const summaryHTML = editElements.map(item => {
+                const preview = item.content.length > 60 ? item.content.substring(0, 60) + '...' : item.content;
+                const typeLabels = {
+                    insert: '✅ INSERT',
+                    delete: '❌ DELETE', 
+                    comment: '💬 COMMENT'
+                };
+                
+                return `
+                    <div class="edit-item ${item.type}" onclick="scrollToElement('${item.id}', '${item.type}')" data-element-id="${item.id}">
+                        <div class="edit-type">${typeLabels[item.type]}</div>
+                        <div class="edit-content">${preview}</div>
+                        <div class="edit-actions">
+                            <button class="small-btn" onclick="copyBeforeText('${item.id}', event)">📋 Get 4 words before</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            summaryEl.innerHTML = summaryHTML;
+        }
+
+        function getTextBeforeElement(elementId, wordCount = 4) {
+            const element = document.getElementById(elementId);
+            if (!element) return '';
+            
+            // Get the text content of the entire preview
+            const previewText = document.getElementById('htmlPreview').textContent || '';
+            const elementText = element.textContent || '';
+            
+            // Find the position of the element text in the preview text
+            const elementIndex = previewText.indexOf(elementText);
+            if (elementIndex === -1) return '';
+            
+            // Get the text before the element
+            const textBefore = previewText.substring(0, elementIndex);
+            
+            // Split into words and get the last N words
+            const words = textBefore.trim().split(/\s+/).filter(word => word.length > 0);
+            const startIndex = Math.max(0, words.length - wordCount);
+            const beforeWords = words.slice(startIndex).join(' ');
+            
+            return beforeWords;
+        }
+
+        function copyBeforeText(elementId, event) {
+            if (event) {
+                event.stopPropagation(); // Prevent triggering the parent click event
+            }
+            
+            const beforeText = getTextBeforeElement(elementId, 4);
+            if (beforeText) {
+                copyToClipboard(beforeText);
+                showNotification(`Copied to clipboard: "${beforeText}"`);
+            } else {
+                showNotification('No text found before this element', 'error');
+            }
+        }
+
+        function scrollToElement(elementId, type) {
+            // Increment counter
+            clickCounts[type]++;
+            updateStats();
+            
+            // Remove highlight from previously clicked element
+            if (currentlyHighlightedElement) {
+                currentlyHighlightedElement.classList.remove('clicked');
+            }
+            
+            // Remove highlight from previously clicked summary item
+            if (currentlyHighlightedSummaryItem) {
+                currentlyHighlightedSummaryItem.classList.remove('clicked');
+            }
+            
+            // Find and highlight the new element
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.classList.add('clicked');
+                currentlyHighlightedElement = element;
+                
+                // Scroll to element
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Copy content to clipboard
+                const content = element.textContent || element.innerText;
+                copyToClipboard(content);
+            }
+            
+            // Also highlight the corresponding item in the Edit Summary panel
+            highlightEditSummaryItem(elementId);
+        }
+
+        function highlightEditSummaryItem(elementId) {
+            // Find the specific edit item that corresponds to the clicked element
+            const correspondingItem = document.querySelector(`.edit-item[data-element-id="${elementId}"]`);
+            if (correspondingItem) {
+                correspondingItem.classList.add('clicked');
+                correspondingItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                currentlyHighlightedSummaryItem = correspondingItem;
+                
+                // Update current index for keyboard navigation
+                currentEditIndex = editElements.findIndex(item => item.id === elementId);
+            }
+        }
+
+        function handleElementClick(elementId, type) {
+            // This function handles clicks directly on elements in the preview
+            scrollToElement(elementId, type);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Notification is shown by the calling function
+            }).catch(() => {
+                showStatus('Failed to copy to clipboard', 'error');
+            });
+        }
+
+        function generateFilename(content) {
+            const doiMatch = content.match(/DOI:\s*10\.1177\/\d*(\d{7})\d*.*?journals\.sagepub\.com\/home\/(\w{3})/i);
+            if (doiMatch) {
+                return `${doiMatch[2].toUpperCase()}${doiMatch[1]}.html`;
+            }
+            return `sage_edit_${Date.now()}.html`;
+        }
+
+        function saveToFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearContent() {
+            editElements = [];
+            clickCounts = { insert: 0, delete: 0, comment: 0 };
+            currentlyHighlightedElement = null;
+            currentlyHighlightedSummaryItem = null;
+            currentEditIndex = -1;
+            document.getElementById('htmlPreview').innerHTML = '<div class="empty-state">HTML preview will appear here after reading clipboard</div>';
+            document.getElementById('editSummary').innerHTML = '<div class="empty-state">Edit summary will appear here after analysis</div>';
+            document.getElementById('stats').style.display = 'none';
+            showStatus('Content cleared successfully!');
+        }
+
+        // Keyboard shortcuts
+        function handleKeyDown(event) {
+            // Check if Alt key is pressed along with 1 or 2
+            if (event.altKey) {
+                if (event.key === '1') {
+                    event.preventDefault();
+                    navigateToNextEdit();
+                } else if (event.key === '2') {
+                    event.preventDefault();
+                    copyBeforeTextForCurrentElement();
+                }
+            }
+        }
+
+        function navigateToNextEdit() {
+            if (editElements.length === 0) {
+                showNotification('No edit elements available', 'error');
+                return;
+            }
+            
+            // Move to next element (circular navigation)
+            currentEditIndex = (currentEditIndex + 1) % editElements.length;
+            const nextElement = editElements[currentEditIndex];
+            
+            // Scroll to and highlight the element
+            scrollToElement(nextElement.id, nextElement.type);
+            showNotification(`Navigated to ${nextElement.type} element ${currentEditIndex + 1}/${editElements.length}`);
+        }
+
+        function copyBeforeTextForCurrentElement() {
+            if (currentEditIndex === -1 || editElements.length === 0) {
+                showNotification('No element selected. Use Alt+1 to navigate first.', 'error');
+                return;
+            }
+            
+            const currentElement = editElements[currentEditIndex];
+            copyBeforeText(currentElement.id);
+        }
+
+        async function readClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                
+                if (!text) {
+                    showStatus('Clipboard is empty', 'error');
+                    return;
+                }
+                
+                // Extract HTML content
+                let htmlContent = extractTextareaContent(text);
+                if (!htmlContent && isHTMLContent(text)) {
+                    htmlContent = text;
+                }
+                
+                if (!htmlContent) {
+                    showStatus('No HTML content found in clipboard', 'error');
+                    return;
+                }
+                
+                // Process and display
+                const cleanedHTML = cleanHTML(htmlContent);
+                const processedHTML = processHTML(cleanedHTML);
+                
+                document.getElementById('htmlPreview').innerHTML = processedHTML;
+                updateStats();
+                displayEditSummary();
+                
+                // Save file
+                const filename = generateFilename(text);
+                saveToFile(processedHTML, filename);
+                
+                showStatus(`HTML analyzed and saved as ${filename}`);
+                
+                // Reset navigation index
+                currentEditIndex = -1;
+                
+            } catch (err) {
+                console.error('Clipboard error:', err);
+                showStatus('Failed to read clipboard. Please grant permission.', 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        document.getElementById('readClipBtn').addEventListener('click', readClipboard);
+        document.getElementById('clearBtn').addEventListener('click', clearContent);
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Initialize
+        loadTheme();
+    </script>
+</body>
+</html>
