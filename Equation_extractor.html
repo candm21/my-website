@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaTeX Equation Extractor</title>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #f5f7ff 0%, #e8ecff 100%);
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #764ba2;
+            transform: translateY(-2px);
+        }
+        .upload-area.dragover {
+            background: linear-gradient(135deg, #e8ecff 0%, #dde4ff 100%);
+            border-color: #764ba2;
+        }
+        #fileInput {
+            display: none;
+        }
+        .upload-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .equation-item {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+        .equation-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .equation-id {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        .equation-content {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        .download-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .preview-area {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
+        .word-format {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Enhanced preview styles */
+        .preview-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+        .preview-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .preview-tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .preview-content {
+            display: none;
+        }
+        .preview-content.active {
+            display: block;
+        }
+        .equation-preview {
+            background: #e8f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .equation-latex {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .equation-mathml {
+            background: #ffe8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+        .copy-btn.copied {
+            background: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LaTeX Equation Extractor</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drop your HTML file here or click to select</p>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Choose HTML File
+            </button>
+            <input type="file" id="fileInput" accept=".html,.htm" />
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing equations...</p>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <div class="stats" id="stats"></div>
+            
+            <h3>📄 Download Options:</h3>
+            <button class="download-btn" onclick="downloadTextFile()">
+                📝 Download math.txt (Raw Equations)
+            </button>
+            <button class="download-btn" onclick="downloadWordFormat()">
+                📄 Download Word Format (Placeholders)
+            </button>
+            <button class="download-btn" onclick="downloadOriginalWithPlaceholders()">
+                🔄 Download Modified HTML (with placeholders)
+            </button>
+
+            <h3>🔍 Preview:</h3>
+            <div class="preview-area" id="preview"></div>
+        </div>
+    </div>
+
+    <script>
+        let extractedEquations = [];
+        let originalHTML = '';
+        let modifiedHTML = '';
+
+        // File upload handlers
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.html') && !file.name.toLowerCase().endsWith('.htm')) {
+                alert('Please select an HTML file.');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                originalHTML = e.target.result;
+                processHTML(originalHTML);
+            };
+            reader.readAsText(file);
+        }
+
+        function processHTML(htmlContent) {
+            extractedEquations = [];
+            modifiedHTML = htmlContent;
+
+            // Regex to match $\( ... \)$ patterns
+            const equationRegex = /\$\\\((.*?)\\\)\$/g;
+            let match;
+            let equationCount = 1;
+
+            while ((match = equationRegex.exec(htmlContent)) !== null) {
+                const fullMatch = match[0]; // $\(...\)$
+                const equation = match[1]; // content inside \(...\)
+                const eqId = `EQ${equationCount}`;
+                
+                extractedEquations.push({
+                    id: eqId,
+                    fullEquation: fullMatch,
+                    content: equation,
+                    placeholder: `&lt;!&lt;${eqId}&gt;!&gt;`
+                });
+
+                // Replace in modified HTML
+                modifiedHTML = modifiedHTML.replace(fullMatch, `&lt;!&lt;${eqId}&gt;!&gt;`);
+                
+                equationCount++;
+            }
+
+            displayResults();
+        }
+
+        function displayResults() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+
+            // Update stats
+            const stats = document.getElementById('stats');
+            stats.innerHTML = `
+                <h3>📊 Extraction Complete!</h3>
+                <p><strong>${extractedEquations.length}</strong> equations found and processed</p>
+            `;
+
+            // Update preview
+            const preview = document.getElementById('preview');
+            let previewHTML = '<h4>📝 Extracted Equations:</h4>';
+            
+            extractedEquations.forEach((eq, index) => {
+                previewHTML += `
+                    <div class="equation-item">
+                        <div class="equation-id">&lt;${eq.id}&gt;:</div>
+                        <div class="preview-tabs">
+                            <button class="preview-tab active" onclick="switchTab(this, 'preview-${index}')">Preview</button>
+                            <button class="preview-tab" onclick="switchTab(this, 'latex-${index}')">LaTeX</button>
+                            <button class="preview-tab" onclick="switchTab(this, 'mathml-${index}')">MathML</button>
+                        </div>
+                        <div class="preview-content active" id="preview-${index}">
+                            <div class="equation-preview" id="preview-eq-${index}">
+                                \\(${eq.content}\\)
+                            </div>
+                            <button class="copy-btn" onclick="copyEquationContent('latex-${index}')">Copy LaTeX</button>
+                        </div>
+                        <div class="preview-content" id="latex-${index}">
+                            <div class="equation-latex">${eq.content}</div>
+                            <button class="copy-btn" onclick="copyEquationContent('latex-${index}')">Copy LaTeX</button>
+                        </div>
+                        <div class="preview-content" id="mathml-${index}">
+                            <div class="equation-mathml" id="mathml-eq-${index}">Loading MathML...</div>
+                            <button class="copy-btn" onclick="copyEquationContent('mathml-${index}')">Copy MathML</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            previewHTML += '<h4>🔄 Word Format Preview:</h4>';
+            previewHTML += '<div class="equation-item word-format">';
+            extractedEquations.forEach(eq => {
+                previewHTML += `<div>${eq.placeholder}</div>`;
+            });
+            previewHTML += '</div>';
+
+            preview.innerHTML = previewHTML;
+            
+            // Process MathJax rendering and extract MathML
+            // Process MathJax rendering and extract MathML
+            MathJax.typesetPromise().then(() => {
+                extractedEquations.forEach((eq, index) => {
+                    // Convert LaTeX to MathML using MathJax's tex2mml
+                    try {
+                        const mathml = MathJax.tex2mml(eq.content, {
+                            display: false
+                        });
+                        document.getElementById(`mathml-eq-${index}`).textContent = mathml;
+                    } catch (error) {
+                        document.getElementById(`mathml-eq-${index}`).textContent = `Error converting to MathML: ${error.message}`;
+                    }
+                });
+            });
+        }
+
+        function switchTab(button, contentId) {
+            // Remove active class from all tabs in this equation item
+            const tabs = button.parentElement.querySelectorAll('.preview-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            button.classList.add('active');
+            
+            // Hide all content in this equation item
+            const contents = button.parentElement.parentElement.querySelectorAll('.preview-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Show selected content
+            document.getElementById(contentId).classList.add('active');
+        }
+
+        function copyEquationContent(contentId) {
+            const contentElement = document.getElementById(contentId);
+            let textToCopy = '';
+            
+            if (contentId.startsWith('latex-')) {
+                textToCopy = contentElement.querySelector('.equation-latex').textContent;
+            } else if (contentId.startsWith('mathml-')) {
+                textToCopy = contentElement.querySelector('.equation-mathml').textContent;
+            }
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const button = contentElement.querySelector('.copy-btn');
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function downloadTextFile() {
+            let content = '';
+            extractedEquations.forEach(eq => {
+                content += `<${eq.id}>: $${eq.content}$\n`;
+            });
+
+            downloadFile('math.txt', content, 'text/plain');
+        }
+
+        function downloadWordFormat() {
+            let content = 'WORD DOCUMENT PLACEHOLDERS:\n';
+            content += '='.repeat(40) + '\n\n';
+            
+            content += 'Insert these placeholders in your Word document:\n\n';
+            extractedEquations.forEach(eq => {
+                content += `${eq.placeholder}\n`;
+            });
+
+            content += '\n\nEquation Reference:\n';
+            content += '='.repeat(20) + '\n';
+            extractedEquations.forEach(eq => {
+                content += `${eq.id}: \\(${eq.content}\\)\n`;
+            });
+
+            downloadFile('word_placeholders.txt', content, 'text/plain');
+        }
+
+        function downloadOriginalWithPlaceholders() {
+            downloadFile('modified_html.html', modifiedHTML, 'text/html');
+        }
+
+        function downloadFile(filename, content, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
