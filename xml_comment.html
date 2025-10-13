@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Tag Validator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .table-container {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-row {
+            display: table-row;
+        }
+
+        .table-cell {
+            display: table-cell;
+            vertical-align: top;
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table-cell.left {
+            width: 50%;
+            border-right: 1px solid #eee;
+        }
+
+        .table-cell.right {
+            width: 50%;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .drop-zone {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9fa;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #2980b9;
+            background: #e8f4f8;
+        }
+
+        .drop-zone i {
+            font-size: 3em;
+            color: #3498db;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .drop-zone h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone p {
+            color: #7f8c8d;
+            margin-bottom: 15px;
+        }
+
+        .browse-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s ease;
+        }
+
+        .browse-btn:hover {
+            background: #2980b9;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .file-info h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #34495e;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .info-value {
+            color: #7f8c8d;
+        }
+
+        .error-list {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+
+        .error-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background: #fff5f5;
+        }
+
+        .error-item:last-child {
+            border-bottom: none;
+        }
+
+        .error-type {
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 5px;
+        }
+
+        .error-details {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .error-code {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #495057;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .success-message h3 {
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #ecf0f1;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3498db;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
+        @media (max-width: 768px) {
+            .table-container {
+                display: block;
+            }
+            
+            .table-row {
+                display: block;
+            }
+            
+            .table-cell {
+                display: block;
+                width: 100%;
+                border-right: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>XML Tag Validator</h1>
+            <p>Upload your XML file to check for missing opening/closing tags</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="table-container">
+            <div class="table-row">
+                <div class="table-cell left">
+                    <div class="section-title">Upload XML File</div>
+                    <div class="drop-zone" id="dropZone">
+                        <i>📄</i>
+                        <h3>Drop your XML file here</h3>
+                        <p>or click to browse files</p>
+                        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">
+                            Browse Files
+                        </button>
+                    </div>
+                    <input type="file" id="fileInput" accept=".xml" />
+                </div>
+                
+                <div class="table-cell right">
+                    <div class="section-title">File Information</div>
+                    <div id="fileInfoContainer" class="empty-state">
+                        No file selected
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="table-container">
+                <div class="table-row">
+                    <div class="table-cell left">
+                        <div class="section-title">Validation Results</div>
+                        <div id="validationResults"></div>
+                    </div>
+                    
+                    <div class="table-cell right">
+                        <div class="section-title">Statistics</div>
+                        <div id="statisticsContainer" class="stats-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class XMLTagValidator {
+            constructor() {
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('fileInput');
+
+                // Drag and drop events
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('dragover');
+                });
+
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('dragover');
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        this.handleFile(files[0]);
+                    }
+                });
+
+                // Click to browse
+                dropZone.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                // File input change
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.handleFile(e.target.files[0]);
+                    }
+                });
+            }
+
+            handleFile(file) {
+                if (!file.name.toLowerCase().endsWith('.xml')) {
+                    this.showError('Invalid file type', 'Please select an XML file (.xml)');
+                    return;
+                }
+
+                this.displayFileInfo(file);
+                this.showProgress();
+                this.readFile(file);
+            }
+
+            readFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    this.validateXML(content);
+                };
+                reader.readAsText(file);
+            }
+
+            showProgress() {
+                document.getElementById('resultsSection').classList.remove('hidden');
+                const progressFill = document.getElementById('progressFill');
+                progressFill.style.width = '0%';
+                
+                // Simulate progress
+                setTimeout(() => progressFill.style.width = '30%', 100);
+                setTimeout(() => progressFill.style.width = '70%', 300);
+                setTimeout(() => progressFill.style.width = '100%', 800);
+            }
+
+            displayFileInfo(file) {
+                const container = document.getElementById('fileInfoContainer');
+                container.innerHTML = `
+                    <div class="file-info">
+                        <h3>File Details</h3>
+                        <div class="info-item">
+                            <span class="info-label">Name:</span>
+                            <span class="info-value">${file.name}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Size:</span>
+                            <span class="info-value">${this.formatFileSize(file.size)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Type:</span>
+                            <span class="info-value">${file.type || 'text/xml'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Modified:</span>
+                            <span class="info-value">${new Date(file.lastModified).toLocaleString()}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            validateXML(content) {
+                setTimeout(() => {
+                    const errors = [];
+                    const lines = content.split('\n');
+                    const tagStack = [];
+                    let totalTags = 0;
+                    let commentErrors = 0;
+                    let tagErrors = 0;
+
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i];
+                        const lineNumber = i + 1;
+
+                        // Check for comment errors first
+                        const commentErrorsInLine = this.checkCommentErrors(line, lineNumber);
+                        errors.push(...commentErrorsInLine);
+                        commentErrors += commentErrorsInLine.length;
+
+                        // Check for regular XML tags
+                        const tagErrorsInLine = this.checkXMLTags(line, lineNumber, tagStack);
+                        errors.push(...tagErrorsInLine);
+                        tagErrors += tagErrorsInLine.length;
+
+                        // Count total tags
+                        const tagMatches = line.match(/<[^>]+>/g);
+                        if (tagMatches) {
+                            totalTags += tagMatches.length;
+                        }
+                    }
+
+                    // Check for unclosed tags
+                    tagStack.forEach(tag => {
+                        errors.push({
+                            type: 'Unclosed Tag',
+                            line: tag.line,
+                            details: `Tag "${tag.name}" is never closed`,
+                            code: tag.fullTag
+                        });
+                        tagErrors++;
+                    });
+
+                    this.displayResults(errors, {
+                        totalTags,
+                        commentErrors,
+                        tagErrors,
+                        totalLines: lines.length,
+                        totalErrors: errors.length
+                    });
+                }, 1000);
+            }
+
+            checkCommentErrors(line, lineNumber) {
+                const errors = [];
+                const commentRegex = /<!--[\s\S]*?-->/g;
+                let match;
+
+                while ((match = commentRegex.exec(line)) !== null) {
+                    const comment = match[0];
+                    const commentContent = comment.slice(4, -3); // Remove <!-- and -->
+                    
+                    // Check for unclosed tags within comments
+                    const tagMatches = commentContent.match(/<[^>]*>/g);
+                    if (tagMatches) {
+                        const tagStack = [];
+                        
+                        tagMatches.forEach(tag => {
+                            const cleanTag = tag.replace(/[<>]/g, '');
+                            
+                            if (cleanTag.startsWith('/')) {
+                                // Closing tag
+                                const tagName = cleanTag.substring(1);
+                                if (tagStack.length === 0 || tagStack[tagStack.length - 1] !== tagName) {
+                                    errors.push({
+                                        type: 'Comment Tag Error',
+                                        line: lineNumber,
+                                        details: `Closing tag "${tagName}" without matching opening tag in comment`,
+                                        code: comment
+                                    });
+                                } else {
+                                    tagStack.pop();
+                                }
+                            } else if (!cleanTag.endsWith('/')) {
+                                // Opening tag (not self-closing)
+                                const tagName = cleanTag.split(' ')[0];
+                                tagStack.push(tagName);
+                            }
+                        });
+                        
+                        // Check for unclosed tags in comment
+                        tagStack.forEach(tagName => {
+                            errors.push({
+                                type: 'Comment Tag Error',
+                                line: lineNumber,
+                                details: `Opening tag "${tagName}" without matching closing tag in comment`,
+                                code: comment
+                            });
+                        });
+                    }
+                }
+
+                return errors;
+            }
+
+            checkXMLTags(line, lineNumber, tagStack) {
+                const errors = [];
+                const tagRegex = /<[^>]+>/g;
+                let match;
+
+                while ((match = tagRegex.exec(line)) !== null) {
+                    const tag = match[0];
+                    const tagContent = tag.slice(1, -1); // Remove < and >
+                    
+                    // Skip comments and processing instructions
+                    if (tagContent.startsWith('!') || tagContent.startsWith('?')) {
+                        continue;
+                    }
+                    
+                    if (tagContent.startsWith('/')) {
+                        // Closing tag
+                        const tagName = tagContent.substring(1);
+                        if (tagStack.length === 0) {
+                            errors.push({
+                                type: 'Unmatched Closing Tag',
+                                line: lineNumber,
+                                details: `Closing tag "${tagName}" without matching opening tag`,
+                                code: tag
+                            });
+                        } else {
+                            const lastTag = tagStack[tagStack.length - 1];
+                            if (lastTag.name !== tagName) {
+                                errors.push({
+                                    type: 'Mismatched Tags',
+                                    line: lineNumber,
+                                    details: `Expected closing tag for "${lastTag.name}" but found "${tagName}"`,
+                                    code: `${lastTag.fullTag} ... ${tag}`
+                                });
+                            } else {
+                                tagStack.pop();
+                            }
+                        }
+                    } else if (!tagContent.endsWith('/')) {
+                        // Opening tag (not self-closing)
+                        const tagName = tagContent.split(' ')[0];
+                        tagStack.push({
+                            name: tagName,
+                            line: lineNumber,
+                            fullTag: tag
+                        });
+                    }
+                }
+
+                return errors;
+            }
+
+            displayResults(errors, stats) {
+                const resultsContainer = document.getElementById('validationResults');
+                
+                if (errors.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="success-message">
+                            <h3>✅ Validation Successful</h3>
+                            <p>No missing or mismatched tags found in your XML file!</p>
+                        </div>
+                    `;
+                } else {
+                    const errorHTML = errors.map(error => `
+                        <div class="error-item">
+                            <div class="error-type">${error.type}</div>
+                            <div class="error-details">Line ${error.line}: ${error.details}</div>
+                            <div class="error-code">${error.code}</div>
+                        </div>
+                    `).join('');
+
+                    resultsContainer.innerHTML = `
+                        <div class="error-list">
+                            ${errorHTML}
+                        </div>
+                    `;
+                }
+
+                this.displayStatistics(stats);
+            }
+
+            displayStatistics(stats) {
+                const statsContainer = document.getElementById('statisticsContainer');
+                
+                statsContainer.innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.totalLines}</div>
+                        <div class="stat-label">Total Lines</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.totalTags}</div>
+                        <div class="stat-label">Total Tags</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.totalErrors}</div>
+                        <div class="stat-label">Total Errors</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.commentErrors}</div>
+                        <div class="stat-label">Comment Errors</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${stats.tagErrors}</div>
+                        <div class="stat-label">Tag Errors</div>
+                    </div>
+                `;
+            }
+
+            showError(title, message) {
+                const resultsContainer = document.getElementById('validationResults');
+                resultsContainer.innerHTML = `
+                    <div class="error-item">
+                        <div class="error-type">${title}</div>
+                        <div class="error-details">${message}</div>
+                    </div>
+                `;
+                document.getElementById('resultsSection').classList.remove('hidden');
+            }
+        }
+
+        // Initialize the validator when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new XMLTagValidator();
+        });
+    </script>
+</body>
+</html>
