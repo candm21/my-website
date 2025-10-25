@@ -139,7 +139,7 @@
   p { margin: 15px 0; text-align: justify; }
   
   /* Source tag styling - italic */
-  .citation-source { font-style: italic; color: #ff7373; }
+  .citation-source { font-style: italic; color: #0080ff; }
   
   /* Highlighted italic and bold text */
   em, i { 
@@ -211,9 +211,123 @@
   
   .references { margin-top: 40px; padding-top: 30px; border-top: 3px solid #34495e; }
   .references h2 { color: #2c3e50; font-size: 1.6em; margin-bottom: 20px; }
-  .ref-item { margin-bottom: 15px; padding-left: 30px; text-indent: -30px; font-size: 0.95em; }
-  .ref-label { font-weight: bold; color: #3498db; margin-right: 8px; }
-  
+  .ref-item {
+  margin-bottom: 15px; 
+  padding-left: 30px; 
+  text-indent: -30px; 
+  font-size: 0.95em; 
+  position: relative;
+  cursor: help;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  padding: 10px 15px 10px 45px;
+  margin-left: -15px;
+  margin-right: -15px;
+}
+
+.ref-item:hover {
+  background: linear-gradient(135deg, #e8f4fd, #d4edff);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+  border-left: 4px solid #3498db;
+  transform: translateX(5px);
+}
+
+.ref-label {
+  font-weight: bold; 
+  color: #3498db; 
+  margin-right: 8px;
+  transition: all 0.3s ease;
+}
+
+.ref-item:hover .ref-label {
+  color: #2c3e50;
+  font-size: 1.05em;
+  text-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+}
+
+/* Citation tooltip styles */
+.citation-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #2c3e50;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  max-width: 300px;
+  min-width: 200px;
+  text-align: left;
+}
+
+.citation-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  border: 6px solid transparent;
+  border-top-color: #2c3e50;
+}
+
+.ref-item:hover .citation-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Enhanced tooltip colors */
+.tooltip-pubtype {
+  background: #8e44ad;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+
+}
+
+.tooltip-journal {
+  color: #3498db;
+  font-weight: bold;
+}
+
+.tooltip-year {
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.tooltip-volume {
+  color: #27ae60;
+}
+
+.tooltip-pages {
+  color: #e74c3c;
+}
+
+.tooltip-chapter {
+  color: #9b59b6;
+  font-style: italic;
+}
+
+.tooltip-publisher {
+  color: #e67e22;
+}
+
+.tooltip-edition {
+  color: #16a085;
+}
+
+.tooltip-issue {
+  color: #d35400;
+}
 .footnotes { 
   margin-top: 40px; 
   padding: 25px; 
@@ -380,7 +494,7 @@
       page-break-before: auto;
     }
     /* Hide section IDs and other UI elements */
-    .section-id, .table-id, .fig-id { display: none !important; }
+    .section-id, .table-id, .fig-id, .citation-tooltip { display: none !important; }
   }
 </style>
 </head>
@@ -833,7 +947,7 @@ function renderAbstract(abstract) {
   let html = '<div class="abstract">';
   
   const abstractTitle = abstract.querySelector('title')?.textContent || 'Abstract';
-  html += `<h1>Abstract</h1>`;
+  html += `<h2>${abstractTitle}</h2>`;
   
   // Check if abstract has sections
   const sections = abstract.querySelectorAll('sec');
@@ -921,18 +1035,107 @@ function renderReferences(refList) {
     const label = ref.querySelector('label')?.textContent || '';
     const citation = ref.querySelector('mixed-citation, element-citation');
     let refText = '';
+    let tooltipContent = '';
+    
     if (citation) {
       refText = formatCitationContent(citation);
+      tooltipContent = extractJournalCitation(citation);
     } else {
       refText = getTextContent(ref, ['label']);
     }
+    
     html += `<div class="ref-item">`;
     if (label) html += `<span class="ref-label">${label}</span>`;
-    html += `${refText}</div>`;
+    html += `${refText}`;
+    
+    // Add tooltip if we have journal citation data
+    if (tooltipContent) {
+      html += `<div class="citation-tooltip">${tooltipContent}</div>`;
+    }
+    
+    html += `</div>`;
   });
   
   html += '</div>';
   return html;
+}
+
+function extractJournalCitation(citation) {
+  const pubType = citation.getAttribute('publication-type') || '';
+  const journal = citation.querySelector('source')?.textContent || '';
+  const year = citation.querySelector('year')?.textContent || '';
+  const volume = citation.querySelector('volume')?.textContent || '';
+  const issue = citation.querySelector('issue')?.textContent || '';
+  const fpage = citation.querySelector('fpage')?.textContent || '';
+  const lpage = citation.querySelector('lpage')?.textContent || '';
+  
+  // Book-specific elements
+  const publisherName = citation.querySelector('publisher-name')?.textContent || '';
+  const publisherLoc = citation.querySelector('publisher-loc')?.textContent || '';
+  const edition = citation.querySelector('edition')?.textContent || '';
+  const chapterTitle = citation.querySelector('chapter-title')?.textContent || '';
+  
+  let tooltip = '';
+  
+  // Add publication type badge
+  if (pubType) {
+    tooltip += `<span class="tooltip-pubtype">${pubType.toUpperCase()}</span><br>`;
+  }
+  
+  if (pubType === 'book') {
+    // Book-specific formatting
+    if (chapterTitle) {
+      tooltip += `<span class="tooltip-chapter">Chapter: ${chapterTitle}</span><br>`;
+    }
+    
+    if (publisherName) {
+      tooltip += `<span class="tooltip-publisher">Publisher: ${publisherName}</span>`;
+      if (publisherLoc) {
+        tooltip += `, ${publisherLoc}`;
+      }
+      tooltip += '<br>';
+    }
+    
+    if (edition) {
+      tooltip += `<span class="tooltip-edition">Edition: ${edition}</span><br>`;
+    }
+  } else {
+    // Journal/article formatting
+    if (journal) {
+      tooltip += `<span class="tooltip-journal">Source: ${journal}</span>`;
+    }
+    
+    if (volume) {
+      if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+      tooltip += `<span class="tooltip-volume">Volume: ${volume}</span>`;
+    }
+    
+    if (issue) {
+      if (volume) {
+        tooltip += `(<span class="tooltip-issue">${issue}</span>)`;
+      } else {
+        if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+        tooltip += `<span class="tooltip-issue">Issue: ${issue}</span>`;
+      }
+    }
+  }
+  
+  // Common elements for all publication types
+  if (year) {
+    if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+    tooltip += `<span class="tooltip-year">Year: ${year}</span>`;
+  }
+  
+  if (fpage) {
+    if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+    if (lpage) {
+      tooltip += `<span class="tooltip-pages">Pages: ${fpage}-${lpage}</span>`;
+    } else {
+      tooltip += `<span class="tooltip-pages">Page: ${fpage}</span>`;
+    }
+  }
+  
+  return tooltip || 'No citation information available';
 }
 
 function formatCitationContent(citation) {
@@ -953,7 +1156,7 @@ function formatCitationContent(citation) {
     });
     
     if (authorList.length > 0) {
-      html += authorList.join(', ') + '. ';
+      html += authorList.join(', ') + '';
     }
   }
   
@@ -1002,7 +1205,7 @@ function formatCitationContent(citation) {
             break;
           case 'uri':
             const uri = node.getAttribute('xlink:href') || node.getAttribute('href') || node.textContent;
-            html += ` <span class="citation-uri"><a href="${uri}" target="_blank">${formatContent(node) || uri}</a></span>`;
+            html += `<span class="citation-uri"><a href="${uri}" target="_blank">${formatContent(node) || uri}</a></span>`;
             break;
           default:
             html += formatContent(node);
@@ -1018,7 +1221,7 @@ function formatCitationContent(citation) {
         } else if (text.includes('–') || text.includes('-')) {
           html += `<span class="citation-page-range">${text}</span>`;
         } else {
-          html += ` ${text}`;
+          html += `${text}`;
         }
       }
     }
@@ -1754,6 +1957,7 @@ function exportPDF() {
         margin-top: 20px;
         margin-bottom: 12px;
         font-weight: bold;
+		font-style: italic;
       }
       h3 { 
         font-size: 12pt;
@@ -1859,6 +2063,7 @@ function exportPDF() {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
+	  .citation-source { font-style: italic; color: #0080ff; }
       .footnotes h2 { 
         font-size: 13pt;
         margin-bottom: 10px;
@@ -1898,7 +2103,7 @@ function exportPDF() {
           page-break-inside: avoid;
         }
         /* Hide section IDs and other UI elements */
-        .section-id, .table-id, .fig-id { display: none !important; }
+        .section-id, .table-id, .fig-id, .citation-tooltip { display: none !important; }
       }
       
       /* Force colors in print */
