@@ -1,673 +1,1851 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XML Tag Validator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-
-        .header p {
-            font-size: 1em;
-            opacity: 0.8;
-        }
-
-        .table-container {
-            display: table;
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table-row {
-            display: table-row;
-        }
-
-        .table-cell {
-            display: table-cell;
-            vertical-align: top;
-            padding: 30px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table-cell.left {
-            width: 50%;
-            border-right: 1px solid #eee;
-        }
-
-        .table-cell.right {
-            width: 50%;
-        }
-
-        .section-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #3498db;
-        }
-
-        .drop-zone {
-            border: 2px dashed #3498db;
-            border-radius: 10px;
-            padding: 40px 20px;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            background: #f8f9fa;
-        }
-
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: #2980b9;
-            background: #e8f4f8;
-        }
-
-        .drop-zone i {
-            font-size: 3em;
-            color: #3498db;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .drop-zone h3 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-
-        .drop-zone p {
-            color: #7f8c8d;
-            margin-bottom: 15px;
-        }
-
-        .browse-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: background 0.3s ease;
-        }
-
-        .browse-btn:hover {
-            background: #2980b9;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .file-info {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-        }
-
-        .file-info h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-        }
-
-        .info-item {
-            margin-bottom: 10px;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .info-item:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #34495e;
-            display: inline-block;
-            width: 100px;
-        }
-
-        .info-value {
-            color: #7f8c8d;
-        }
-
-        .error-list {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-        }
-
-        .error-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            background: #fff5f5;
-        }
-
-        .error-item:last-child {
-            border-bottom: none;
-        }
-
-        .error-type {
-            font-weight: bold;
-            color: #e74c3c;
-            margin-bottom: 5px;
-        }
-
-        .error-details {
-            color: #2c3e50;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-        }
-
-        .error-code {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            color: #495057;
-        }
-
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .success-message h3 {
-            margin-bottom: 10px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-        }
-
-        .stat-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #3498db;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: #ecf0f1;
-            border-radius: 2px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: #3498db;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: #7f8c8d;
-            font-style: italic;
-            padding: 40px 20px;
-        }
-
-        @media (max-width: 768px) {
-            .table-container {
-                display: block;
-            }
-            
-            .table-row {
-                display: block;
-            }
-            
-            .table-cell {
-                display: block;
-                width: 100%;
-                border-right: none;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JATS XML Viewer</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 20px; line-height: 1.8; background: #f5f5f5; color: #2c3e50; }
+  
+  .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  
+  .drop-zone { border: 3px dashed #3498db; border-radius: 12px; padding: 60px 20px; text-align: center; margin-bottom: 30px; background: #ecf7fd; cursor: pointer; transition: all 0.3s; max-width: 900px; margin: 0 auto 30px; }
+  .drop-zone.dragover { background: #d4edff; border-color: #2980b9; transform: scale(1.02); }
+  .drop-zone-icon { font-size: 48px; margin-bottom: 15px; }
+  .drop-zone-text { font-size: 18px; color: #34495e; margin-bottom: 10px; }
+  .drop-zone-hint { font-size: 14px; color: #7f8c8d; }
+  .file-input { display: none; }
+  
+  /* Floating buttons */
+  .floating-buttons {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+  }
+  .floating-btn {
+    padding: 10px 15px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .floating-btn:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .export-bar { max-width: 900px; margin: 0 auto 20px; display: none; justify-content: flex-end; gap: 10px; }
+  .export-bar.visible { display: flex; }
+  .export-btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+  .export-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+  .export-pdf { background: #e74c3c; color: white; }
+  .export-pdf:hover { background: #c0392b; }
+  .export-html { background: #27ae60; color: white; }
+  .export-html:hover { background: #229954; }
+  
+  .metadata-section { max-width: 900px; margin: 0 auto 30px; background: #fff; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
+  .metadata-section.visible { display: block; }
+  .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .metadata-column h3 { color: #2c3e50; font-size: 1.3em; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  .metadata-item { margin: 10px 0; font-size: 0.95em; }
+  .metadata-label { font-weight: 600; color: #555; display: inline-block; min-width: 150px; }
+  .metadata-value { color: #2c3e50; }
+  
+  /* Validation Section Styles */
+  .validation-section { max-width: 900px; margin: 0 auto 30px; background: #fff; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; border-left: 4px solid #e74c3c; }
+  .validation-section.visible { display: block; }
+  .validation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ecf0f1; }
+  .validation-title { font-size: 1.4em; font-weight: 600; color: #2c3e50; }
+  .validation-stats { display: flex; gap: 20px; }
+  .stat-item { padding: 8px 15px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em; font-weight: 600; }
+  .errors-list { max-height: 400px; overflow-y: auto; }
+  .error-item { padding: 15px; margin-bottom: 10px; background: #fff5f5; border-left: 4px solid #e74c3c; border-radius: 4px; }
+  .error-type { font-weight: 600; color: #c0392b; margin-bottom: 5px; }
+  .error-line { color: #7f8c8d; font-size: 0.9em; margin-bottom: 5px; }
+  .error-details { color: #2c3e50; margin-bottom: 8px; }
+  .error-code { background: #2c3e50; color: white; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.85em; margin-top: 8px; }
+  
+  .article-header { border-bottom: 3px solid #34495e; padding-bottom: 20px; margin-bottom: 30px; }
+  .article-type { display: inline-block; background: #3498db; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; text-transform: uppercase; margin-bottom: 15px; font-weight: bold; }
+  .article-title { font-size: 2.2em; color: #2c3e50; margin: 15px 0; font-weight: 700; line-height: 1.3; }
+  .article-subtitle { font-size: 1.4em; color: #7f8c8d; margin: 10px 0; font-style: italic; }
+  
+  .authors { margin: 20px 0; font-size: 1.1em; }
+  .author { display: inline; color: #2c3e50; }
+  .author-sup { color: #3498db; font-size: 0.9em; vertical-align: super; }
+  .author:not(:last-child)::after { content: ", "; }
+  
+  .affiliations { margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #3498db; }
+  .aff-item { margin: 8px 0; font-size: 0.95em; color: #555; }
+  .aff-label { font-weight: bold; color: #3498db; margin-right: 6px; }
+  
+  .correspondence { margin: 20px 0; padding: 15px; background: #fff9e6; border-left: 4px solid #f39c12; }
+  .correspondence-label { font-weight: bold; color: #e67e22; margin-right: 8px; }
+  
+  /* Enhanced Abstract Styles */
+  .abstract { margin: 30px 0; padding: 25px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; }
+  .abstract h2 { margin-top: 0; color: #2c3e50; font-size: 1.4em; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  .abstract-section { margin: 20px 0; }
+  .abstract-section-title { font-weight: 600; color: #2c3e50; margin-bottom: 8px; font-size: 1.1em; }
+  .abstract-section-content { margin-left: 20px; }
+  .abstract-section-content p { margin: 8px 0; }
+  
+  /* Appendix Styles */
+  .app-group { margin: 40px 0; padding: 30px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; }
+  .app-group h2 { color: #8e44ad; border-bottom: 2px solid #8e44ad; padding-bottom: 8px; }
+  .app { margin: 25px 0; padding: 20px; background: white; border-radius: 6px; border-left: 4px solid #9b59b6; }
+  .app-title { color: #8e44ad; font-size: 1.4em; margin-bottom: 15px; font-weight: 600; }
+  
+  /* Biography Styles */
+  .bio { margin: 30px 0; padding: 25px; background: #f0f8ff; border-radius: 8px; border: 1px solid #bde0fe; }
+  .bio h3 { color: #2980b9; margin-top: 0; border-bottom: 1px solid #3498db; padding-bottom: 8px; }
+  
+  section { margin: 30px 0; position: relative; }
+  /* Heading styles with distinct colors and sizes */
+  h1 { font-size: 1.8em; color: #2c3e50; margin-top: 40px; margin-bottom: 20px; font-weight: 700; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  h2 { font-size: 1.5em; color: #34495e; margin-top: 35px; margin-bottom: 15px; font-weight: 600; border-left: 4px solid #3498db; padding-left: 12px; }
+  h3 { font-size: 1.3em; color: #2980b9; margin-top: 30px; margin-bottom: 12px; font-weight: 600; }
+  h4 { font-size: 1.1em; color: #5d6d7e; margin-top: 25px; margin-bottom: 10px; font-weight: 600; font-style: italic; }
+  h5 { font-size: 1em; color: #7f8c8d; margin-top: 20px; margin-bottom: 8px; font-weight: 600; }
+  h6 { font-size: 0.9em; color: #95a5a6; margin-top: 18px; margin-bottom: 6px; font-weight: 600; }
+  
+  /* Section ID indicator */
+  .section-id { 
+    position: absolute; 
+    top: 5px; 
+    right: 5px; 
+    background: #e74c3c; 
+    color: white; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 1em; 
+    font-family: monospace; 
+    opacity: 0.7; 
+  }
+  
+  p { margin: 15px 0; text-align: justify; }
+  
+  /* Source tag styling - italic */
+  .source { font-style: italic; color: #7f8c8d; }
+  
+  /* Highlighted italic and bold text */
+  em, i { 
+    background-color: #ccff99; 
+    padding: 1px 4px; 
+    border-radius: 3px; 
+  }
+  
+  strong, b { 
+    background-color: #b3ff99; 
+    padding: 1px 4px; 
+    border-radius: 3px; 
+  }
+  
+  .table-wrap { margin: 25px 0; overflow-x: auto; position: relative; }
+  .table-id { 
+    position: absolute; 
+    top: 5px; 
+    right: 5px; 
+    background: #27ae60; 
+    color: white; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 1em; 
+    font-family: monospace; 
+    opacity: 0.7; 
+  }
+  table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #fff; font-size: 0.95em; }
+  caption { font-weight: bold; text-align: left; padding: 10px 0; color: #2c3e50; font-size: 1.1em; }
+  .table-label { font-weight: bold; color: #3498db; margin-right: 8px; }
+  th, td { border: 1px solid #bdc3c7; padding: 10px 12px; vertical-align: top; text-align: left; }
+  th { background: #ecf0f1; font-weight: 600; color: #2c3e50; }
+  tr:hover { background: #f8f9fa; }
+  .table-footer { font-size: 0.9em; color: #7f8c8d; margin-top: 8px; font-style: italic; }
+  .table-footnote { font-size: 0.85em; color: #7f8c8d; margin-top: 5px; padding-left: 10px; border-left: 2px solid #bdc3c7; }
+  
+  /* References Table Styles */
+  .references-table { margin: 25px 0; overflow-x: auto; }
+  .references-table table { width: 100%; }
+  .ref-type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
+  .ref-type-journal { background: #e8f6f3; color: #1a5276; border: 1px solid #a3e4d7; }
+  .ref-type-book { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
+  .ref-type-web { background: #eaf2f8; color: #2874a6; border: 1px solid #aed6f1; }
+  .ref-type-conf { background: #f4ecf7; color: #6c3483; border: 1px solid #d7bde2; }
+  .ref-type-thesis { background: #fdebd0; color: #ca6f1e; border: 1px solid #f5b041; }
+  .ref-type-other { background: #f2f3f4; color: #566573; border: 1px solid #d5dbdb; }
+  
+  .fig-wrap { margin: 25px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; text-align: center; position: relative; }
+  .fig-id { 
+    position: absolute; 
+    top: 5px; 
+    right: 5px; 
+    background: #f39c12; 
+    color: white; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 1em; 
+    font-family: monospace; 
+    opacity: 0.7; 
+  }
+  .fig-label { font-weight: bold; color: #3498db; margin-right: 8px; }
+  .fig-caption { margin-top: 15px; text-align: left; font-size: 0.95em; color: #555; }
+  .fig-graphic { max-width: 100%; height: auto; margin: 15px 0; border: 1px solid #ddd; }
+  
+  /* XRef styling */
+  .xref { color: #e74c3c; font-weight: 600; text-decoration: underline; cursor: pointer; }
+  .xref:hover { color: #c0392b; background: #fff5f5; }
+  
+  /* Inline formula styling */
+  .inline-formula { 
+    background: #ffefbf; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    border: 1px solid #e1e4e8; 
+    font-family: "Times New Roman", serif; 
+  }
+  
+  ul, ol { margin: 15px 0; padding-left: 30px; }
+  li { margin: 8px 0; }
+  
+  .references { margin-top: 40px; padding-top: 30px; border-top: 3px solid #34495e; }
+  .references h2 { color: #2c3e50; font-size: 1.6em; margin-bottom: 20px; }
+  .ref-item { margin-bottom: 15px; padding-left: 30px; text-indent: -30px; font-size: 0.95em; }
+  .ref-label { font-weight: bold; color: #3498db; margin-right: 8px; }
+  
+  .footnotes { margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; }
+  .footnotes h2 { color: #2c3e50; font-size: 1.4em; margin-bottom: 15px; }
+  .fn-item { margin-bottom: 12px; font-size: 0.9em; }
+  .fn-label { font-weight: bold; color: #e67e22; margin-right: 6px; }
+  
+  .keywords { margin: 20px 0; }
+  .keywords-label { font-weight: bold; color: #2c3e50; margin-right: 8px; }
+  .keyword { display: inline-block; background: #ecf0f1; padding: 4px 10px; margin: 4px; border-radius: 4px; font-size: 0.9em; }
+  
+  /* Style for unstyled elements */
+  .unstyled-element { 
+    margin: 15px 0; 
+    padding: 10px; 
+    background: #f9f9f9; 
+    border-left: 3px solid #95a5a6; 
+    border: 2px dashed #e74c3c;
+  }
+  .unstyled-tag { 
+    background: #fff5f5; 
+    color: #c0392b; 
+    padding: 2px 4px; 
+    border-radius: 3px; 
+    font-family: monospace; 
+    font-size: 0.9em; 
+    margin: 0 2px; 
+  }
+  
+  /* Print styles */
+  @media print {
+    body {
+      background: white !important;
+      font-family: "Times New Roman", Times, serif !important;
+      font-size: 12pt;
+      line-height: 1.6;
+      color: #000;
+      padding: 15mm;
+      margin: 0;
+    }
+    .container {
+      max-width: 100%;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+    }
+    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons { 
+      display: none !important; 
+    }
+    .article-type {
+      background: #3498db !important;
+      color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .affiliations {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .correspondence {
+      background: #fff9e6 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .abstract {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    th {
+      background: #ecf0f1 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .fig-wrap {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .keyword {
+      background: #ecf0f1 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .footnotes {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    /* Remove background highlights for print */
+    em, i, strong, b {
+      background-color: transparent !important;
+      padding: 0 !important;
+    }
+    /* Page break controls */
+    h1, h2, h3 {
+      page-break-after: avoid;
+    }
+    table, .table-wrap, .fig-wrap {
+      page-break-inside: avoid;
+    }
+    .references {
+      page-break-before: auto;
+    }
+    /* Hide section IDs and other UI elements */
+    .section-id, .table-id, .fig-id { display: none !important; }
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>XML Tag Validator</h1>
-            <p>Upload your XML file to check for missing opening/closing tags</p>
-        </div>
-
-        <!-- Upload Section -->
-        <div class="table-container">
-            <div class="table-row">
-                <div class="table-cell left">
-                    <div class="section-title">Upload XML File</div>
-                    <div class="drop-zone" id="dropZone">
-                        <i>📄</i>
-                        <h3>Drop your XML file here</h3>
-                        <p>or click to browse files</p>
-                        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">
-                            Browse Files
-                        </button>
-                    </div>
-                    <input type="file" id="fileInput" accept=".xml" />
-                </div>
-                
-                <div class="table-cell right">
-                    <div class="section-title">File Information</div>
-                    <div id="fileInfoContainer" class="empty-state">
-                        No file selected
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Results Section -->
-        <div id="resultsSection" class="hidden">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            
-            <div class="table-container">
-                <div class="table-row">
-                    <div class="table-cell left">
-                        <div class="section-title">Validation Results</div>
-                        <div id="validationResults"></div>
-                    </div>
-                    
-                    <div class="table-cell right">
-                        <div class="section-title">Statistics</div>
-                        <div id="statisticsContainer" class="stats-grid"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Floating buttons -->
+  <div class="floating-buttons">
+    <button id="browseBtn" class="floating-btn">
+      <span>📁</span> Browse
+    </button>
+    <button id="refreshBtn" class="floating-btn">
+      <span>🔄</span> Refresh
+    </button>
+  </div>
+  
+  <div id="dropZone" class="drop-zone">
+    <div class="drop-zone-icon">📄</div>
+    <div class="drop-zone-text">Drag & Drop your NLM XML file here</div>
+    <div class="drop-zone-hint">or click to browse</div>
+    <input type="file" id="fileInput" class="file-input" accept=".xml">
+  </div>
+  
+  <div id="exportBar" class="export-bar">
+    <button class="export-btn export-html" onclick="exportHTML()">
+      <span>📄</span> Export HTML
+    </button>
+    <button class="export-btn export-pdf" onclick="exportPDF()">
+      <span>📑</span> Print / Save as PDF
+    </button>
+  </div>
+  
+  <div id="metadataSection" class="metadata-section">
+    <div class="metadata-grid">
+      <div class="metadata-column">
+        <h3>Journal Information</h3>
+        <div id="journalInfo"></div>
+      </div>
+      <div class="metadata-column">
+        <h3>Article Information</h3>
+        <div id="articleInfo"></div>
+      </div>
     </div>
+  </div>
 
-    <script>
-        class XMLTagValidator {
-            constructor() {
-                this.setupEventListeners();
-            }
+  <!-- Validation Section -->
+  <div id="validationSection" class="validation-section">
+    <div class="validation-header">
+      <div class="validation-title">XML Validation Results</div>
+      <div class="validation-stats">
+        <div class="stat-item" id="totalTags">Tags: 0</div>
+        <div class="stat-item" id="totalLines">Lines: 0</div>
+        <div class="stat-item" id="totalErrors">Errors: 0</div>
+        <div class="stat-item" id="commentErrors">Comment Errors: 0</div>
+      </div>
+    </div>
+    <div id="errorsList" class="errors-list"></div>
+  </div>
+  
+  <div id="output"></div>
 
-            setupEventListeners() {
-                const dropZone = document.getElementById('dropZone');
-                const fileInput = document.getElementById('fileInput');
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const output = document.getElementById('output');
+const exportBar = document.getElementById('exportBar');
+const metadataSection = document.getElementById('metadataSection');
+const validationSection = document.getElementById('validationSection');
+const journalInfo = document.getElementById('journalInfo');
+const articleInfo = document.getElementById('articleInfo');
+const errorsList = document.getElementById('errorsList');
+const totalTagsEl = document.getElementById('totalTags');
+const totalLinesEl = document.getElementById('totalLines');
+const totalErrorsEl = document.getElementById('totalErrors');
+const commentErrorsEl = document.getElementById('commentErrors');
+const browseBtn = document.getElementById('browseBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+let currentArticleTitle = 'article';
+let currentFile = null;
 
-                // Drag and drop events
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.add('dragover');
-                });
+// Global counters for metadata
+let totalTables = 0;
+let totalFigures = 0;
+let totalInlineFormulas = 0;
+let totalDisplayFormulas = 0;
+let totalRefs = 0;
 
-                dropZone.addEventListener('dragleave', () => {
-                    dropZone.classList.remove('dragover');
-                });
+// Track unstyled elements
+let unstyledElements = new Set();
 
-                dropZone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.remove('dragover');
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0) {
-                        this.handleFile(files[0]);
-                    }
-                });
+// Event listeners for floating buttons
+browseBtn.addEventListener('click', () => fileInput.click());
+refreshBtn.addEventListener('click', () => {
+  if (currentFile) {
+    processFile(currentFile);
+  } else {
+    alert('No file loaded. Please browse for a file first.');
+  }
+});
 
-                // Click to browse
-                dropZone.addEventListener('click', () => {
-                    fileInput.click();
-                });
+dropZone.addEventListener('click', () => fileInput.click());
 
-                // File input change
-                fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) {
-                        this.handleFile(e.target.files[0]);
-                    }
-                });
-            }
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
 
-            handleFile(file) {
-                if (!file.name.toLowerCase().endsWith('.xml')) {
-                    this.showError('Invalid file type', 'Please select an XML file (.xml)');
-                    return;
-                }
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
 
-                this.displayFileInfo(file);
-                this.showProgress();
-                this.readFile(file);
-            }
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.xml')) {
+    currentFile = file;
+    processFile(file);
+  } else {
+    alert('Please drop a valid XML file');
+  }
+});
 
-            readFile(file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const content = e.target.result;
-                    this.validateXML(content);
-                };
-                reader.readAsText(file);
-            }
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    currentFile = file;
+    processFile(file);
+  }
+});
 
-            showProgress() {
-                document.getElementById('resultsSection').classList.remove('hidden');
-                const progressFill = document.getElementById('progressFill');
-                progressFill.style.width = '0%';
-                
-                // Simulate progress
-                setTimeout(() => progressFill.style.width = '30%', 100);
-                setTimeout(() => progressFill.style.width = '70%', 300);
-                setTimeout(() => progressFill.style.width = '100%', 800);
-            }
+async function processFile(file) {
+  try {
+    const text = await file.text();
+    // Run XML validation
+    validateXML(text);
+    // Process and display XML content
+    processXMLText(text);
+    // Hide drop zone after successful file load
+    dropZone.style.display = 'none';
+  } catch (error) {
+    output.innerHTML = `<div class="container"><p style="color: red;">Error processing file: ${error.message}</p></div>`;
+    console.error(error);
+  }
+}
 
-            displayFileInfo(file) {
-                const container = document.getElementById('fileInfoContainer');
-                container.innerHTML = `
-                    <div class="file-info">
-                        <h3>File Details</h3>
-                        <div class="info-item">
-                            <span class="info-label">Name:</span>
-                            <span class="info-value">${file.name}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Size:</span>
-                            <span class="info-value">${this.formatFileSize(file.size)}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Type:</span>
-                            <span class="info-value">${file.type || 'text/xml'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Modified:</span>
-                            <span class="info-value">${new Date(file.lastModified).toLocaleString()}</span>
-                        </div>
-                    </div>
-                `;
-            }
+function validateXML(content) {
+  setTimeout(() => {
+    const errors = [];
+    const lines = content.split('\n');
+    let totalTags = 0;
+    let commentErrors = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNumber = i + 1;
 
-            formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
+      const commentErrorsInLine = checkCommentErrors(line, lineNumber);
+      errors.push(...commentErrorsInLine);
+      commentErrors += commentErrorsInLine.length;
 
-            validateXML(content) {
-                setTimeout(() => {
-                    const errors = [];
-                    const lines = content.split('\n');
-                    const tagStack = [];
-                    let totalTags = 0;
-                    let commentErrors = 0;
-                    let tagErrors = 0;
+      const tagMatches = line.match(/<[^>]+>/g);
+      if (tagMatches) {
+        totalTags += tagMatches.length;
+      }
+    }
 
-                    for (let i = 0; i < lines.length; i++) {
-                        const line = lines[i];
-                        const lineNumber = i + 1;
+    displayValidationResults(errors, {
+      totalTags,
+      commentErrors,
+      totalLines: lines.length,
+      totalErrors: errors.length
+    });
+  }, 100);
+}
 
-                        // Check for comment errors first
-                        const commentErrorsInLine = this.checkCommentErrors(line, lineNumber);
-                        errors.push(...commentErrorsInLine);
-                        commentErrors += commentErrorsInLine.length;
+function checkCommentErrors(line, lineNumber) {
+  const errors = [];
+  const commentRegex = /<!--[\s\S]*?-->/g;
+  let match;
 
-                        // Check for regular XML tags
-                        const tagErrorsInLine = this.checkXMLTags(line, lineNumber, tagStack);
-                        errors.push(...tagErrorsInLine);
-                        tagErrors += tagErrorsInLine.length;
-
-                        // Count total tags
-                        const tagMatches = line.match(/<[^>]+>/g);
-                        if (tagMatches) {
-                            totalTags += tagMatches.length;
-                        }
-                    }
-
-                    // Check for unclosed tags
-                    tagStack.forEach(tag => {
-                        errors.push({
-                            type: 'Unclosed Tag',
-                            line: tag.line,
-                            details: `Tag "${tag.name}" is never closed`,
-                            code: tag.fullTag
-                        });
-                        tagErrors++;
-                    });
-
-                    this.displayResults(errors, {
-                        totalTags,
-                        commentErrors,
-                        tagErrors,
-                        totalLines: lines.length,
-                        totalErrors: errors.length
-                    });
-                }, 1000);
-            }
-
-            checkCommentErrors(line, lineNumber) {
-                const errors = [];
-                const commentRegex = /<!--[\s\S]*?-->/g;
-                let match;
-
-                while ((match = commentRegex.exec(line)) !== null) {
-                    const comment = match[0];
-                    const commentContent = comment.slice(4, -3); // Remove <!-- and -->
-                    
-                    // Check for unclosed tags within comments
-                    const tagMatches = commentContent.match(/<[^>]*>/g);
-                    if (tagMatches) {
-                        const tagStack = [];
-                        
-                        tagMatches.forEach(tag => {
-                            const cleanTag = tag.replace(/[<>]/g, '');
-                            
-                            if (cleanTag.startsWith('/')) {
-                                // Closing tag
-                                const tagName = cleanTag.substring(1);
-                                if (tagStack.length === 0 || tagStack[tagStack.length - 1] !== tagName) {
-                                    errors.push({
-                                        type: 'Comment Tag Error',
-                                        line: lineNumber,
-                                        details: `Closing tag "${tagName}" without matching opening tag in comment`,
-                                        code: comment
-                                    });
-                                } else {
-                                    tagStack.pop();
-                                }
-                            } else if (!cleanTag.endsWith('/')) {
-                                // Opening tag (not self-closing)
-                                const tagName = cleanTag.split(' ')[0];
-                                tagStack.push(tagName);
-                            }
-                        });
-                        
-                        // Check for unclosed tags in comment
-                        tagStack.forEach(tagName => {
-                            errors.push({
-                                type: 'Comment Tag Error',
-                                line: lineNumber,
-                                details: `Opening tag "${tagName}" without matching closing tag in comment`,
-                                code: comment
-                            });
-                        });
-                    }
-                }
-
-                return errors;
-            }
-
-            checkXMLTags(line, lineNumber, tagStack) {
-                const errors = [];
-                const tagRegex = /<[^>]+>/g;
-                let match;
-
-                while ((match = tagRegex.exec(line)) !== null) {
-                    const tag = match[0];
-                    const tagContent = tag.slice(1, -1); // Remove < and >
-                    
-                    // Skip comments and processing instructions
-                    if (tagContent.startsWith('!') || tagContent.startsWith('?')) {
-                        continue;
-                    }
-                    
-                    if (tagContent.startsWith('/')) {
-                        // Closing tag
-                        const tagName = tagContent.substring(1);
-                        if (tagStack.length === 0) {
-                            errors.push({
-                                type: 'Unmatched Closing Tag',
-                                line: lineNumber,
-                                details: `Closing tag "${tagName}" without matching opening tag`,
-                                code: tag
-                            });
-                        } else {
-                            const lastTag = tagStack[tagStack.length - 1];
-                            if (lastTag.name !== tagName) {
-                                errors.push({
-                                    type: 'Mismatched Tags',
-                                    line: lineNumber,
-                                    details: `Expected closing tag for "${lastTag.name}" but found "${tagName}"`,
-                                    code: `${lastTag.fullTag} ... ${tag}`
-                                });
-                            } else {
-                                tagStack.pop();
-                            }
-                        }
-                    } else if (!tagContent.endsWith('/')) {
-                        // Opening tag (not self-closing)
-                        const tagName = tagContent.split(' ')[0];
-                        tagStack.push({
-                            name: tagName,
-                            line: lineNumber,
-                            fullTag: tag
-                        });
-                    }
-                }
-
-                return errors;
-            }
-
-            displayResults(errors, stats) {
-                const resultsContainer = document.getElementById('validationResults');
-                
-                if (errors.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div class="success-message">
-                            <h3>✅ Validation Successful</h3>
-                            <p>No missing or mismatched tags found in your XML file!</p>
-                        </div>
-                    `;
-                } else {
-                    const errorHTML = errors.map(error => `
-                        <div class="error-item">
-                            <div class="error-type">${error.type}</div>
-                            <div class="error-details">Line ${error.line}: ${error.details}</div>
-                            <div class="error-code">${error.code}</div>
-                        </div>
-                    `).join('');
-
-                    resultsContainer.innerHTML = `
-                        <div class="error-list">
-                            ${errorHTML}
-                        </div>
-                    `;
-                }
-
-                this.displayStatistics(stats);
-            }
-
-            displayStatistics(stats) {
-                const statsContainer = document.getElementById('statisticsContainer');
-                
-                statsContainer.innerHTML = `
-                    <div class="stat-item">
-                        <div class="stat-number">${stats.totalLines}</div>
-                        <div class="stat-label">Total Lines</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${stats.totalTags}</div>
-                        <div class="stat-label">Total Tags</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${stats.totalErrors}</div>
-                        <div class="stat-label">Total Errors</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${stats.commentErrors}</div>
-                        <div class="stat-label">Comment Errors</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${stats.tagErrors}</div>
-                        <div class="stat-label">Tag Errors</div>
-                    </div>
-                `;
-            }
-
-            showError(title, message) {
-                const resultsContainer = document.getElementById('validationResults');
-                resultsContainer.innerHTML = `
-                    <div class="error-item">
-                        <div class="error-type">${title}</div>
-                        <div class="error-details">${message}</div>
-                    </div>
-                `;
-                document.getElementById('resultsSection').classList.remove('hidden');
-            }
+  while ((match = commentRegex.exec(line)) !== null) {
+    const comment = match[0];
+    const commentContent = comment.slice(4, -3);
+    
+    const tagMatches = commentContent.match(/<[^>]*>/g);
+    if (tagMatches) {
+      const tagStack = [];
+      
+      tagMatches.forEach(tag => {
+        const cleanTag = tag.replace(/[<>]/g, '');
+        
+        if (cleanTag.startsWith('/')) {
+          const tagName = cleanTag.substring(1);
+          if (tagStack.length === 0 || tagStack[tagStack.length - 1] !== tagName) {
+            errors.push({
+              type: 'Comment Tag Error',
+              line: lineNumber,
+              details: `Closing tag "${tagName}" without matching opening tag in comment`,
+              code: comment
+            });
+          } else {
+            tagStack.pop();
+          }
+        } else if (!cleanTag.endsWith('/')) {
+          const tagName = cleanTag.split(' ')[0];
+          tagStack.push(tagName);
         }
+      });
 
-        // Initialize the validator when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            new XMLTagValidator();
+      tagStack.forEach(tagName => {
+        errors.push({
+          type: 'Comment Tag Error',
+          line: lineNumber,
+          details: `Opening tag "${tagName}" without matching closing tag in comment`,
+          code: comment
         });
-    </script>
+      });
+    }
+  }
+  
+  return errors;
+}
+
+function displayValidationResults(errors, stats) {
+  // Update stats
+  totalTagsEl.textContent = `Tags: ${stats.totalTags}`;
+  totalLinesEl.textContent = `Lines: ${stats.totalLines}`;
+  totalErrorsEl.textContent = `Errors: ${stats.totalErrors}`;
+  commentErrorsEl.textContent = `Comment Errors: ${stats.commentErrors}`;
+  
+  // Display errors
+  errorsList.innerHTML = '';
+  
+  if (errors.length === 0) {
+    errorsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #27ae60;">No validation errors found!</div>';
+  } else {
+    errors.forEach(error => {
+      const errorEl = document.createElement('div');
+      errorEl.className = 'error-item';
+      errorEl.innerHTML = `
+        <div class="error-type">${error.type}</div>
+        <div class="error-line">Line ${error.line}</div>
+        <div class="error-details">${error.details}</div>
+        ${error.code ? `<div class="error-code">${error.code}</div>` : ''}
+      `;
+      errorsList.appendChild(errorEl);
+    });
+  }
+  
+  validationSection.classList.add('visible');
+}
+
+function processXMLText(text) {
+  try {
+    // Reset counters and trackers
+    totalTables = 0;
+    totalFigures = 0;
+    totalInlineFormulas = 0;
+    totalDisplayFormulas = 0;
+    totalRefs = 0;
+    unstyledElements.clear();
+    
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "text/xml");
+    
+    if (xml.querySelector('parsererror')) {
+      output.innerHTML = '<div class="container"><p style="color: red;">Error parsing XML file. Please check the file format.</p></div>';
+      return;
+    }
+    
+    // Count elements
+    countElements(xml);
+    
+    // Extract and display metadata
+    displayMetadata(xml);
+    
+    let html = '<div class="container">';
+    
+    const articleType = xml.querySelector('article')?.getAttribute('article-type') || 'research-article';
+    html += `<div class="article-type">${formatText(articleType.replace(/-/g, ' '))}</div>`;
+    
+    html += '<div class="article-header">';
+    
+    const title = xml.querySelector("article-title");
+    if (title) {
+      currentArticleTitle = title.textContent.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+      html += `<h1 class="article-title">${formatContent(title)}</h1>`;
+    }
+    
+    const subtitle = xml.querySelector("subtitle");
+    if (subtitle) {
+      html += `<div class="article-subtitle">${formatContent(subtitle)}</div>`;
+    }
+    
+    const contribGroup = xml.querySelector("contrib-group");
+    if (contribGroup) {
+      const authors = contribGroup.querySelectorAll('contrib[contrib-type="author"]');
+      if (authors.length > 0) {
+        html += '<div class="authors">';
+        authors.forEach((author) => {
+          const name = author.querySelector('name');
+          if (name) {
+            const surname = name.querySelector('surname')?.textContent || '';
+            const givenNames = name.querySelector('given-names')?.textContent || '';
+            const xrefs = author.querySelectorAll('xref[ref-type="aff"]');
+            let supText = '';
+            xrefs.forEach(xref => {
+              supText += `<span class="author-sup">${xref.textContent}</span>`;
+            });
+            html += `<span class="author">${givenNames} ${surname}${supText}</span>`;
+          }
+        });
+        html += '</div>';
+      }
+    }
+    
+    const affs = xml.querySelectorAll('aff');
+    if (affs.length > 0) {
+      html += '<div class="affiliations">';
+      affs.forEach(aff => {
+        const label = aff.querySelector('label')?.textContent || '';
+        const affText = getTextContent(aff, ['label']);
+        html += `<div class="aff-item">`;
+        if (label) html += `<span class="aff-label">${label}</span>`;
+        html += `${affText}</div>`;
+      });
+      html += '</div>';
+    }
+    
+    const corresp = xml.querySelector('author-notes corresp, corresp');
+    if (corresp) {
+      const correspText = formatContent(corresp);
+      html += `<div class="correspondence"><span class="correspondence-label">*Correspondence:</span> ${correspText}</div>`;
+    }
+    
+    html += '</div>';
+    
+    const abstract = xml.querySelector('abstract');
+    if (abstract) {
+      html += renderAbstract(abstract);
+    }
+    
+    const kwdGroup = xml.querySelector('kwd-group');
+    if (kwdGroup) {
+      html += '<div class="keywords">';
+      const kwdTitle = kwdGroup.querySelector('title')?.textContent || 'Keywords';
+      html += `<span class="keywords-label">${kwdTitle}:</span>`;
+      kwdGroup.querySelectorAll('kwd').forEach(kwd => {
+        html += `<span class="keyword">${kwd.textContent}</span>`;
+      });
+      html += '</div>';
+    }
+    
+    const body = xml.querySelector('body');
+    if (body) {
+      html += processElement(body);
+    }
+    
+    // Process appendices
+    const appGroup = xml.querySelector('app-group');
+    if (appGroup) {
+      html += renderAppGroup(appGroup);
+    }
+    
+    // Process biographies
+    const bio = xml.querySelector('bio');
+    if (bio) {
+      html += renderBio(bio);
+    }
+    
+    const fnGroup = xml.querySelector('fn-group');
+    if (fnGroup) {
+      html += '<div class="footnotes"><h2>Footnotes</h2>';
+      fnGroup.querySelectorAll('fn').forEach(fn => {
+        const label = fn.querySelector('label')?.textContent || '';
+        const fnText = getTextContent(fn, ['label']);
+        html += `<div class="fn-item">`;
+        if (label) html += `<span class="fn-label">${label}</span>`;
+        html += `${fnText}</div>`;
+      });
+      html += '</div>';
+    }
+    
+    const refList = xml.querySelector('ref-list');
+    if (refList) {
+      html += renderReferences(refList);
+    }
+    
+    // Show unstyled elements warning if any
+    if (unstyledElements.size > 0) {
+      html += `<div class="unstyled-element" style="margin-top: 30px;">
+        <strong>Unstyled Elements Found:</strong> The following XML tags were rendered as paragraphs: 
+        ${Array.from(unstyledElements).map(tag => `<span class="unstyled-tag">${tag}</span>`).join(', ')}
+      </div>`;
+    }
+    
+    html += '</div>';
+    output.innerHTML = html;
+    exportBar.classList.add('visible');
+    
+    // Render MathJax formulas
+    if (window.MathJax) {
+      MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+    }
+    
+  } catch (error) {
+    output.innerHTML = `<div class="container"><p style="color: red;">Error processing XML: ${error.message}</p></div>`;
+    console.error(error);
+  }
+}
+
+function countElements(xml) {
+  // Count tables
+  totalTables = xml.querySelectorAll('table-wrap').length;
+  
+  // Count figures
+  totalFigures = xml.querySelectorAll('fig').length;
+  
+  // Count formulas
+  totalInlineFormulas = xml.querySelectorAll('inline-formula').length;
+  totalDisplayFormulas = xml.querySelectorAll('disp-formula').length;
+  
+  // Count references
+  totalRefs = xml.querySelectorAll('ref-list ref').length;
+}
+
+function renderAbstract(abstract) {
+  let html = '<div class="abstract">';
+  
+  const abstractTitle = abstract.querySelector('title')?.textContent || 'Abstract';
+  html += `<h2>${abstractTitle}</h2>`;
+  
+  // Check if abstract has sections
+  const sections = abstract.querySelectorAll('sec');
+  if (sections.length > 0) {
+    // Abstract with sections (structured abstract)
+    sections.forEach(section => {
+      const sectionTitle = section.querySelector('title')?.textContent || '';
+      const sectionContent = section.querySelector('p');
+      const sectionId = section.getAttribute('id');
+      
+      html += '<div class="abstract-section">';
+      if (sectionTitle) {
+        html += `<div class="abstract-section-title">${sectionTitle}</div>`;
+      }
+      if (sectionContent) {
+        html += `<div class="abstract-section-content"><p>${formatContent(sectionContent)}</p></div>`;
+      }
+      if (sectionId) {
+        html += `<div class="section-id">${sectionId}</div>`;
+      }
+      html += '</div>';
+    });
+  } else {
+    // Traditional abstract without sections
+    abstract.querySelectorAll('p').forEach(p => {
+      html += `<p>${formatContent(p)}</p>`;
+    });
+  }
+  
+  html += '</div>';
+  return html;
+}
+
+function renderAppGroup(appGroup) {
+  let html = '<div class="app-group">';
+  
+  const appGroupTitle = appGroup.querySelector('title');
+  if (appGroupTitle) {
+    html += `<h2>${formatContent(appGroupTitle)}</h2>`;
+  } else {
+    html += '<h2>Appendix</h2>';
+  }
+  
+  const apps = appGroup.querySelectorAll('app');
+  apps.forEach(app => {
+    const appId = app.getAttribute('id') || '';
+    html += `<div class="app" id="${appId}">`;
+    
+    const appTitle = app.querySelector('title');
+    if (appTitle) {
+      html += `<div class="app-title">${formatContent(appTitle)}</div>`;
+    }
+    
+    html += processElement(app);
+    html += '</div>';
+  });
+  
+  html += '</div>';
+  return html;
+}
+
+function renderBio(bio) {
+  let html = '<div class="bio">';
+  
+  const bioTitle = bio.querySelector('title');
+  if (bioTitle) {
+    html += `<h3>${formatContent(bioTitle)}</h3>`;
+  } else {
+    html += '<h3>Biography</h3>';
+  }
+  
+  html += processElement(bio);
+  html += '</div>';
+  return html;
+}
+
+function renderReferences(refList) {
+  let html = '<div class="references">';
+  
+  const refTitle = refList.querySelector('title')?.textContent || 'References';
+  html += `<h2>${refTitle}</h2>`;
+  
+  // Check if we should render as table (for structured citations)
+  const hasMixedCitations = refList.querySelector('mixed-citation');
+  if (hasMixedCitations) {
+    html += renderReferencesTable(refList);
+  } else {
+    // Traditional list format
+    refList.querySelectorAll('ref').forEach(ref => {
+      const label = ref.querySelector('label')?.textContent || '';
+      const citation = ref.querySelector('mixed-citation, element-citation');
+      let refText = '';
+      if (citation) {
+        refText = formatCitationContent(citation);
+      } else {
+        refText = getTextContent(ref, ['label']);
+      }
+      html += `<div class="ref-item">`;
+      if (label) html += `<span class="ref-label">${label}.</span>`;
+      html += `${refText}</div>`;
+    });
+  }
+  
+  html += '</div>';
+  return html;
+}
+
+function renderReferencesTable(refList) {
+  let html = '<div class="references-table">';
+  html += '<table>';
+  html += '<thead><tr><th style="width: 80px;">Ref</th><th style="width: 100px;">Type</th><th>Citation</th></tr></thead>';
+  html += '<tbody>';
+  
+  refList.querySelectorAll('ref').forEach(ref => {
+    const label = ref.querySelector('label')?.textContent || '';
+    const citation = ref.querySelector('mixed-citation, element-citation');
+    
+    if (citation) {
+      const pubType = citation.getAttribute('publication-type') || 'other';
+      
+      // For table format, let's use a simplified approach that ensures proper formatting
+      let citationHtml = '';
+      const personGroup = citation.querySelector('person-group');
+      
+      // Process authors first
+      if (personGroup) {
+        const authors = personGroup.querySelectorAll('name');
+        const authorList = [];
+        
+        authors.forEach(author => {
+          const surname = author.querySelector('surname')?.textContent || '';
+          const givenNames = author.querySelector('given-names')?.textContent || '';
+          if (surname || givenNames) {
+            authorList.push(`${surname} ${givenNames}`.trim());
+          }
+        });
+        
+        if (authorList.length > 0) {
+          citationHtml += authorList.join(', ') + '. ';
+        }
+      }
+      
+      // Process the rest of the citation with formatContent but exclude person-group
+      citation.childNodes.forEach(node => {
+        if (node.nodeType === 1 && node.tagName.toLowerCase() !== 'person-group') {
+          citationHtml += formatContent(node);
+        } else if (node.nodeType === 3 && node.textContent.trim()) {
+          citationHtml += escapeHtml(node.textContent);
+        }
+      });
+      
+      html += '<tr>';
+      html += `<td><strong>${label}</strong></td>`;
+      html += `<td><span class="ref-type-badge ref-type-${pubType}">${pubType}</span></td>`;
+      html += `<td>${citationHtml}</td>`;
+      html += '</tr>';
+    }
+  });
+  
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function formatCitationContent(citation) {
+  let html = '';
+  
+  // First, extract author names from person-group
+  const personGroup = citation.querySelector('person-group');
+  if (personGroup) {
+    const authors = personGroup.querySelectorAll('name');
+    const authorList = [];
+    
+    authors.forEach(author => {
+      const surname = author.querySelector('surname')?.textContent || '';
+      const givenNames = author.querySelector('given-names')?.textContent || '';
+      if (surname || givenNames) {
+        // Add proper space between surname and given names
+        authorList.push(`${surname} ${givenNames}`.trim());
+      }
+    });
+    
+    if (authorList.length > 0) {
+      html += authorList.join(', ') + '. ';
+    }
+  }
+  
+  // Now process the rest of the citation content using formatContent
+  // This will preserve source tag styling and other formatting
+  citation.childNodes.forEach(node => {
+    if (node.nodeType === 1) { // Element node
+      const tagName = node.tagName.toLowerCase();
+      // Skip person-group and name elements since we already processed them
+      if (!['person-group', 'name', 'surname', 'given-names'].includes(tagName)) {
+        html += formatContent(node);
+      }
+    } else if (node.nodeType === 3) { // Text node
+      // Only add text content if it's not just whitespace
+      if (node.textContent.trim()) {
+        html += escapeHtml(node.textContent);
+      }
+    }
+  });
+  
+  return html;
+}
+
+function processElement(element, level = 1) {
+  let html = '';
+  
+  // Process all direct children of the element
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 1) { // Element node
+      const tagName = node.tagName.toLowerCase();
+      
+      switch(tagName) {
+        case 'sec':
+          html += processSection(node, level);
+          break;
+        case 'p':
+          html += `<p>${formatContent(node)}</p>`;
+          break;
+        case 'list':
+          html += renderList(node);
+          break;
+        case 'table-wrap':
+          html += renderTableWrap(node);
+          break;
+        case 'fig':
+          html += renderFigure(node);
+          break;
+        case 'disp-formula':
+          html += renderDispFormula(node);
+          break;
+        case 'title':
+          // Skip titles here as they're handled in processSection
+          break;
+        default:
+          // For any other elements without specific styling, render as paragraph with warning
+          if (node.textContent && node.textContent.trim()) {
+            unstyledElements.add(tagName);
+            html += `<div class="unstyled-element">${formatContent(node)}</div>`;
+          }
+      }
+    }
+  });
+  
+  return html;
+}
+
+function processSection(sec, level = 1) {
+  const secId = sec.getAttribute('id');
+  let html = `<section${secId ? ` id="${secId}"` : ''}>`;
+  
+  // Add section ID indicator
+  if (secId) {
+    html += `<div class="section-id">${secId}</div>`;
+  }
+  
+  // Handle section title with proper heading level
+  const secTitle = sec.querySelector(':scope > title');
+  const headingLevel = Math.min(level, 6); // Limit to h6 maximum
+  if (secTitle) {
+    html += `<h${headingLevel}>${formatContent(secTitle)}</h${headingLevel}>`;
+  }
+  
+  // Process all direct children except title
+  sec.childNodes.forEach(node => {
+    if (node.nodeType === 1) { // Element node
+      const tagName = node.tagName.toLowerCase();
+      
+      switch(tagName) {
+        case 'p':
+          html += `<p>${formatContent(node)}</p>`;
+          break;
+        case 'list':
+          html += renderList(node);
+          break;
+        case 'sec':
+          html += processSection(node, level + 1);
+          break;
+        case 'table-wrap':
+          html += renderTableWrap(node);
+          break;
+        case 'fig':
+          html += renderFigure(node);
+          break;
+        case 'disp-formula':
+          html += renderDispFormula(node);
+          break;
+        default:
+          // For any other elements without specific styling, render as paragraph with warning
+          if (node.textContent && node.textContent.trim()) {
+            unstyledElements.add(tagName);
+            html += `<div class="unstyled-element">${formatContent(node)}</div>`;
+          }
+      }
+    }
+  });
+  
+  html += '</section>';
+  return html;
+}
+
+function renderList(list) {
+  const listType = list.getAttribute('list-type') || 'bullet';
+  const tag = (listType === 'order' || listType === 'ordered') ? 'ol' : 'ul';
+  let html = `<${tag}>`;
+  
+  list.querySelectorAll(':scope > list-item').forEach(item => {
+    html += '<li>';
+    
+    // Process all content in the list item
+    item.childNodes.forEach(node => {
+      if (node.nodeType === 1) { // Element node
+        const tagName = node.tagName.toLowerCase();
+        
+        switch(tagName) {
+          case 'p':
+            html += `<p>${formatContent(node)}</p>`;
+            break;
+          case 'list':
+            html += renderList(node);
+            break;
+          default:
+            html += formatContent(node);
+        }
+      } else if (node.nodeType === 3 && node.textContent.trim()) {
+        html += node.textContent;
+      }
+    });
+    
+    html += '</li>';
+  });
+  
+  html += `</${tag}>`;
+  return html;
+}
+
+function renderTableWrap(tableWrap) {
+  const tableId = tableWrap.getAttribute('id');
+  let html = `<div class="table-wrap"${tableId ? ` id="${tableId}"` : ''}>`;
+  
+  // Add table ID indicator
+  if (tableId) {
+    html += `<div class="table-id">${tableId}</div>`;
+  }
+  
+  const label = tableWrap.querySelector('label')?.textContent || '';
+  const caption = tableWrap.querySelector('caption');
+  if (label || caption) {
+    html += '<div>';
+    if (label) html += `<span class="table-label">${label}</span>`;
+    if (caption) {
+      const captionTitle = caption.querySelector('title')?.textContent || '';
+      const captionP = caption.querySelector('p');
+      if (captionTitle) html += captionTitle;
+      if (captionP) html += ' ' + formatContent(captionP);
+    }
+    html += '</div>';
+  }
+  
+  const table = tableWrap.querySelector('table');
+  if (table) {
+    html += '<table>';
+    const thead = table.querySelector('thead');
+    if (thead) {
+      html += '<thead>';
+      thead.querySelectorAll('tr').forEach(tr => {
+        html += '<tr>';
+        tr.querySelectorAll('th, td').forEach(cell => {
+          const tag = cell.tagName.toLowerCase();
+          const colspan = cell.getAttribute('colspan') || '';
+          const rowspan = cell.getAttribute('rowspan') || '';
+          let attrs = '';
+          if (colspan) attrs += ` colspan="${colspan}"`;
+          if (rowspan) attrs += ` rowspan="${rowspan}"`;
+          html += `<${tag}${attrs}>${formatContent(cell)}</${tag}>`;
+        });
+        html += '</tr>';
+      });
+      html += '</thead>';
+    }
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+      html += '<tbody>';
+      tbody.querySelectorAll('tr').forEach(tr => {
+        html += '<tr>';
+        tr.querySelectorAll('th, td').forEach(cell => {
+          const tag = cell.tagName.toLowerCase();
+          const colspan = cell.getAttribute('colspan') || '';
+          const rowspan = cell.getAttribute('rowspan') || '';
+          let attrs = '';
+          if (colspan) attrs += ` colspan="${colspan}"`;
+          if (rowspan) attrs += ` rowspan="${rowspan}"`;
+          html += `<${tag}${attrs}>${formatContent(cell)}</${tag}>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tbody>';
+    }
+    const tfoot = table.querySelector('tfoot');
+    if (tfoot) {
+      html += '<tfoot>';
+      tfoot.querySelectorAll('tr').forEach(tr => {
+        html += '<tr>';
+        tr.querySelectorAll('th, td').forEach(cell => {
+          const tag = cell.tagName.toLowerCase();
+          html += `<${tag}>${formatContent(cell)}</${tag}>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tfoot>';
+    }
+    html += '</table>';
+  }
+  
+  // Handle table footnotes
+  const tableFootnotes = tableWrap.querySelectorAll('table-wrap-foot fn');
+  if (tableFootnotes.length > 0) {
+    tableFootnotes.forEach(fn => {
+      const fnLabel = fn.querySelector('label')?.textContent || '';
+      const fnText = getTextContent(fn, ['label']);
+      html += `<div class="table-footnote">`;
+      if (fnLabel) html += `<strong>${fnLabel}</strong> `;
+      html += `${fnText}</div>`;
+    });
+  }
+  
+  const tableFn = tableWrap.querySelectorAll('table-wrap-foot fn');
+  if (tableFn.length > 0) {
+    tableFn.forEach(fn => {
+      const fnText = formatContent(fn);
+      html += `<div class="table-footer">${fnText}</div>`;
+    });
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderFigure(fig) {
+  const figId = fig.getAttribute('id');
+  let html = `<div class="fig-wrap"${figId ? ` id="${figId}"` : ''}>`;
+  
+  // Add figure ID indicator
+  if (figId) {
+    html += `<div class="fig-id">${figId}</div>`;
+  }
+  
+  const label = fig.querySelector('label')?.textContent || '';
+  const caption = fig.querySelector('caption');
+  const graphic = fig.querySelector('graphic');
+  if (label) html += `<div class="fig-label">${label}</div>`;
+  if (graphic) {
+    const href = graphic.getAttribute('xlink:href') || graphic.getAttribute('href') || '';
+    if (href) {
+      html += `<div><img src="${href}" alt="${label}" class="fig-graphic" onerror="this.style.display='none'"></div>`;
+    }
+  }
+  if (caption) {
+    html += '<div class="fig-caption">';
+    const captionTitle = caption.querySelector('title');
+    const captionP = caption.querySelector('p');
+    if (captionTitle) html += `<strong>${formatContent(captionTitle)}</strong> `;
+    if (captionP) html += formatContent(captionP);
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function formatContent(element) {
+  if (!element) return '';
+  let html = '';
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 3) {
+      html += escapeHtml(node.textContent);
+    } else if (node.nodeType === 1) {
+      const tag = node.tagName.toLowerCase();
+      switch(tag) {
+        case 'bold':
+        case 'b':
+          html += `<strong>${formatContent(node)}</strong>`;
+          break;
+        case 'italic':
+        case 'i':
+          html += `<em>${formatContent(node)}</em>`;
+          break;
+        case 'underline':
+        case 'u':
+          html += `<u>${formatContent(node)}</u>`;
+          break;
+        case 'sup':
+          html += `<sup>${formatContent(node)}</sup>`;
+          break;
+        case 'sub':
+          html += `<sub>${formatContent(node)}</sub>`;
+          break;
+        case 'source':
+          html += `<em>${formatContent(node)}</em>`;
+          break;
+        case 'year':
+          html += `<span>${formatContent(node)}</span>`;
+          break;
+        case 'publisher-name':
+          html += `<span>${formatContent(node)}</span>`;
+          break;
+        case 'person-group':
+          // Skip person-group as it's handled separately in citation functions
+          break;
+        case 'name':
+          // Skip name as it's handled separately in citation functions
+          break;
+        case 'surname':
+          // Skip surname as it's handled separately in citation functions
+          break;
+        case 'given-names':
+          // Skip given-names as it's handled separately in citation functions
+          break;
+        case 'xref':
+          const refType = node.getAttribute('ref-type');
+          const rid = node.getAttribute('rid');
+          html += `<span class="xref" data-ref-type="${refType}" data-rid="${rid}">${formatContent(node)}</span>`;
+          break;
+        case 'ext-link':
+        case 'uri':
+          const href = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
+          html += `<a href="${href}" target="_blank">${formatContent(node) || href}</a>`;
+          break;
+        case 'email':
+          html += `<a href="mailto:${node.textContent}">${node.textContent}</a>`;
+          break;
+        case 'inline-formula':
+          html += renderInlineFormula(node);
+          break;
+        case 'disp-formula':
+          html += renderDispFormula(node);
+          break;
+        case 'label':
+          break;
+        default:
+          html += formatContent(node);
+      }
+    }
+  });
+  return html;
+}
+
+function getTextContent(element, skipTags = []) {
+  let text = '';
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 3) {
+      text += node.textContent;
+    } else if (node.nodeType === 1) {
+      if (!skipTags.includes(node.tagName.toLowerCase())) {
+        text += getTextContent(node, skipTags);
+      }
+    }
+  });
+  return text.trim();
+}
+
+function formatText(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function renderInlineFormula(formulaNode) {
+  const texMath = formulaNode.querySelector('tex-math');
+  const mml = formulaNode.querySelector('mml\\:math, math');
+  
+  // Get the raw text content directly from the formula node if no tex-math or mml
+  let latex = '';
+  if (texMath) {
+    latex = texMath.textContent.trim();
+  } else if (mml) {
+    return `<span class="inline-formula">${mml.outerHTML}</span>`;
+  } else {
+    // Get direct text content
+    latex = formulaNode.textContent.trim();
+  }
+  
+  // Remove $ delimiters if present
+  latex = latex.replace(/^\$+|\$+$/g, '');
+  
+  // Replace XML entities
+  latex = latex.replace(/\\plus\s*/g, '+');
+  latex = latex.replace(/\\equals\s*/g, '=');
+  latex = latex.replace(/\\bi\s*/g, '\\boldsymbol');
+  latex = latex.replace(/\\amp\s*/g, '&');
+  latex = latex.replace(/\\lpar\s*/g, '(');
+  latex = latex.replace(/\\rpar\s*/g, ')');
+  latex = latex.replace(/\\comma\s*/g, ',');
+  
+  return `<span class="inline-formula">\\(${latex}\\)</span>`;
+}
+
+function renderDispFormula(formulaNode) {
+  const label = formulaNode.querySelector('label')?.textContent || '';
+  const texMath = formulaNode.querySelector('tex-math');
+  const mml = formulaNode.querySelector('mml\\:math, math');
+  
+  let formulaHTML = '<div class="disp-formula">';
+  
+  if (label) {
+    formulaHTML += `<div style="text-align: right; font-weight: bold; color: #3498db; margin-bottom: 10px;">${label}</div>`;
+  }
+  
+  let latex = '';
+  if (texMath) {
+    latex = texMath.textContent.trim();
+  } else if (mml) {
+    formulaHTML += `<div>${mml.outerHTML}</div>`;
+    formulaHTML += '</div>';
+    return formulaHTML;
+  } else {
+    latex = formulaNode.textContent.trim();
+    if (label) {
+      latex = latex.replace(label, '').trim();
+    }
+  }
+  
+  // Remove $ delimiters if present
+  latex = latex.replace(/^\$+|\$+$/g, '');
+  
+  // Replace XML entities
+  latex = latex.replace(/\\plus\s*/g, '+');
+  latex = latex.replace(/\\equals\s*/g, '=');
+  latex = latex.replace(/\\bi\s*/g, '\\boldsymbol');
+  latex = latex.replace(/\\amp\s*/g, '&');
+  latex = latex.replace(/\\lpar\s*/g, '(');
+  latex = latex.replace(/\\rpar\s*/g, ')');
+  latex = latex.replace(/\\comma\s*/g, ',');
+
+  formulaHTML += `<div>\\[${latex}\\]</div>`;
+  formulaHTML += '</div>';
+  return formulaHTML;
+}
+
+function displayMetadata(xml) {
+  // Extract journal metadata
+  const journalMeta = xml.querySelector('journal-meta');
+  let journalHTML = '';
+  
+  if (journalMeta) {
+    const journalId = journalMeta.querySelector('journal-id[journal-id-type="publisher-id"]')?.textContent || 'N/A';
+    const hwpId = journalMeta.querySelector('journal-id[journal-id-type="hwp"]')?.textContent || 'N/A';
+    const issnPpub = journalMeta.querySelector('issn[pub-type="ppub"]')?.textContent || 'N/A';
+    const issnEpub = journalMeta.querySelector('issn[pub-type="epub"]')?.textContent || 'N/A';
+    const publisherName = journalMeta.querySelector('publisher-name')?.textContent || 'N/A';
+    const publisherLoc = journalMeta.querySelector('publisher-loc')?.textContent || 'N/A';
+    
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Journal publisher-id ID:</span> <span class="metadata-value">${journalId}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Journal hwp ID:</span> <span class="metadata-value">${hwpId}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">ISSN - ppub:</span> <span class="metadata-value">${issnPpub}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">ISSN - epub:</span> <span class="metadata-value">${issnEpub}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Publisher Name:</span> <span class="metadata-value">${publisherName}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Publisher Location:</span> <span class="metadata-value">${publisherLoc}</span></div>`;
+    
+    // Add counts
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Tables:</span> <span class="metadata-value">${totalTables}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Figures:</span> <span class="metadata-value">${totalFigures}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Inline Formulas:</span> <span class="metadata-value">${totalInlineFormulas}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Display Formulas:</span> <span class="metadata-value">${totalDisplayFormulas}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total References:</span> <span class="metadata-value">${totalRefs}</span></div>`;
+  }
+  
+  // Extract article metadata
+  const articleMeta = xml.querySelector('article-meta');
+  let articleHTML = '';
+  
+  if (articleMeta) {
+    const doi = articleMeta.querySelector('article-id[pub-id-type="doi"]')?.textContent || 'N/A';
+    const publisherId = articleMeta.querySelector('article-id[pub-id-type="publisher-id"]')?.textContent || 'N/A';
+    const elocationId = articleMeta.querySelector('elocation-id')?.textContent || 'N/A';
+    const volume = articleMeta.querySelector('volume')?.textContent || 'N/A';
+    
+    const pubDate = articleMeta.querySelector('pub-date[pub-type="epub"]') || articleMeta.querySelector('pub-date');
+    let pubMonth = 'N/A', pubYear = 'N/A';
+    if (pubDate) {
+      pubMonth = pubDate.querySelector('month')?.textContent || 'N/A';
+      pubYear = pubDate.querySelector('year')?.textContent || 'N/A';
+    }
+    
+    const history = articleMeta.querySelector('history');
+    let receivedDate = 'N/A', acceptedDate = 'N/A';
+    if (history) {
+      const received = history.querySelector('date[date-type="received"]');
+      if (received) {
+        const rDay = received.querySelector('day')?.textContent || '';
+        const rMonth = received.querySelector('month')?.textContent || '';
+        const rYear = received.querySelector('year')?.textContent || '';
+        receivedDate = `Day: ${rDay} Month: ${rMonth} Year: ${rYear}`;
+      }
+      
+      const accepted = history.querySelector('date[date-type="accepted"]');
+      if (accepted) {
+        const aDay = accepted.querySelector('day')?.textContent || '';
+        const aMonth = accepted.querySelector('month')?.textContent || '';
+        const aYear = accepted.querySelector('year')?.textContent || '';
+        acceptedDate = `Day: ${aDay} Month: ${aMonth} Year: ${aYear}`;
+      }
+    }
+    
+    const permissions = articleMeta.querySelector('permissions');
+    let copyrightStatement = 'N/A', copyrightYear = 'N/A', copyrightHolder = 'N/A', license = '';
+    if (permissions) {
+      copyrightStatement = permissions.querySelector('copyright-statement')?.textContent || 'N/A';
+      copyrightYear = permissions.querySelector('copyright-year')?.textContent || 'N/A';
+      copyrightHolder = permissions.querySelector('copyright-holder')?.textContent || 'N/A';
+      const licenseP = permissions.querySelector('license p');
+      if (licenseP) {
+        license = licenseP.textContent;
+      }
+    }
+    
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">DOI:</span> <span class="metadata-value">${doi}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Publisher ID:</span> <span class="metadata-value">${publisherId}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Month:</span> <span class="metadata-value">${pubMonth}</span> <span class="metadata-label">Year:</span> <span class="metadata-value">${pubYear}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Volume:</span> <span class="metadata-value">${volume}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Elocation-ID:</span> <span class="metadata-value">${elocationId}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Received Date:</span> <span class="metadata-value">${receivedDate}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Accepted Date:</span> <span class="metadata-value">${acceptedDate}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Copyright Statement:</span> <span class="metadata-value">${copyrightStatement}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Copyright Year:</span> <span class="metadata-value">${copyrightYear}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Copyright Holder:</span> <span class="metadata-value">${copyrightHolder}</span></div>`;
+    if (license) {
+      articleHTML += `<div class="metadata-item" style="margin-top: 10px;"><span class="metadata-value">${license}</span></div>`;
+    }
+  }
+  
+  journalInfo.innerHTML = journalHTML;
+  articleInfo.innerHTML = articleHTML;
+  metadataSection.classList.add('visible');
+}
+
+function exportHTML() {
+  const content = output.innerHTML;
+  const styles = Array.from(document.styleSheets)
+    .map(sheet => {
+      try {
+        return Array.from(sheet.cssRules)
+          .map(rule => rule.cssText)
+          .join('\n');
+      } catch (e) {
+        return '';
+      }
+    })
+    .join('\n');
+  
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${currentArticleTitle}</title>
+<style>
+${styles}
+body { margin: 20px; padding: 0; background: #f5f5f5; }
+.export-bar { display: none !important; }
+.drop-zone { display: none !important; }
+.validation-section { display: none !important; }
+.floating-buttons { display: none !important; }
+</style>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+  
+  const blob = new Blob([fullHTML], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentArticleTitle}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF() {
+  // Create a clone of the content to avoid affecting the main page
+  const originalContent = document.getElementById('output').innerHTML;
+  
+  const printStyles = `
+    <style>
+      @media print {
+        body { margin: 0; padding: 20px; font-family: Georgia, "Times New Roman", serif; }
+        .container { max-width: 100%; box-shadow: none; padding: 0; }
+		        @page {
+          margin-top: 15mm !important;
+          margin-bottom: 15mm !important;
+          margin-left: 10mm !important;
+          margin-right: 10mm !important;
+        }
+      }
+	  
+      .container { 
+        max-width: 100%;
+        background: white;
+        padding: 0;
+        box-shadow: none;
+        margin: 0;
+      }
+      .article-type { 
+        display: inline-block;
+        background: #3498db !important;
+        color: white !important;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 10pt;
+        text-transform: uppercase;
+        margin-bottom: 15px;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .article-title { 
+        font-size: 18pt;
+        color: #000 !important;
+        margin: 15px 0;
+        font-weight: bold;
+        line-height: 1.3;
+      }
+      .article-subtitle { 
+        font-size: 14pt;
+        color: #555 !important;
+        margin: 10px 0;
+        font-style: italic;
+      }
+      .article-header { 
+        border-bottom: 2px solid #000 !important;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+      }
+      .authors { margin: 15px 0; font-size: 11pt; }
+      .author { display: inline; color: #000 !important; }
+      .author-sup { vertical-align: super; font-size: 9pt; }
+      .author:not(:last-child)::after { content: ", "; }
+      .affiliations { 
+        margin: 15px 0;
+        padding: 10px;
+        background: #f5f5f5 !important;
+        border-left: 3px solid #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .aff-item { margin: 5px 0; font-size: 10pt; color: #000 !important; }
+      .aff-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .correspondence { 
+        margin: 15px 0;
+        padding: 10px;
+        background: #fff9e6 !important;
+        border-left: 3px solid #f39c12 !important;
+        font-size: 10pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .correspondence-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .abstract { 
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9f9f9 !important;
+        border: 1px solid #ddd !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .abstract h2 { 
+        margin-top: 0;
+        font-size: 14pt;
+        margin-bottom: 10px;
+        color: #000 !important;
+      }
+      .abstract p { margin: 10px 0; text-align: justify; color: #000 !important; }
+      h1, h2, h3 { 
+        color: #000 !important;
+        page-break-after: avoid;
+      }
+      h1 { 
+        font-size: 16pt;
+        margin-top: 25px;
+        margin-bottom: 15px;
+        font-weight: bold;
+      }
+      h2 { 
+        font-size: 14pt;
+        margin-top: 20px;
+        margin-bottom: 12px;
+        font-weight: bold;
+      }
+      h3 { 
+        font-size: 12pt;
+        margin-top: 15px;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+      p { 
+        margin: 10px 0; 
+        text-align: justify; 
+        color: #000 !important;
+      }
+      section { margin: 20px 0; }
+      table { 
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+        font-size: 10pt;
+        page-break-inside: avoid;
+      }
+      th, td { 
+        border: 1px solid #000 !important;
+        padding: 8px;
+        text-align: left;
+        color: #000 !important;
+      }
+      th { 
+        background: #e0e0e0 !important;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .table-wrap { 
+        margin: 20px 0; 
+        page-break-inside: avoid;
+      }
+      .table-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .table-footer { 
+        font-size: 9pt;
+        color: #555 !important;
+        margin-top: 5px;
+        font-style: italic;
+      }
+      .fig-wrap { 
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9f9f9 !important;
+        border: 1px solid #ddd !important;
+        text-align: center;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .fig-label { font-weight: bold; color: #000 !important; }
+      .fig-caption { 
+        margin-top: 10px;
+        text-align: left;
+        font-size: 10pt;
+        color: #000 !important;
+      }
+      .fig-graphic { 
+        max-width: 100%;
+        height: auto;
+        margin: 10px 0;
+      }
+      ul, ol { margin: 10px 0; padding-left: 25px; }
+      li { margin: 5px 0; color: #000 !important; }
+      .keywords { margin: 15px 0; font-size: 10pt; }
+      .keywords-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .keyword { 
+        display: inline-block;
+        background: #e0e0e0 !important;
+        padding: 3px 8px;
+        margin: 3px;
+        border-radius: 3px;
+        font-size: 9pt;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .references { 
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #000 !important;
+        page-break-before: auto;
+      }
+      .references h2 { 
+        font-size: 14pt;
+        margin-bottom: 15px;
+      }
+      .ref-item { 
+        margin-bottom: 10px;
+        padding-left: 25px;
+        text-indent: -25px;
+        font-size: 10pt;
+        color: #000 !important;
+      }
+      .ref-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .footnotes { 
+        margin-top: 30px;
+        padding: 15px;
+        background: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .footnotes h2 { 
+        font-size: 13pt;
+        margin-bottom: 10px;
+        color: #000 !important;
+      }
+      .fn-item { margin-bottom: 8px; font-size: 10pt; color: #000 !important; }
+      .fn-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      
+      /* Print-specific styles */
+      @media print {
+        body { 
+          margin: 0 !important; 
+          padding: 15mm !important;
+          font-family: "Times New Roman", Times, serif !important;
+        }
+        .container { 
+          padding: 0 !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+        }
+        .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons { 
+          display: none !important; 
+        }
+        /* Remove background highlights for print */
+        em, i, strong, b {
+          background-color: transparent !important;
+          padding: 0 !important;
+        }
+        /* Ensure page breaks work properly */
+        h1, h2, h3 {
+          page-break-after: avoid;
+        }
+        table, figure {
+          page-break-inside: avoid;
+        }
+        .table-wrap, .fig-wrap {
+          page-break-inside: avoid;
+        }
+        /* Hide section IDs and other UI elements */
+        .section-id, .table-id, .fig-id { display: none !important; }
+      }
+      
+      /* Force colors in print */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    </style>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${currentArticleTitle}</title>
+      ${printStyles}
+    </head>
+    <body>
+      <div class="container">
+        ${originalContent}
+      </div>
+      <script>
+        // Auto-print when content is loaded
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+          }, 500);
+        };
+        
+        // Close window after print
+        window.onafterprint = function() {
+          setTimeout(function() {
+            window.close();
+          }, 100);
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+}
+</script>
 </body>
 </html>
