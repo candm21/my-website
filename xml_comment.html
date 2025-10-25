@@ -97,7 +97,7 @@
   
   /* Enhanced Abstract Styles */
   .abstract { margin: 30px 0; padding: 25px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; }
-  .abstract h2 { margin-top: 0; color: #2c3e50; font-size: 1.4em; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  .abstract h2 { margin-top: 0; color: #2c3e50; font-size: 1.4em; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-style: italic;}
   .abstract-section { margin: 20px 0; }
   .abstract-section-title { font-weight: 600; color: #2c3e50; margin-bottom: 8px; font-size: 1.1em; }
   .abstract-section-content { margin-left: 20px; }
@@ -116,7 +116,7 @@
   section { margin: 30px 0; position: relative; }
   /* Heading styles with distinct colors and sizes */
   h1 { font-size: 1.8em; color: #2c3e50; margin-top: 40px; margin-bottom: 20px; font-weight: 700; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
-  h2 { font-size: 1.5em; color: #34495e; margin-top: 35px; margin-bottom: 15px; font-weight: 600; border-left: 4px solid #3498db; padding-left: 12px; }
+  h2 { font-size: 1.5em; color: #34495e; margin-top: 35px; margin-bottom: 15px; font-weight: 600; border-left: 4px solid #3498db; padding-left: 12px; font-style: italic;}
   h3 { font-size: 1.3em; color: #2980b9; margin-top: 30px; margin-bottom: 12px; font-weight: 600; }
   h4 { font-size: 1.1em; color: #5d6d7e; margin-top: 25px; margin-bottom: 10px; font-weight: 600; font-style: italic; }
   h5 { font-size: 1em; color: #7f8c8d; margin-top: 20px; margin-bottom: 8px; font-weight: 600; }
@@ -139,7 +139,7 @@
   p { margin: 15px 0; text-align: justify; }
   
   /* Source tag styling - italic */
-  .source { font-style: italic; color: #7f8c8d; }
+  .citation-source { font-style: italic; color: #ff7373; }
   
   /* Highlighted italic and bold text */
   em, i { 
@@ -175,17 +175,6 @@
   tr:hover { background: #f8f9fa; }
   .table-footer { font-size: 0.9em; color: #7f8c8d; margin-top: 8px; font-style: italic; }
   .table-footnote { font-size: 0.85em; color: #7f8c8d; margin-top: 5px; padding-left: 10px; border-left: 2px solid #bdc3c7; }
-  
-  /* References Table Styles */
-  .references-table { margin: 25px 0; overflow-x: auto; }
-  .references-table table { width: 100%; }
-  .ref-type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; margin-right: 8px; }
-  .ref-type-journal { background: #e8f6f3; color: #1a5276; border: 1px solid #a3e4d7; }
-  .ref-type-book { background: #fef9e7; color: #7d6608; border: 1px solid #f9e79f; }
-  .ref-type-web { background: #eaf2f8; color: #2874a6; border: 1px solid #aed6f1; }
-  .ref-type-conf { background: #f4ecf7; color: #6c3483; border: 1px solid #d7bde2; }
-  .ref-type-thesis { background: #fdebd0; color: #ca6f1e; border: 1px solid #f5b041; }
-  .ref-type-other { background: #f2f3f4; color: #566573; border: 1px solid #d5dbdb; }
   
   .fig-wrap { margin: 25px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; text-align: center; position: relative; }
   .fig-id { 
@@ -225,10 +214,72 @@
   .ref-item { margin-bottom: 15px; padding-left: 30px; text-indent: -30px; font-size: 0.95em; }
   .ref-label { font-weight: bold; color: #3498db; margin-right: 8px; }
   
-  .footnotes { margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; }
-  .footnotes h2 { color: #2c3e50; font-size: 1.4em; margin-bottom: 15px; }
-  .fn-item { margin-bottom: 12px; font-size: 0.9em; }
-  .fn-label { font-weight: bold; color: #e67e22; margin-right: 6px; }
+.footnotes { 
+  margin-top: 40px; 
+  padding: 25px; 
+  background: #f8f9fa; 
+  border-radius: 8px; 
+  border: 1px solid #e1e4e8;
+  page-break-inside: avoid;
+}
+.footnotes h2 { 
+  color: #2c3e50; 
+  font-size: 1.4em; 
+  margin-bottom: 20px; 
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+.fn-item { 
+  margin-bottom: 25px; 
+  padding: 0;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
+  overflow: hidden;
+}
+.fn-label { 
+  font-weight: bold; 
+  color: white;
+  background: #e67e22;
+  margin: 0;
+  font-size: 1.1em;
+  padding: 12px 15px;
+  display: block;
+  border-bottom: 1px solid #d35400;
+}
+.fn-content {
+  padding: 15px;
+}
+.fn-paragraph {
+  margin: 15px 0;
+  line-height: 1.6;
+  text-align: justify;
+  color: #2c3e50;
+}
+.fn-paragraph:first-child {
+  margin-top: 5px;
+}
+.fn-paragraph:last-child {
+  margin-bottom: 5px;
+}
+
+/* Print styles for footnotes */
+@media print {
+  .footnotes {
+    background: #f8f9fa !important;
+    border: 1px solid #ddd !important;
+  }
+  .fn-item {
+    background: white !important;
+    border: 1px solid #ddd !important;
+  }
+  .fn-label {
+    background: #e67e22 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
   
   .keywords { margin: 20px 0; }
   .keywords-label { font-weight: bold; color: #2c3e50; margin-right: 8px; }
@@ -700,18 +751,40 @@ function processXMLText(text) {
       html += renderBio(bio);
     }
     
-    const fnGroup = xml.querySelector('fn-group');
-    if (fnGroup) {
-      html += '<div class="footnotes"><h2>Footnotes</h2>';
-      fnGroup.querySelectorAll('fn').forEach(fn => {
-        const label = fn.querySelector('label')?.textContent || '';
-        const fnText = getTextContent(fn, ['label']);
-        html += `<div class="fn-item">`;
-        if (label) html += `<span class="fn-label">${label}</span>`;
-        html += `${fnText}</div>`;
-      });
-      html += '</div>';
-    }
+const fnGroup = xml.querySelector('fn-group');
+if (fnGroup) {
+  html += '<div class="footnotes"><h2>Back Matter</h2>';
+  fnGroup.querySelectorAll('fn').forEach(fn => {
+    const label = fn.querySelector('label')?.textContent || '';
+    
+    html += `<div class="fn-item">`;
+    if (label) html += `<div class="fn-label">${label}</div>`;
+    html += `<div class="fn-content">`;
+    
+    // Process all child nodes except label
+    fn.childNodes.forEach(node => {
+      if (node.nodeType === 1) { // Element node
+        const tagName = node.tagName.toLowerCase();
+        if (tagName === 'label') {
+          // Skip label as we already processed it
+          return;
+        } else if (tagName === 'p') {
+          // Handle paragraphs with proper spacing
+          html += `<div class="fn-paragraph">${formatContent(node)}</div>`;
+        } else {
+          // Handle other elements (lists, tables, etc.)
+          html += processElement(node);
+        }
+      } else if (node.nodeType === 3 && node.textContent.trim()) {
+        // Handle text nodes directly inside fn (without p wrapper)
+        html += `<div class="fn-paragraph">${escapeHtml(node.textContent)}</div>`;
+      }
+    });
+    
+    html += `</div></div>`;
+  });
+  html += '</div>';
+}
     
     const refList = xml.querySelector('ref-list');
     if (refList) {
@@ -760,7 +833,7 @@ function renderAbstract(abstract) {
   let html = '<div class="abstract">';
   
   const abstractTitle = abstract.querySelector('title')?.textContent || 'Abstract';
-  html += `<h2>${abstractTitle}</h2>`;
+  html += `<h1>Abstract</h1>`;
   
   // Check if abstract has sections
   const sections = abstract.querySelectorAll('sec');
@@ -843,91 +916,29 @@ function renderReferences(refList) {
   const refTitle = refList.querySelector('title')?.textContent || 'References';
   html += `<h2>${refTitle}</h2>`;
   
-  // Check if we should render as table (for structured citations)
-  const hasMixedCitations = refList.querySelector('mixed-citation');
-  if (hasMixedCitations) {
-    html += renderReferencesTable(refList);
-  } else {
-    // Traditional list format
-    refList.querySelectorAll('ref').forEach(ref => {
-      const label = ref.querySelector('label')?.textContent || '';
-      const citation = ref.querySelector('mixed-citation, element-citation');
-      let refText = '';
-      if (citation) {
-        refText = formatCitationContent(citation);
-      } else {
-        refText = getTextContent(ref, ['label']);
-      }
-      html += `<div class="ref-item">`;
-      if (label) html += `<span class="ref-label">${label}.</span>`;
-      html += `${refText}</div>`;
-    });
-  }
-  
-  html += '</div>';
-  return html;
-}
-
-function renderReferencesTable(refList) {
-  let html = '<div class="references-table">';
-  html += '<table>';
-  html += '<thead><tr><th style="width: 80px;">Ref</th><th style="width: 100px;">Type</th><th>Citation</th></tr></thead>';
-  html += '<tbody>';
-  
+  // Always use normal list format (no table)
   refList.querySelectorAll('ref').forEach(ref => {
     const label = ref.querySelector('label')?.textContent || '';
     const citation = ref.querySelector('mixed-citation, element-citation');
-    
+    let refText = '';
     if (citation) {
-      const pubType = citation.getAttribute('publication-type') || 'other';
-      
-      // For table format, let's use a simplified approach that ensures proper formatting
-      let citationHtml = '';
-      const personGroup = citation.querySelector('person-group');
-      
-      // Process authors first
-      if (personGroup) {
-        const authors = personGroup.querySelectorAll('name');
-        const authorList = [];
-        
-        authors.forEach(author => {
-          const surname = author.querySelector('surname')?.textContent || '';
-          const givenNames = author.querySelector('given-names')?.textContent || '';
-          if (surname || givenNames) {
-            authorList.push(`${surname} ${givenNames}`.trim());
-          }
-        });
-        
-        if (authorList.length > 0) {
-          citationHtml += authorList.join(', ') + '. ';
-        }
-      }
-      
-      // Process the rest of the citation with formatContent but exclude person-group
-      citation.childNodes.forEach(node => {
-        if (node.nodeType === 1 && node.tagName.toLowerCase() !== 'person-group') {
-          citationHtml += formatContent(node);
-        } else if (node.nodeType === 3 && node.textContent.trim()) {
-          citationHtml += escapeHtml(node.textContent);
-        }
-      });
-      
-      html += '<tr>';
-      html += `<td><strong>${label}</strong></td>`;
-      html += `<td><span class="ref-type-badge ref-type-${pubType}">${pubType}</span></td>`;
-      html += `<td>${citationHtml}</td>`;
-      html += '</tr>';
+      refText = formatCitationContent(citation);
+    } else {
+      refText = getTextContent(ref, ['label']);
     }
+    html += `<div class="ref-item">`;
+    if (label) html += `<span class="ref-label">${label}</span>`;
+    html += `${refText}</div>`;
   });
   
-  html += '</tbody></table></div>';
+  html += '</div>';
   return html;
 }
 
 function formatCitationContent(citation) {
   let html = '';
   
-  // First, extract author names from person-group
+  // Extract author names from person-group
   const personGroup = citation.querySelector('person-group');
   if (personGroup) {
     const authors = personGroup.querySelectorAll('name');
@@ -937,7 +948,6 @@ function formatCitationContent(citation) {
       const surname = author.querySelector('surname')?.textContent || '';
       const givenNames = author.querySelector('given-names')?.textContent || '';
       if (surname || givenNames) {
-        // Add proper space between surname and given names
         authorList.push(`${surname} ${givenNames}`.trim());
       }
     });
@@ -947,19 +957,69 @@ function formatCitationContent(citation) {
     }
   }
   
-  // Now process the rest of the citation content using formatContent
-  // This will preserve source tag styling and other formatting
+  // Process the rest of the citation content
   citation.childNodes.forEach(node => {
     if (node.nodeType === 1) { // Element node
       const tagName = node.tagName.toLowerCase();
+      
       // Skip person-group and name elements since we already processed them
       if (!['person-group', 'name', 'surname', 'given-names'].includes(tagName)) {
-        html += formatContent(node);
+        switch(tagName) {
+          case 'year':
+            html += `<span class="citation-year">${formatContent(node)}</span>`;
+            break;
+          case 'article-title':
+            html += `<span class="citation-article-title">${formatContent(node)}</span>`;
+            break;
+          case 'source':
+            // Source tag is now properly styled with italic
+            html += `<span class="citation-source">${formatContent(node)}</span>`;
+            break;
+          case 'volume':
+            html += `<span class="citation-volume">${formatContent(node)}</span>`;
+            break;
+          case 'issue':
+            html += `<span class="citation-issue">${formatContent(node)}</span>`;
+            break;
+          case 'fpage':
+            html += `<span class="citation-pages">${formatContent(node)}</span>`;
+            break;
+          case 'lpage':
+            html += `<span class="citation-pages">${formatContent(node)}</span>`;
+            break;
+          case 'publisher-name':
+            html += `<span class="citation-publisher">${formatContent(node)}</span>`;
+            break;
+          case 'publisher-loc':
+            html += `<span class="citation-publisher-loc">${formatContent(node)}</span>`;
+            break;
+          case 'edition':
+            html += `<span class="citation-edition">${formatContent(node)}</span> ed.`;
+            break;
+          case 'ext-link':
+            const href = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
+            html += `<span class="citation-ext-link"><a href="${href}" target="_blank">${formatContent(node) || href}</a></span>`;
+            break;
+          case 'uri':
+            const uri = node.getAttribute('xlink:href') || node.getAttribute('href') || node.textContent;
+            html += ` <span class="citation-uri"><a href="${uri}" target="_blank">${formatContent(node) || uri}</a></span>`;
+            break;
+          default:
+            html += formatContent(node);
+        }
       }
     } else if (node.nodeType === 3) { // Text node
       // Only add text content if it's not just whitespace
       if (node.textContent.trim()) {
-        html += escapeHtml(node.textContent);
+        const text = escapeHtml(node.textContent);
+        // Handle common punctuation and formatting
+        if (text === ',' || text === '.' || text === ':' || text === ';') {
+          html += text;
+        } else if (text.includes('–') || text.includes('-')) {
+          html += `<span class="citation-page-range">${text}</span>`;
+        } else {
+          html += ` ${text}`;
+        }
       }
     }
   });
@@ -995,7 +1055,9 @@ function processElement(element, level = 1) {
           html += renderDispFormula(node);
           break;
         case 'title':
-          // Skip titles here as they're handled in processSection
+          // Handle title elements with proper heading level
+          const headingLevel = Math.min(level, 6);
+          html += `<span style="font-weight: bold; color: #2c3e50;">${formatContent(node)}</span>`;
           break;
         default:
           // For any other elements without specific styling, render as paragraph with warning
@@ -1010,6 +1072,7 @@ function processElement(element, level = 1) {
   return html;
 }
 
+
 function processSection(sec, level = 1) {
   const secId = sec.getAttribute('id');
   let html = `<section${secId ? ` id="${secId}"` : ''}>`;
@@ -1021,15 +1084,23 @@ function processSection(sec, level = 1) {
   
   // Handle section title with proper heading level
   const secTitle = sec.querySelector(':scope > title');
-  const headingLevel = Math.min(level, 6); // Limit to h6 maximum
+  const headingLevel = Math.min(level, 6);
+  let titleProcessed = false;
+  
   if (secTitle) {
     html += `<h${headingLevel}>${formatContent(secTitle)}</h${headingLevel}>`;
+    titleProcessed = true;
   }
   
-  // Process all direct children except title
+  // Process all direct children except the main title
   sec.childNodes.forEach(node => {
     if (node.nodeType === 1) { // Element node
       const tagName = node.tagName.toLowerCase();
+      
+      // Skip the main title if we already processed it
+      if (titleProcessed && node === secTitle) {
+        return;
+      }
       
       switch(tagName) {
         case 'p':
@@ -1050,8 +1121,11 @@ function processSection(sec, level = 1) {
         case 'disp-formula':
           html += renderDispFormula(node);
           break;
+        case 'title':
+          // This handles nested titles or titles in unexpected locations
+          html += `<h${Math.min(level + 1, 6)}>${formatContent(node)}</h${Math.min(level + 1, 6)}>`;
+          break;
         default:
-          // For any other elements without specific styling, render as paragraph with warning
           if (node.textContent && node.textContent.trim()) {
             unstyledElements.add(tagName);
             html += `<div class="unstyled-element">${formatContent(node)}</div>`;
@@ -1211,14 +1285,38 @@ function renderFigure(fig) {
   
   const label = fig.querySelector('label')?.textContent || '';
   const caption = fig.querySelector('caption');
-  const graphic = fig.querySelector('graphic');
+  
   if (label) html += `<div class="fig-label">${label}</div>`;
-  if (graphic) {
-    const href = graphic.getAttribute('xlink:href') || graphic.getAttribute('href') || '';
-    if (href) {
-      html += `<div><img src="${href}" alt="${label}" class="fig-graphic" onerror="this.style.display='none'"></div>`;
-    }
+  
+  // Find and display ALL graphics in the figure
+  const graphics = fig.querySelectorAll('graphic, inline-graphic');
+  
+  if (graphics.length > 0) {
+    html += '<div class="graphics-container">';
+    graphics.forEach((graphic, index) => {
+      const graphicId = graphic.getAttribute('id') || `graphic-${index + 1}`;
+      const href = graphic.getAttribute('xlink:href') || graphic.getAttribute('href') || '';
+      const tagName = graphic.tagName.toLowerCase();
+      
+      html += `<div class="graphic-item">`;
+      html += `<div class="graphic-info">`;
+      if (graphic.getAttribute('id')) {
+        html += `<strong><span class="graphic-id">ID: ${graphic.getAttribute('id')}</span></strong>`;
+      }
+      html += `<strong><span class="graphic-href">ID: ${href}</span></strong>`;
+      html += `</div>`;
+      
+      if (href) {
+        html += `<div class="graphic-image">`;
+        html += `<img src="${href}" alt="${label} - Graphic ${index + 1}" class="fig-graphic" onerror="this.style.display='none'; console.log('Failed to load image: ${href}')">`;
+        html += `</div>`;
+      }
+      
+      html += `</div>`;
+    });
+    html += '</div>';
   }
+  
   if (caption) {
     html += '<div class="fig-caption">';
     const captionTitle = caption.querySelector('title');
@@ -1227,6 +1325,7 @@ function renderFigure(fig) {
     if (captionP) html += formatContent(captionP);
     html += '</div>';
   }
+  
   html += '</div>';
   return html;
 }
