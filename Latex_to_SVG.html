@@ -149,6 +149,13 @@
         .btn-success:hover {
             background: #218838;
         }
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background: #138496;
+        }
         .equation-preview {
             background: white;
             padding: 20px;
@@ -254,20 +261,28 @@
             font-size: 12px;
             color: #666;
         }
+        .download-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .download-buttons .btn {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📄 Document to SVG Equation Converter</h1>
-        <p class="subtitle">Extract and convert equations from DOC/MD/HTML files to SVG format with MathJax</p>
+        <p class="subtitle">Extract and convert equations from DOC/MD/HTML/XML files to SVG format with MathJax</p>
         
         <div class="drop-zone" id="dropZone">
             <div class="drop-zone-icon">📎</div>
-            <div class="drop-zone-text">Drag & Drop your DOC, MD, or HTML file here</div>
-            <div class="drop-zone-subtext">or click to browse (supports .doc, .docx, .md, .html)</div>
+            <div class="drop-zone-text">Drag & Drop your DOC, MD, HTML, or XML file here</div>
+            <div class="drop-zone-subtext">or click to browse (supports .doc, .docx, .md, .html, .xml)</div>
         </div>
         
-        <input type="file" id="fileInput" accept=".doc,.docx,.md,.html,.htm">
+        <input type="file" id="fileInput" accept=".doc,.docx,.md,.html,.htm,.xml">
         
         <div class="status" id="status"></div>
         
@@ -314,10 +329,14 @@
                 <h2 style="color: #333;">Extracted Equations</h2>
                 <div>
                     <button class="btn btn-secondary" id="scalingButton">Settings</button>
-                    <button class="btn btn-success" id="downloadAll">Download All as ZIP</button>
                 </div>
             </div>
             <div id="equationsList"></div>
+            
+            <div class="download-buttons">
+                <button class="btn btn-success" id="downloadAllSVG">Download All as SVG ZIP</button>
+                <button class="btn btn-info" id="downloadAllMathML">Download All as MathML</button>
+            </div>
         </div>
 
         <a id="hiddenLink" style="display: none;"></a>
@@ -331,7 +350,8 @@
         const status = document.getElementById('status');
         const equationsContainer = document.getElementById('equationsContainer');
         const equationsList = document.getElementById('equationsList');
-        const downloadAll = document.getElementById('downloadAll');
+        const downloadAllSVG = document.getElementById('downloadAllSVG');
+        const downloadAllMathML = document.getElementById('downloadAllMathML');
         const settingsPanel = document.getElementById('settingsPanel');
         const scalingButton = document.getElementById('scalingButton');
         const hiddenLink = document.getElementById('hiddenLink');
@@ -446,8 +466,8 @@
         }
 
         async function handleFile(file) {
-            if (!file.name.match(/\.(doc|docx|md|html|htm)$/i)) {
-                showStatus('Please upload a valid DOC, DOCX, MD, or HTML file', 'error');
+            if (!file.name.match(/\.(doc|docx|md|html|htm|xml)$/i)) {
+                showStatus('Please upload a valid DOC, DOCX, MD, HTML, or XML file', 'error');
                 return;
             }
 
@@ -467,6 +487,10 @@
                     // Handle Markdown files
                     text = await file.text();
                     equations = extractEquationsFromText(text);
+                } else if (file.name.match(/\.xml$/i)) {
+                    // Handle XML files
+                    text = await file.text();
+                    equations = extractEquationsFromXML(text);
                 } else {
                     // Handle DOC/DOCX files
                     const arrayBuffer = await file.arrayBuffer();
@@ -493,6 +517,62 @@
             }
         }
 
+        function extractEquationsFromXML(xmlText) {
+            const equations = [];
+            
+            // Create a temporary DOM parser to extract equation tags
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xmlText, 'text/xml');
+            
+            // Extract equations from inline-formula tags
+            const inlineFormulaTags = doc.querySelectorAll('inline-formula');
+            inlineFormulaTags.forEach((tag, index) => {
+                const content = tag.textContent.trim();
+                if (content) {
+                    const cleanedContent = cleanXMLEquationContent(content);
+                    equations.push({
+                        content: cleanedContent,
+                        original: tag.outerHTML,
+                        type: 'inline-formula',
+                        position: index
+                    });
+                }
+            });
+            
+            // Extract equations from tex-math tags
+            const texMathTags = doc.querySelectorAll('tex-math');
+            texMathTags.forEach((tag, index) => {
+                const content = tag.textContent.trim();
+                if (content) {
+                    const cleanedContent = cleanXMLEquationContent(content);
+                    equations.push({
+                        content: cleanedContent,
+                        original: tag.outerHTML,
+                        type: 'tex-math',
+                        position: index + inlineFormulaTags.length
+                    });
+                }
+            });
+            
+            return equations;
+        }
+
+        function cleanXMLEquationContent(content) {
+            // Remove $ delimiters if present
+            let cleaned = content.replace(/^\$+|\$+$/g, '');
+            
+            // Replace XML entities with their LaTeX equivalents
+            cleaned = cleaned.replace(/\\plus\s*/g, '+');
+            cleaned = cleaned.replace(/\\equals\s*/g, '=');
+            cleaned = cleaned.replace(/\\bi\s*/g, '\\boldsymbol');
+            cleaned = cleaned.replace(/\\amp\s*/g, '&');
+            cleaned = cleaned.replace(/\\lpar\s*/g, '(');
+            cleaned = cleaned.replace(/\\rpar\s*/g, ')');
+            cleaned = cleaned.replace(/\\comma\s*/g, ',');
+            
+            return cleaned;
+        }
+
         function extractEquationsFromHTML(htmlText) {
             const equations = [];
             
@@ -514,23 +594,6 @@
                     });
                 }
             });
-            
-            // Also extract from MathML <math> tags
-  //         const mathTags = doc.querySelectorAll('math');
-    //        mathTags.forEach((tag, index) => {
-      //          const texElements = tag.querySelectorAll('annotation[encoding="application/x-tex"]');
-        //        texElements.forEach(texElement => {
-//                    const content = texElement.textContent.trim();
-  //                  if (content) {
-    //                    equations.push({
-      //                      content: content,
-        //                    original: tag.outerHTML,
-          //                  type: 'mathml',
-            //                position: index + annotationTags.length
-//                        });
-  //                  }
-    //            });
-      //      });
             
             return equations;
         }
@@ -800,6 +863,15 @@
                     
                     // Store the SVG source for downloading
                     eq.svgSource = xmlHeader + new XMLSerializer().serializeToString(svg);
+                    
+                    // Also store MathML for batch download
+                    try {
+                        const mathml = MathJax.tex2mml(eq.latex, {display: eq.type === 'display' || eq.type === 'tex-math'});
+                        eq.mathml = mathml;
+                    } catch (error) {
+                        console.warn('Could not generate MathML for equation', index, error);
+                        eq.mathml = null;
+                    }
                 }
             } catch (error) {
                 console.error('Error rendering equation:', error);
@@ -844,7 +916,7 @@
             const eq = extractedEquations[index];
             try {
                 // Convert LaTeX to MathML using MathJax
-                const mathml = MathJax.tex2mml(eq.latex, {display: true});
+                const mathml = MathJax.tex2mml(eq.latex, {display: eq.type === 'display' || eq.type === 'tex-math'});
                 
                 if (hiddenLink.href) {
                     URL.revokeObjectURL(hiddenLink.href);
@@ -860,7 +932,7 @@
             }
         }
 
-        downloadAll.addEventListener('click', async () => {
+        downloadAllSVG.addEventListener('click', async () => {
             if (extractedEquations.length === 0) {
                 alert('No equations to download');
                 return;
@@ -886,6 +958,104 @@
                 console.error(error);
             }
         });
+
+        downloadAllMathML.addEventListener('click', async () => {
+            if (extractedEquations.length === 0) {
+                alert('No equations to download');
+                return;
+            }
+            
+            showStatus('Creating MathML file...', 'processing');
+            
+            try {
+                // Create a comprehensive MathML document
+                let mathmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE math PUBLIC "-//W3C//DTD MathML 3.0//EN" "http://www.w3.org/Math/DTD/mathml3/mathml3.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Extracted Equations</title>
+    <meta charset="UTF-8"/>
+</head>
+<body>
+    <h1>Extracted Equations</h1>
+    <p>Total equations: ${extractedEquations.length}</p>
+    
+    <div class="equations-list">
+`;
+
+                for (let i = 0; i < extractedEquations.length; i++) {
+                    const eq = extractedEquations[i];
+                    const isDisplay = eq.type === 'display' || eq.type === 'tex-math';
+                    
+                    mathmlContent += `
+        <div class="equation-item" id="eq-${i + 1}">
+            <h2>Equation ${i + 1} (${eq.type})</h2>
+            <div class="equation-content">
+`;
+                    
+                    if (isDisplay) {
+                        mathmlContent += `                <math display="block" id="math-${i + 1}">\n`;
+                    } else {
+                        mathmlContent += `                <math display="inline" id="math-${i + 1}">\n`;
+                    }
+                    
+                    // Use stored MathML or generate it
+                    let mathml = eq.mathml;
+                    if (!mathml) {
+                        try {
+                            mathml = MathJax.tex2mml(eq.latex, {display: isDisplay});
+                        } catch (error) {
+                            mathml = `<merror>Error generating MathML: ${error.message}</merror>`;
+                        }
+                    }
+                    
+                    // Extract the content inside <math> tags
+                    const mathMatch = mathml.match(/<math[^>]*>(.*?)<\/math>/s);
+                    if (mathMatch) {
+                        mathmlContent += mathMatch[1] + '\n';
+                    } else {
+                        mathmlContent += mathml + '\n';
+                    }
+                    
+                    mathmlContent += `                </math>\n`;
+                    mathmlContent += `            </div>\n`;
+                    mathmlContent += `            <div class="equation-info">\n`;
+                    mathmlContent += `                <p><strong>Original:</strong> ${escapeHTML(eq.original)}</p>\n`;
+                    mathmlContent += `                <p><strong>Type:</strong> ${eq.type}</p>\n`;
+                    mathmlContent += `            </div>\n`;
+                    mathmlContent += `        </div>\n`;
+                    
+                    if (i < extractedEquations.length - 1) {
+                        mathmlContent += `        <hr/>\n`;
+                    }
+                }
+                
+                mathmlContent += `    </div>
+</body>
+</html>`;
+
+                if (hiddenLink.href) {
+                    URL.revokeObjectURL(hiddenLink.href);
+                }
+                
+                const blob = new Blob([mathmlContent], {type: 'application/mathml+xml'});
+                hiddenLink.href = URL.createObjectURL(blob);
+                hiddenLink.download = 'all_equations.html';
+                hiddenLink.click();
+                
+                showStatus('MathML file downloaded successfully', 'success');
+            } catch (error) {
+                showStatus('Error creating MathML file: ' + error.message, 'error');
+                console.error(error);
+            }
+        });
+
+        // Helper function to escape HTML
+        function escapeHTML(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Initialize custom color input
         document.getElementById('customColor').addEventListener('change', function() {
