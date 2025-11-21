@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOC to SVG Equation Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            background: #f8f9ff;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+        .drop-zone.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .drop-zone-text {
+            color: #667eea;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .drop-zone-subtext {
+            color: #999;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.processing {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .equations-container {
+            margin-top: 30px;
+            display: none;
+        }
+        .equation-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .equation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .equation-title {
+            font-weight: 600;
+            color: #333;
+        }
+        .equation-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #764ba2;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .equation-preview {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .equation-editor {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            display: none;
+        }
+        .download-all {
+            margin-top: 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        .download-all:hover {
+            background: #218838;
+        }
+        .settings-panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        .settings-panel.true {
+            display: block;
+        }
+        .setting-group {
+            margin-bottom: 15px;
+        }
+        .setting-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .color-options, .scaling-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .color-option, .scaling-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+        }
+        .color-option.true, .scaling-option.true {
+            border-color: #667eea;
+            background: #e8ebff;
+        }
+        .tick {
+            margin-right: 8px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-left: 10px;
+            width: 120px;
+        }
+        .svg-preview {
+            max-width: 100%;
+            height: auto;
+        }
+        .edit-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .original-equation {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Document to SVG Equation Converter</h1>
+        <p class="subtitle">Extract and convert equations from DOC/MD/HTML files to SVG format with MathJax</p>
+        
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📎</div>
+            <div class="drop-zone-text">Drag & Drop your DOC, MD, or HTML file here</div>
+            <div class="drop-zone-subtext">or click to browse (supports .doc, .docx, .md, .html)</div>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".doc,.docx,.md,.html,.htm">
+        
+        <div class="status" id="status"></div>
+        
+        <div class="settings-panel" id="settingsPanel">
+            <div class="setting-group">
+                <div class="setting-label">Color Options</div>
+                <div class="color-options" id="color">
+                    <div class="color-option true">
+                        <span class="tick">✓</span>
+                        <span>Current Color</span>
+                    </div>
+                    <div class="color-option">
+                        <span class="tick">✓</span>
+                        <span>Black (#000000)</span>
+                    </div>
+                    <div class="color-option">
+                        <span class="tick">✓</span>
+                        <span>Custom: <input type="text" id="customColor" value="#ff0000"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="setting-group">
+                <div class="setting-label">Scaling Options</div>
+                <div class="scaling-options" id="scaling">
+                    <div class="scaling-option true">
+                        <span class="tick">✓</span>
+                        <span>Default (8px/ex)</span>
+                    </div>
+                    <div class="scaling-option">
+                        <span class="tick">✓</span>
+                        <span>Font: <input type="text" id="fontScaling" value="16px Lato"></span>
+                    </div>
+                    <div class="scaling-option">
+                        <span class="tick">✓</span>
+                        <span>Fixed: <input type="number" id="fixedScaling" value="8" min="1" max="100"> px/ex</span>
+                    </div>
+                </div>
+                <div id="scalingValue" style="margin-top: 10px; color: #666;">1 ex = 8.000 px</div>
+            </div>
+        </div>
+        
+        <div class="equations-container" id="equationsContainer">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #333;">Extracted Equations</h2>
+                <div>
+                    <button class="btn btn-secondary" id="scalingButton">Settings</button>
+                    <button class="btn btn-success" id="downloadAll">Download All as ZIP</button>
+                </div>
+            </div>
+            <div id="equationsList"></div>
+        </div>
+
+        <a id="hiddenLink" style="display: none;"></a>
+    </div>
+
+    <script>
+        'use strict';
+        
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const equationsContainer = document.getElementById('equationsContainer');
+        const equationsList = document.getElementById('equationsList');
+        const downloadAll = document.getElementById('downloadAll');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const scalingButton = document.getElementById('scalingButton');
+        const hiddenLink = document.getElementById('hiddenLink');
+        
+        let extractedEquations = [];
+        let currentColor = 'currentColor';
+        let scalingPxPerEx = 8;
+        const xmlHeader = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n';
+
+        // Configure MathJax
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                packages: {'[+]': ['unicode']}
+            },
+            loader: {load: ['[tex]/unicode']},
+            startup: {
+                ready: function() {
+                    const MathJax = window.MathJax;
+                    MathJax.startup.defaultReady();
+                    // Add Unicode support
+                    const tex = MathJax.startup.document.inputJax[0];
+                    tex.parseOptions.options.unicode.fallback = function(char) {
+                        return char;
+                    };
+                }
+            }
+        };
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        scalingButton.addEventListener('click', () => {
+            settingsPanel.classList.toggle('true');
+        });
+
+        // Color options
+        const colorOptions = document.querySelectorAll('.color-option');
+        colorOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                colorOptions.forEach(opt => opt.classList.remove('true'));
+                this.classList.add('true');
+                
+                if (this.querySelector('span').textContent === 'Current Color') {
+                    currentColor = 'currentColor';
+                } else if (this.querySelector('span').textContent === 'Black (#000000)') {
+                    currentColor = '#000000';
+                } else {
+                    currentColor = document.getElementById('customColor').value;
+                }
+                
+                if (extractedEquations.length > 0) {
+                    renderAllEquations();
+                }
+            });
+        });
+
+        // Scaling options
+        const scalingOptions = document.querySelectorAll('.scaling-option');
+        scalingOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                scalingOptions.forEach(opt => opt.classList.remove('true'));
+                this.classList.add('true');
+                
+                if (this.querySelector('span').textContent.includes('Default')) {
+                    scalingPxPerEx = 8;
+                } else if (this.querySelector('span').textContent.includes('Font')) {
+                    // Font scaling logic would go here
+                    scalingPxPerEx = 8;
+                } else {
+                    scalingPxPerEx = parseFloat(document.getElementById('fixedScaling').value) || 8;
+                }
+                
+                document.getElementById('scalingValue').textContent = `1 ex = ${scalingPxPerEx.toFixed(3)} px`;
+                
+                if (extractedEquations.length > 0) {
+                    renderAllEquations();
+                }
+            });
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        async function handleFile(file) {
+            if (!file.name.match(/\.(doc|docx|md|html|htm)$/i)) {
+                showStatus('Please upload a valid DOC, DOCX, MD, or HTML file', 'error');
+                return;
+            }
+
+            showStatus('Processing document...', 'processing');
+            equationsContainer.style.display = 'none';
+            extractedEquations = [];
+
+            try {
+                let text = '';
+                let equations = [];
+                
+                if (file.name.match(/\.(html|htm)$/i)) {
+                    // Handle HTML files - extract from annotation tags
+                    text = await file.text();
+                    equations = extractEquationsFromHTML(text);
+                } else if (file.name.match(/\.md$/i)) {
+                    // Handle Markdown files
+                    text = await file.text();
+                    equations = extractEquationsFromText(text);
+                } else {
+                    // Handle DOC/DOCX files
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    text = result.value;
+                    equations = extractEquationsFromText(text);
+                }
+                
+                if (equations.length === 0) {
+                    showStatus('No equations found in the document', 'error');
+                    return;
+                }
+
+                showStatus(`Found ${equations.length} equation(s). Rendering with MathJax...`, 'processing');
+                
+                await renderEquations(equations);
+                
+                showStatus(`Successfully processed ${equations.length} equation(s)`, 'success');
+                equationsContainer.style.display = 'block';
+                
+            } catch (error) {
+                showStatus('Error processing file: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        function extractEquationsFromHTML(htmlText) {
+            const equations = [];
+            
+            // Create a temporary DOM parser to extract annotation tags
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            
+            // Extract equations from <annotation encoding="application/x-tex"> tags
+            const annotationTags = doc.querySelectorAll('annotation[encoding="application/x-tex"]');
+            
+            annotationTags.forEach((tag, index) => {
+                const content = tag.textContent.trim();
+                if (content) {
+                    equations.push({
+                        content: content,
+                        original: `<annotation encoding="application/x-tex">${content}</annotation>`,
+                        type: 'annotation',
+                        position: index
+                    });
+                }
+            });
+            
+            // Also extract from MathML <math> tags
+  //         const mathTags = doc.querySelectorAll('math');
+    //        mathTags.forEach((tag, index) => {
+      //          const texElements = tag.querySelectorAll('annotation[encoding="application/x-tex"]');
+        //        texElements.forEach(texElement => {
+//                    const content = texElement.textContent.trim();
+  //                  if (content) {
+    //                    equations.push({
+      //                      content: content,
+        //                    original: tag.outerHTML,
+          //                  type: 'mathml',
+            //                position: index + annotationTags.length
+//                        });
+  //                  }
+    //            });
+      //      });
+            
+            return equations;
+        }
+
+        function extractEquationsFromText(text) {
+            const equations = [];
+            
+            // Step 1: First remove all escaped \$ patterns completely
+            text = text.replace(/\\\$/g, '');
+            
+            // Step 2: Remove [GQ *] and [AQ *] patterns
+            text = text.replace(/\[(GQ|AQ)\s*[^\]]*\]/gi, '');
+            
+            // Step 3: Extract equations in order of appearance - focus only on $$*$$, $*$, and \(*\)
+            const mathPatterns = [
+                { 
+                    pattern: /\$\$([^$]+)\$\$/g, 
+                    type: 'display'
+                },     // $$...$$
+                { 
+                    pattern: /\\\[([^\]]+)\\\]/g, 
+                    type: 'display'
+                },    // \[...\]
+                { 
+                    pattern: /\$([^$]+)\$/g, 
+                    type: 'inline'
+                },          // $...$
+                { 
+                    pattern: /\\\(([^)]+)\\\)/g, 
+                    type: 'inline'
+                }       // \(...\)
+            ];
+            
+            // Find all matches and store with their position
+            const allMatches = [];
+            
+            mathPatterns.forEach(({pattern, type}) => {
+                let match;
+                // Reset regex lastIndex
+                pattern.lastIndex = 0;
+                while ((match = pattern.exec(text)) !== null) {
+                    const content = match[1] || match[0];
+                    const cleanedContent = cleanEquationContent(content);
+                    
+                    // Include ALL math content found (no filtering for currency since we removed \$ already)
+                    if (cleanedContent && cleanedContent.trim().length > 0) {
+                        allMatches.push({
+                            content: match[0],
+                            cleanedContent: cleanedContent,
+                            type: type,
+                            position: match.index
+                        });
+                    }
+                }
+            });
+            
+            // Sort by position in the document
+            allMatches.sort((a, b) => a.position - b.position);
+            
+            // Extract unique equations in order
+            const seenEquations = new Set();
+            allMatches.forEach(match => {
+                if (match.cleanedContent && !seenEquations.has(match.cleanedContent)) {
+                    seenEquations.add(match.cleanedContent);
+                    equations.push({
+                        content: match.cleanedContent,
+                        original: match.content,
+                        type: match.type
+                    });
+                }
+            });
+
+            return equations;
+        }
+
+        function cleanEquationContent(content) {
+            // Remove any remaining $ signs and trim
+            let cleaned = content.replace(/\$/g, '').trim();
+            
+            // Remove any [GQ *] or [AQ *] patterns that might have been missed
+            cleaned = cleaned.replace(/\[(GQ|AQ)\s*[^\]]*\]/gi, '');
+            
+            // Clean up any extra spaces around commas and other punctuation
+            cleaned = cleaned.replace(/\s*,\s*/g, ', ');
+            cleaned = cleaned.replace(/\s*\.\s*/g, '. ');
+            
+            return cleaned;
+        }
+
+        async function renderEquations(equations) {
+            equationsList.innerHTML = '';
+            extractedEquations = [];
+            
+            for (let i = 0; i < equations.length; i++) {
+                const equation = equations[i];
+                const container = document.createElement('div');
+                container.className = 'equation-item';
+                container.id = `equation-container-${i}`;
+                
+                const header = document.createElement('div');
+                header.className = 'equation-header';
+                
+                const title = document.createElement('div');
+                title.className = 'equation-title';
+                title.textContent = `Equation ${i + 1} (${equation.type})`;
+                
+                const controls = document.createElement('div');
+                controls.className = 'equation-controls';
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-secondary';
+                editBtn.textContent = 'Edit';
+                editBtn.onclick = () => toggleEditMode(i);
+                
+                const mathmlBtn = document.createElement('button');
+                mathmlBtn.className = 'btn btn-secondary';
+                mathmlBtn.textContent = 'MathML';
+                mathmlBtn.onclick = () => downloadMathML(i);
+                
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn btn-primary';
+                downloadBtn.textContent = 'Download SVG';
+                downloadBtn.onclick = () => downloadSVG(i);
+                
+                controls.appendChild(editBtn);
+                controls.appendChild(mathmlBtn);
+                controls.appendChild(downloadBtn);
+                
+                header.appendChild(title);
+                header.appendChild(controls);
+                
+                // Show original equation for reference
+                const originalEq = document.createElement('div');
+                originalEq.className = 'original-equation';
+                originalEq.textContent = `Original: ${equation.original}`;
+                
+                const preview = document.createElement('div');
+                preview.className = 'equation-preview';
+                preview.id = `equation-preview-${i}`;
+                
+                const editor = document.createElement('textarea');
+                editor.className = 'equation-editor';
+                editor.id = `equation-editor-${i}`;
+                editor.value = equation.content;
+                
+                const editControls = document.createElement('div');
+                editControls.className = 'edit-controls';
+                editControls.id = `edit-controls-${i}`;
+                editControls.style.display = 'none';
+                
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn btn-success';
+                saveBtn.textContent = 'Save';
+                saveBtn.onclick = () => saveEquation(i);
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-secondary';
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.onclick = () => cancelEdit(i);
+                
+                editControls.appendChild(saveBtn);
+                editControls.appendChild(cancelBtn);
+                
+                container.appendChild(header);
+                container.appendChild(originalEq);
+                container.appendChild(preview);
+                container.appendChild(editor);
+                container.appendChild(editControls);
+                equationsList.appendChild(container);
+                
+                extractedEquations.push({
+                    latex: equation.content,
+                    original: equation.original,
+                    type: equation.type,
+                    elementId: `equation-${i}`,
+                    previewId: `equation-preview-${i}`,
+                    editorId: `equation-editor-${i}`,
+                    editControlsId: `edit-controls-${i}`,
+                    containerId: `equation-container-${i}`
+                });
+            }
+            
+            // Wait for MathJax to be ready and render all equations
+            await renderAllEquations();
+        }
+
+        function toggleEditMode(index) {
+            const eq = extractedEquations[index];
+            const preview = document.getElementById(eq.previewId);
+            const editor = document.getElementById(eq.editorId);
+            const editControls = document.getElementById(eq.editControlsId);
+            
+            if (editor.style.display === 'none') {
+                // Enter edit mode
+                preview.style.display = 'none';
+                editor.style.display = 'block';
+                editControls.style.display = 'flex';
+            } else {
+                // Exit edit mode
+                preview.style.display = 'flex';
+                editor.style.display = 'none';
+                editControls.style.display = 'none';
+            }
+        }
+
+        async function saveEquation(index) {
+            const eq = extractedEquations[index];
+            const editor = document.getElementById(eq.editorId);
+            const newLatex = editor.value.trim();
+            
+            if (newLatex !== eq.latex) {
+                eq.latex = newLatex;
+                await renderSingleEquation(index);
+            }
+            
+            toggleEditMode(index);
+        }
+
+        function cancelEdit(index) {
+            const eq = extractedEquations[index];
+            const editor = document.getElementById(eq.editorId);
+            editor.value = eq.latex; // Reset to original value
+            toggleEditMode(index);
+        }
+
+        async function renderSingleEquation(index) {
+            const eq = extractedEquations[index];
+            const preview = document.getElementById(eq.previewId);
+            
+            try {
+                // Clear previous content
+                preview.innerHTML = '';
+                
+                // Create temporary element for MathJax rendering
+                const tempDiv = document.createElement('div');
+                tempDiv.style.display = 'none';
+                tempDiv.textContent = eq.latex;
+                document.body.appendChild(tempDiv);
+                
+                // Use MathJax to convert LaTeX to SVG
+                const mathElement = await MathJax.tex2svg(tempDiv.textContent, {
+                    em: 16,
+                    ex: 8,
+                    display: true,
+                    scale: 1
+                });
+                
+                document.body.removeChild(tempDiv);
+                
+                const svg = mathElement.querySelector('svg');
+                if (svg) {
+                    // Apply scaling and color
+                    svg.setAttribute('width', exToPx(svg.getAttribute('width')));
+                    svg.setAttribute('height', exToPx(svg.getAttribute('height')));
+                    svg.style.maxWidth = '100%';
+                    svg.style.height = 'auto';
+                    
+                    if (currentColor !== 'currentColor') {
+                        const groups = svg.querySelectorAll('g');
+                        groups.forEach(group => {
+                            group.setAttribute('fill', currentColor);
+                            group.setAttribute('stroke', currentColor);
+                        });
+                    }
+                    
+                    preview.appendChild(svg);
+                    
+                    // Store the SVG source for downloading
+                    eq.svgSource = xmlHeader + new XMLSerializer().serializeToString(svg);
+                }
+            } catch (error) {
+                console.error('Error rendering equation:', error);
+                preview.innerHTML = `<div style="color: red;">Error rendering equation: ${error.message}</div>`;
+            }
+            
+            function exToPx(value) {
+                if (!value) return value;
+                const match = value.match(/^(.*)ex$/);
+                return match ? (parseFloat(match[1]) * scalingPxPerEx).toFixed(3) + 'px' : value;
+            }
+        }
+
+        async function renderAllEquations() {
+            if (!window.MathJax.typesetPromise) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            for (let i = 0; i < extractedEquations.length; i++) {
+                await renderSingleEquation(i);
+            }
+        }
+
+        function downloadSVG(index) {
+            const eq = extractedEquations[index];
+            if (!eq || !eq.svgSource) {
+                alert('SVG not available for download');
+                return;
+            }
+            
+            if (hiddenLink.href) {
+                URL.revokeObjectURL(hiddenLink.href);
+            }
+            
+            const blob = new Blob([eq.svgSource], {type: 'image/svg+xml'});
+            hiddenLink.href = URL.createObjectURL(blob);
+            hiddenLink.download = `equation_${index + 1}.svg`;
+            hiddenLink.click();
+        }
+
+        function downloadMathML(index) {
+            const eq = extractedEquations[index];
+            try {
+                // Convert LaTeX to MathML using MathJax
+                const mathml = MathJax.tex2mml(eq.latex, {display: true});
+                
+                if (hiddenLink.href) {
+                    URL.revokeObjectURL(hiddenLink.href);
+                }
+                
+                const blob = new Blob([mathml], {type: 'application/mathml+xml'});
+                hiddenLink.href = URL.createObjectURL(blob);
+                hiddenLink.download = `equation_${index + 1}.mathml`;
+                hiddenLink.click();
+            } catch (error) {
+                alert('Error generating MathML: ' + error.message);
+                console.error('MathML conversion error:', error);
+            }
+        }
+
+        downloadAll.addEventListener('click', async () => {
+            if (extractedEquations.length === 0) {
+                alert('No equations to download');
+                return;
+            }
+            
+            showStatus('Creating ZIP file...', 'processing');
+            
+            try {
+                const zip = new JSZip();
+                
+                for (let i = 0; i < extractedEquations.length; i++) {
+                    const eq = extractedEquations[i];
+                    if (eq.svgSource) {
+                        zip.file(`equation_${i + 1}.svg`, eq.svgSource);
+                    }
+                }
+                
+                const content = await zip.generateAsync({type: 'blob'});
+                saveAs(content, 'equations.zip');
+                showStatus('ZIP file downloaded successfully', 'success');
+            } catch (error) {
+                showStatus('Error creating ZIP file: ' + error.message, 'error');
+                console.error(error);
+            }
+        });
+
+        // Initialize custom color input
+        document.getElementById('customColor').addEventListener('change', function() {
+            const customOption = document.querySelector('.color-option:last-child');
+            if (customOption.classList.contains('true')) {
+                currentColor = this.value;
+                if (extractedEquations.length > 0) {
+                    renderAllEquations();
+                }
+            }
+        });
+
+        // Initialize fixed scaling input
+        document.getElementById('fixedScaling').addEventListener('change', function() {
+            const fixedOption = document.querySelector('.scaling-option:last-child');
+            if (fixedOption.classList.contains('true')) {
+                scalingPxPerEx = parseFloat(this.value) || 8;
+                document.getElementById('scalingValue').textContent = `1 ex = ${scalingPxPerEx.toFixed(3)} px`;
+                if (extractedEquations.length > 0) {
+                    renderAllEquations();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
