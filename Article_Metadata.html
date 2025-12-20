@@ -14,6 +14,7 @@
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     th { background-color: #f0f0f0; }
+    .format-indicator { text-align: center; color: #666; font-style: italic; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -24,6 +25,8 @@
   <div id="dropZone" style="border: 2px dashed #2c3e50; padding: 20px; text-align: center; color: red; cursor: pointer;">Drag & Drop XML File Here</div>
   <input type="file" id="xmlFile" accept=".xml" style="display:block; margin-top:10px;">
 </div>
+
+<div class="format-indicator" id="formatIndicator"></div>
 
 <div class="grid">
   <div class="section">
@@ -41,21 +44,22 @@
     <textarea id="abstract" readonly></textarea>
     <button onclick="copyText('abstract')">Copy Abstract</button>
   </div>
-<div class="section">
-  <h2>Keywords</h2>
-  <textarea id="keywords" readonly></textarea>
-  <button onclick="copyText('keywords')">Copy Keywords</button>
-</div>
+  <div class="section">
+    <h2>Keywords</h2>
+    <textarea id="keywords" readonly></textarea>
+    <button onclick="copyText('keywords')">Copy Keywords</button>
+  </div>
 
-<div class="section">
-  <h2>Author Keywords</h2>
-  <div id="author_keywords"></div>
-</div>
+  <div class="section">
+    <h2>Author Keywords</h2>
+    <div id="author_keywords"></div>
+  </div>
 
-<div class="section">
-  <h2>Editor Keywords</h2>
-  <div id="editor_keywords"></div>
-</div>
+  <div class="section">
+    <h2>Editor Keywords</h2>
+    <div id="editor_keywords"></div>
+  </div>
+
   <div class="section">
     <h2>Plain Language Summary</h2>
     <textarea id="plain_summary" readonly></textarea>
@@ -68,13 +72,25 @@
   </div>
 
   <div class="section">
-    <h2>ORCID + Author Details (Validated Authors)</h2>
+    <h2>ORCID iD</h2>
     <div id="author_table"></div>
   </div>
   <div class="section">
     <h2>Author Credit Roles</h2>
     <textarea id="credit_roles" readonly></textarea>
     <button onclick="copyText('credit_roles')">Copy Credit Roles</button>
+  </div>
+
+  <div class="section">
+    <h2>Companion Papers</h2>
+    <textarea id="companion_papers" readonly></textarea>
+    <button onclick="copyText('companion_papers')">Copy Companion Papers</button>
+  </div>
+
+  <div class="section">
+    <h2>Corresponding Author</h2>
+    <textarea id="corresponding_author" readonly></textarea>
+    <button onclick="copyText('corresponding_author')">Copy Corresponding Author</button>
   </div>
 </div>
 
@@ -102,14 +118,12 @@ function generatePeopleTable(list) {
     return tableHTML;
 }
 
-
-
 function extractPeopleList(xmlDoc, listTagName) {
     const list = xmlDoc.querySelector(listTagName);
     const people = [];
 
     if (list) {
-        const entries = list.querySelectorAll(listTagName.slice(0, -5)); // 'editor' or 'author'
+        const entries = list.querySelectorAll(listTagName.slice(0, -5));
 
         entries.forEach(entry => {
             const firstName = entry.querySelector("first_name")?.textContent.trim() || "";
@@ -138,120 +152,284 @@ function extractPeopleList(xmlDoc, listTagName) {
     return people;
 }
 
+function detectXMLFormat(xmlDoc) {
+    // Check for new format indicators
+    if (xmlDoc.querySelector("metadata > articleinfo")) {
+        return "new";
+    }
+    // Check for old format indicators
+    if (xmlDoc.querySelector("author_list")) {
+        return "old";
+    }
+    return "unknown";
+}
+
+function parseNewFormat(xmlDoc) {
+    const data = {};
+
+    // Article Info
+    const articleInfo = xmlDoc.querySelector("articleinfo");
+    const journalTitle = articleInfo?.querySelector("journal-title")?.textContent || "";
+    const articleTitle = articleInfo?.querySelector("article-title")?.textContent || "";
+    const manuscriptNumber = articleInfo?.querySelector("manuscript-number")?.textContent || "";
+
+    // Manuscript Type
+    const manuscriptType = xmlDoc.querySelector("manuscript-type")?.textContent || "";
+
+    data.journalDetails = [
+        labelLine("Journal Title", journalTitle),
+        labelLine("Article Title", articleTitle),
+        labelLine("Manuscript Number", manuscriptNumber),
+        labelLine("Manuscript Type", manuscriptType)
+    ].join("\n\n");
+
+    // Corresponding Author
+    const corrInfo = xmlDoc.querySelector("corrinfo");
+    if (corrInfo) {
+        const firstName = corrInfo.querySelector("corresponding-author-firstname")?.textContent || "";
+        const middleName = corrInfo.querySelector("corresponding-author-middlename")?.textContent || "";
+        const lastName = corrInfo.querySelector("corresponding-author-lastname")?.textContent || "";
+        const email = corrInfo.querySelector("corresponding-author-email")?.textContent || "";
+        const institution = corrInfo.querySelector("corresponding-author-institution")?.textContent || "";
+        const title = corrInfo.querySelector("corresponding-author-title")?.textContent || "";
+        const address1 = corrInfo.querySelector("corresponding-author-address-1")?.textContent || "";
+        const address2 = corrInfo.querySelector("corresponding-author-address-2")?.textContent || "";
+        const city = corrInfo.querySelector("corresponding-author-city")?.textContent || "";
+        const state = corrInfo.querySelector("corresponding-author-state")?.textContent || "";
+        const country = corrInfo.querySelector("corresponding-author-country")?.textContent || "";
+        const zipcode = corrInfo.querySelector("corresponding-author-zipcode")?.textContent || "";
+        const phone = corrInfo.querySelector("corresponding-author-phone")?.textContent || "";
+        const orcid = corrInfo.querySelector("person-id[type='orcid']")?.textContent || "";
+
+        data.correspondingAuthor = [
+            labelLine("Name", [firstName, middleName, lastName].filter(Boolean).join(" ")),
+            labelLine("Email", email),
+            labelLine("Institution", institution),
+            labelLine("Title", title),
+            labelLine("Address", [address1, address2].filter(Boolean).join(", ")),
+            labelLine("City", city),
+            labelLine("State", state),
+            labelLine("Country", country),
+            labelLine("Zipcode", zipcode),
+            labelLine("Phone", phone),
+            labelLine("ORCID", orcid ? `https://orcid.org/${orcid}` : "")
+        ].filter(line => !line.endsWith(": ")).join("\n");
+    } else {
+        data.correspondingAuthor = "";
+    }
+
+    // Authors
+    let authorTableHTML = "";
+    const firstAuthor = xmlDoc.querySelector("first-author");
+    const otherAuthors = xmlDoc.querySelectorAll("other-author");
+    
+    const allAuthors = [];
+    if (firstAuthor) allAuthors.push(firstAuthor);
+    otherAuthors.forEach(author => allAuthors.push(author));
+
+    allAuthors.forEach(author => {
+        const firstName = author.querySelector("first-author-firstname, other-author-firstname")?.textContent || "";
+        const middleName = author.querySelector("first-author-middlename, other-author-middlename")?.textContent || "";
+        const lastName = author.querySelector("first-author-lastname, other-author-lastname")?.textContent || "";
+        const orcid = author.querySelector("person-id[type='orcid']")?.textContent || "";
+        const authenticated = author.querySelector("person-id[type='orcid']")?.getAttribute("authenticated") || "";
+
+        const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ");
+        
+        if (orcid && authenticated === "true") {
+            authorTableHTML += `${fullName} https://orcid.org/${orcid}<p/>\n`;
+        }
+    });
+
+    data.authorTable = authorTableHTML;
+    data.creditRoles = ""; // New format doesn't have credit roles in the provided example
+
+    // History
+    let historyHTML = "<table><thead><tr><th>Event</th><th>Date</th></tr></thead><tbody>";
+    const history = xmlDoc.querySelector("history");
+    if (history) {
+        const submittedDate = history.querySelector("submitted-date")?.textContent || "";
+        const revisedDate = history.querySelector("revised-date")?.textContent || "";
+        const acceptedDate = history.querySelector("accepted-date")?.textContent || "";
+
+        if (submittedDate) historyHTML += `<tr><td>SUBMITTED DATE</td><td>${submittedDate}</td></tr>`;
+        if (revisedDate) historyHTML += `<tr><td>REVISED DATE</td><td>${revisedDate}</td></tr>`;
+        if (acceptedDate) historyHTML += `<tr><td>ACCEPTED DATE</td><td>${acceptedDate}</td></tr>`;
+    }
+    historyHTML += "</tbody></table>";
+    data.historyTable = historyHTML;
+
+    // Companion Papers
+    const companionPapers = xmlDoc.querySelectorAll("companion-paper");
+    let companionText = "";
+    companionPapers.forEach(paper => {
+        const paperNumber = paper.querySelector("companion-paper-number")?.textContent || "";
+        if (paperNumber) companionText += `${paperNumber}\n`;
+    });
+    data.companionPapers = companionText;
+
+    // Defaults for fields not in new format
+    data.abstract = "";
+    data.plainSummary = "";
+    data.keywords = "";
+    data.fundrefInfo = "";
+    data.authorKeywords = [];
+    data.editorKeywords = [];
+
+    return data;
+}
+
+function parseOldFormat(xmlDoc) {
+    const data = {};
+
+    const abstract = xmlDoc.getElementsByTagName("abstract")[0]?.textContent || "";
+    const plainSummary = [...xmlDoc.querySelectorAll("custom_fields[cd_code='Plain Language Summary']")]
+        .map(el => el.textContent.trim()).join("\n");
+
+    const keywords = [...xmlDoc.querySelectorAll("attr_type[name='Keywords'] > attribute")]
+        .map(attr => attr.getAttribute("name")).join(", ");
+
+    const authors = xmlDoc.querySelectorAll("author_list > author");
+    let authorTableHTML = "";
+    let credits = "";
+
+    for (let author of authors) {
+        const authorSeq = author.getAttribute("author_seq") || "";
+        if (authorSeq !== "") {
+            const first = author.querySelector("first_name")?.textContent.trim() || "";
+            const last = author.querySelector("last_name")?.textContent.trim() || "";
+            const orcid = author.querySelector("orcid")?.textContent.trim() || "";
+            const validation = author.querySelector("orcid_id_validation")?.textContent.trim() || "FALSE";
+
+            if (orcid && validation === "TRUE") {
+                authorTableHTML += `${first} ${last} https://orcid.org/${orcid}<p/>\n`;
+            }
+        }
+
+        const first = author.querySelector("first_name")?.textContent || "";
+        const last = author.querySelector("last_name")?.textContent || "";
+        const roles = [...author.querySelectorAll("credit_taxonomy_role")]
+            .map(r => r.textContent.trim());
+        credits += `${first} ${last}: ${roles.join(", ")}\n`;
+    }
+
+    const journal = xmlDoc.querySelector("journal");
+    const journalDetails = [
+        labelLine("Publication Type", xmlDoc.querySelector("publication_type")?.textContent || ""),
+        labelLine("Full Journal Title", journal?.querySelector("full_journal_title")?.textContent || ""),
+        labelLine("Site Short Name", journal?.querySelector("site_short_name")?.textContent || ""),
+        labelLine("Journal Abbreviation", journal?.querySelector("journal_abbreviation")?.textContent || ""),
+        labelLine("PubMed Abbreviation", journal?.querySelector("pubmed_abbreviation")?.textContent || ""),
+        labelLine("Print ISSN", journal?.querySelector("issn[issn_type='print']")?.textContent || ""),
+        labelLine("Digital ISSN", journal?.querySelector("issn[issn_type='digital']")?.textContent || ""),
+        labelLine("Article Status", xmlDoc.querySelector("article_status")?.getAttribute("decision_status") || ""),
+        labelLine("Article Title", xmlDoc.querySelector("article_title")?.textContent || ""),
+        labelLine("Article Subtitle", xmlDoc.querySelector("article_sub_title")?.textContent || "")
+    ].join("\n\n");
+
+    let fundrefText = "";
+    const fundref = xmlDoc.querySelector("fundref_information");
+    if (fundref) {
+        const noFundersText = fundref.querySelector("no_funders")?.textContent.trim().toLowerCase();
+        if (noFundersText === "true") {
+            fundrefText = "No Funders: true";
+        } else if (noFundersText === "false") {
+            const funders = fundref.querySelectorAll("funder");
+            funders.forEach(funder => {
+                const label = funder.querySelector("preferred_label")?.textContent.trim() || "";
+                const id = funder.querySelector("concept_id")?.textContent.trim() || "";
+                const grant = funder.querySelector("grant_number")?.textContent.trim() || "";
+                fundrefText += `FUNDER: ${label}\nCONCEPT ID: ${id}\nGRANT NUMBER: ${grant}\n\n`;
+            });
+        }
+    }
+
+    let historyHTML = "<table><thead><tr><th>Event</th><th>Date</th></tr></thead><tbody>";
+    const history = xmlDoc.querySelector("history > ms_id");
+    if (history) {
+        const events = [
+            "submitted_date", "received_date", "received_date_resub",
+            "revised_date", "decision_date", "approval_date",
+            "author_returned_date", "most_recent_decision_date", "transmission_date", "web_publish_date"
+        ];
+        events.forEach(event => {
+            const node = history.querySelector(event);
+            if (node) {
+                const year = node.querySelector("year")?.textContent || "";
+                const month = node.querySelector("month")?.textContent || "";
+                const day = node.querySelector("day")?.textContent || "";
+                if (year && month && day) {
+                    historyHTML += `<tr><td>${event.replace(/_/g, ' ').toUpperCase()}</td><td>${day.padStart(2,'0')}-${month.padStart(2,'0')}-${year}</td></tr>`;
+                }
+            }
+        });
+    }
+    historyHTML += "</tbody></table>";
+
+    const authorKeywordsList = extractPeopleList(xmlDoc, "author_list");
+    const editorKeywordsList = extractPeopleList(xmlDoc, "editor_list");
+
+    data.journalDetails = journalDetails;
+    data.fundrefInfo = fundrefText;
+    data.historyTable = historyHTML;
+    data.abstract = abstract;
+    data.plainSummary = plainSummary;
+    data.keywords = keywords;
+    data.authorTable = authorTableHTML;
+    data.creditRoles = credits;
+    data.authorKeywords = authorKeywordsList;
+    data.editorKeywords = editorKeywordsList;
+    data.correspondingAuthor = "";
+    data.companionPapers = "";
+
+    return data;
+}
+
 function handleFile(file) {
     const reader = new FileReader();
     reader.onload = function (e) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
 
-        const abstract = xmlDoc.getElementsByTagName("abstract")[0]?.textContent || "";
-        const plainSummary = [...xmlDoc.querySelectorAll("custom_fields[cd_code='Plain Language Summary']")]
-            .map(el => el.textContent.trim()).join("\n");
+        const format = detectXMLFormat(xmlDoc);
+        document.getElementById("formatIndicator").textContent = `Detected Format: ${format.toUpperCase()}`;
 
-        const keywords = [...xmlDoc.querySelectorAll("attr_type[name='Keywords'] > attribute")]
-            .map(attr => attr.getAttribute("name")).join(", ");
-
-        const authors = xmlDoc.querySelectorAll("author_list > author");
-        let authorTableHTML = "";
-        let credits = "";
-
-        for (let author of authors) {
-            const authorSeq = author.getAttribute("author_seq") || "";
-            if (authorSeq !== "") {
-                const first = author.querySelector("first_name")?.textContent.trim() || "";
-                const last = author.querySelector("last_name")?.textContent.trim() || "";
-                const email = author.querySelector("email")?.textContent.trim() || "";
-                const orcid = author.querySelector("orcid")?.textContent.trim() || "";
-                const validation = author.querySelector("orcid_id_validation")?.textContent.trim() || "FALSE";
-
-                if (orcid && validation === "TRUE") {
-                    authorTableHTML += `${first} ${last} https://orcid.org/${orcid}<br>\n`;
-                }
-        authorTableHTML += "</tbody></table>";
-            }
-
-            const first = author.querySelector("first_name")?.textContent || "";
-            const last = author.querySelector("last_name")?.textContent || "";
-            const roles = [...author.querySelectorAll("credit_taxonomy_role")]
-                .map(r => r.textContent.trim());
-            credits += `${first} ${last}: ${roles.join(", ")}\n`;
-        }
-        authorTableHTML += "</tbody></table>";
-
-        const journal = xmlDoc.querySelector("journal");
-        const journalDetails = [
-            labelLine("Publication Type", xmlDoc.querySelector("publication_type")?.textContent || ""),
-            labelLine("Full Journal Title", journal?.querySelector("full_journal_title")?.textContent || ""),
-            labelLine("Site Short Name", journal?.querySelector("site_short_name")?.textContent || ""),
-            labelLine("Journal Abbreviation", journal?.querySelector("journal_abbreviation")?.textContent || ""),
-            labelLine("PubMed Abbreviation", journal?.querySelector("pubmed_abbreviation")?.textContent || ""),
-            labelLine("Print ISSN", journal?.querySelector("issn[issn_type='print']")?.textContent || ""),
-            labelLine("Digital ISSN", journal?.querySelector("issn[issn_type='digital']")?.textContent || ""),
-            labelLine("Article Status", xmlDoc.querySelector("article_status")?.getAttribute("decision_status") || ""),
-            labelLine("Article Title", xmlDoc.querySelector("article_title")?.textContent || ""),
-            labelLine("Article Subtitle", xmlDoc.querySelector("article_sub_title")?.textContent || "")
-        ].join("\n\n");
-
-        let fundrefText = "";
-        const fundref = xmlDoc.querySelector("fundref_information");
-        if (fundref) {
-            const noFundersText = fundref.querySelector("no_funders")?.textContent.trim().toLowerCase();
-            if (noFundersText === "true") {
-                fundrefText = "No Funders: true";
-            } else if (noFundersText === "false") {
-                const funders = fundref.querySelectorAll("funder");
-                funders.forEach(funder => {
-                    const label = funder.querySelector("preferred_label")?.textContent.trim() || "";
-                    const id = funder.querySelector("concept_id")?.textContent.trim() || "";
-                    const grant = funder.querySelector("grant_number")?.textContent.trim() || "";
-                    fundrefText += `FUNDER: ${label}\nCONCEPT ID: ${id}\nGRANT NUMBER: ${grant}\n\n`;
-                });
-            }
+        let data;
+        if (format === "new") {
+            data = parseNewFormat(xmlDoc);
+        } else if (format === "old") {
+            data = parseOldFormat(xmlDoc);
+        } else {
+            alert("Unknown XML format!");
+            return;
         }
 
-        let historyHTML = "<table><thead><tr><th>Event</th><th>Date</th></tr></thead><tbody>";
-        const history = xmlDoc.querySelector("history > ms_id");
-        if (history) {
-            const events = [
-                "submitted_date", "received_date", "received_date_resub",
-                "revised_date", "decision_date", "approval_date",
-                "author_returned_date", "most_recent_decision_date", "transmission_date", "web_publish_date"
-            ];
-            events.forEach(event => {
-                const node = history.querySelector(event);
-                if (node) {
-                    const year = node.querySelector("year")?.textContent || "";
-                    const month = node.querySelector("month")?.textContent || "";
-                    const day = node.querySelector("day")?.textContent || "";
-                    if (year && month && day) {
-                        historyHTML += `<tr><td>${event.replace(/_/g, ' ').toUpperCase()}</td><td>${day.padStart(2,'0')}-${month.padStart(2,'0')}-${year}</td></tr>`;
-                    }
-                }
-            });
+        // Set values to textareas and divs
+        document.getElementById("journal_details").value = data.journalDetails;
+        document.getElementById("fundref_info").value = data.fundrefInfo || "";
+        document.getElementById("history_table").innerHTML = data.historyTable;
+        document.getElementById("abstract").value = data.abstract;
+        document.getElementById("plain_summary").value = data.plainSummary;
+        document.getElementById("keywords").value = data.keywords;
+        document.getElementById("author_table").innerHTML = data.authorTable;
+        document.getElementById("credit_roles").value = data.creditRoles;
+        document.getElementById("corresponding_author").value = data.correspondingAuthor || "";
+        document.getElementById("companion_papers").value = data.companionPapers || "";
+        
+        if (data.authorKeywords && data.authorKeywords.length > 0) {
+            document.getElementById("author_keywords").innerHTML = generatePeopleTable(data.authorKeywords);
+        } else {
+            document.getElementById("author_keywords").innerHTML = "<p>No author keywords available</p>";
         }
-        historyHTML += "</tbody></table>";
-
-        // NEW: extract author_list and editor_list
-        const authorKeywordsList = extractPeopleList(xmlDoc, "author_list");
-        const editorKeywordsList = extractPeopleList(xmlDoc, "editor_list");
-
-        // Set values to textareas
-        document.getElementById("journal_details").value = journalDetails;
-        document.getElementById("fundref_info").value = fundrefText;
-        document.getElementById("history_table").innerHTML = historyHTML;
-        document.getElementById("abstract").value = abstract;
-        document.getElementById("plain_summary").value = plainSummary;
-        document.getElementById("keywords").value = keywords;
-        document.getElementById("author_table").innerHTML = authorTableHTML;
-        document.getElementById("credit_roles").value = credits;
-        document.getElementById("author_keywords").innerHTML = generatePeopleTable(authorKeywordsList);
-        document.getElementById("editor_keywords").innerHTML = generatePeopleTable(editorKeywordsList);
-
+        
+        if (data.editorKeywords && data.editorKeywords.length > 0) {
+            document.getElementById("editor_keywords").innerHTML = generatePeopleTable(data.editorKeywords);
+        } else {
+            document.getElementById("editor_keywords").innerHTML = "<p>No editor keywords available</p>";
+        }
     }
     reader.readAsText(file);
 }
-
-
 
 document.getElementById('xmlFile').addEventListener('change', function (e) {
     handleFile(e.target.files[0]);
@@ -278,7 +456,6 @@ document.getElementById('dropZone').addEventListener('drop', function (e) {
     }
 });
 </script>
-
 
 </body>
 </html>
