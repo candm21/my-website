@@ -72,7 +72,7 @@
   </div>
 
   <div class="section">
-    <h2>ORCID iD</h2>
+    <h2 id="orcid_heading">ORCID iD</h2>
     <div id="author_table"></div>
   </div>
   <div class="section">
@@ -91,6 +91,17 @@
     <h2>Corresponding Author</h2>
     <textarea id="corresponding_author" readonly></textarea>
     <button onclick="copyText('corresponding_author')">Copy Corresponding Author</button>
+  </div>
+
+  <div class="section">
+    <h2>Figures & Supplementary Materials</h2>
+    <div id="figures_supplement"></div>
+  </div>
+
+  <div class="section">
+    <h2>Article Categories</h2>
+    <textarea id="article_categories" readonly></textarea>
+    <button onclick="copyText('article_categories')">Copy Categories</button>
   </div>
 </div>
 
@@ -153,27 +164,231 @@ function extractPeopleList(xmlDoc, listTagName) {
 }
 
 function detectXMLFormat(xmlDoc) {
-    // Check for new format indicators
+    // Check for JATS format
+    if (xmlDoc.querySelector("article > front > journal-meta")) {
+        return "jats";
+    }
+    // Check for new format
     if (xmlDoc.querySelector("metadata > articleinfo")) {
         return "new";
     }
-    // Check for old format indicators
+    // Check for old format
     if (xmlDoc.querySelector("author_list")) {
         return "old";
     }
     return "unknown";
 }
 
+function parseJATSFormat(xmlDoc) {
+    const data = {};
+
+    // Journal Info
+    const journalMeta = xmlDoc.querySelector("journal-meta");
+    const journalTitle = journalMeta?.querySelector("journal-title")?.textContent || "";
+    const printISSN = journalMeta?.querySelector("issn[pub-type='ppub']")?.textContent || "";
+    const epubISSN = journalMeta?.querySelector("issn[pub-type='epub']")?.textContent || "";
+
+    // Article Info
+    const articleMeta = xmlDoc.querySelector("article-meta");
+    const articleType = xmlDoc.querySelector("article")?.getAttribute("article-type") || "";
+    const articleTitle = articleMeta?.querySelector("article-title")?.textContent || "";
+    const manuscriptId = articleMeta?.querySelector("article-id[pub-id-type='manuscript']")?.textContent || "";
+
+    data.journalDetails = [
+        labelLine("Journal Title", journalTitle),
+        labelLine("Print ISSN", printISSN),
+        labelLine("Digital ISSN", epubISSN),
+        labelLine("Article Type", articleType),
+        labelLine("Article Title", articleTitle),
+        labelLine("Manuscript ID", manuscriptId)
+    ].filter(line => !line.endsWith(": ")).join("\n\n");
+
+    // Abstract
+    const abstract = articleMeta?.querySelector("abstract p")?.textContent || "";
+    data.abstract = abstract;
+
+    // Keywords
+    const keywords = [...articleMeta.querySelectorAll("kwd-group kwd")]
+        .map(kwd => kwd.textContent.trim()).join(", ");
+    data.keywords = keywords;
+
+    // Article Categories
+    let categoriesText = "";
+    const categories = articleMeta.querySelectorAll("article-categories subj-group");
+    categories.forEach(group => {
+        const groupType = group.getAttribute("subj-group-type") || "";
+        const subjects = [...group.querySelectorAll(":scope > subject")]
+            .map(s => s.textContent.trim());
+        
+        if (subjects.length > 0) {
+            categoriesText += `${groupType.toUpperCase()}:\n`;
+            subjects.forEach(subj => categoriesText += `  - ${subj}\n`);
+            
+            // Get nested subjects
+            const nestedGroups = group.querySelectorAll(":scope > subj-group");
+            nestedGroups.forEach(nested => {
+                const nestedSubjects = [...nested.querySelectorAll("subject")]
+                    .map(s => s.textContent.trim());
+                nestedSubjects.forEach(subj => categoriesText += `    - ${subj}\n`);
+            });
+            categoriesText += "\n";
+        }
+    });
+    data.articleCategories = categoriesText;
+
+    // Contributors (Authors and Editors)
+    let authorTableHTML = "";
+    let editorInfo = "";
+    let orcidCount = 0;
+    const contributors = articleMeta.querySelectorAll("contrib");
+
+    contributors.forEach(contrib => {
+        const contribType = contrib.getAttribute("contrib-type");
+        const surname = contrib.querySelector("surname")?.textContent || "";
+        const givenNames = contrib.querySelector("given-names")?.textContent || "";
+        const prefix = contrib.querySelector("prefix")?.textContent || "";
+        const orcid = contrib.querySelector("contrib-id[contrib-id-type='orcid']")?.textContent || "";
+        const orcidAuth = contrib.querySelector("contrib-id[contrib-id-type='orcid']")?.getAttribute("specific-use") || "";
+
+        const fullName = [prefix, givenNames, surname].filter(Boolean).join(" ");
+
+        if (contribType === "author") {
+            if (orcid && orcidAuth === "authenticated") {
+                authorTableHTML += `${fullName} https://orcid.org/${orcid}<p/>\n`;
+                orcidCount++;
+            }
+        } else if (contribType === "editor") {
+            const degrees = contrib.querySelector("degrees")?.textContent || "";
+            const role = contrib.querySelector("role")?.textContent || "";
+            const email = contrib.querySelector("email")?.textContent || "";
+            
+            editorInfo += `${fullName}`;
+            if (degrees) editorInfo += ` (${degrees})`;
+            if (role) editorInfo += ` - ${role}`;
+            if (email) editorInfo += `\nEmail: ${email}`;
+            editorInfo += "\n\n";
+        }
+    });
+
+    // If no authenticated ORCIDs found
+    if (orcidCount === 0) {
+        authorTableHTML = "No ORCID";
+    }
+
+    data.authorTable = authorTableHTML;
+    data.editorInfo = editorInfo;
+    data.orcidCount = orcidCount;
+
+    // Corresponding Author
+    const corrAuthor = articleMeta.querySelector("contrib[corresp='yes']");
+    if (corrAuthor) {
+        const surname = corrAuthor.querySelector("surname")?.textContent || "";
+        const givenNames = corrAuthor.querySelector("given-names")?.textContent || "";
+        const prefix = corrAuthor.querySelector("prefix")?.textContent || "";
+        const degrees = corrAuthor.querySelector("degrees")?.textContent || "";
+        const email = corrAuthor.querySelector("email")?.textContent || "";
+        const orcid = corrAuthor.querySelector("contrib-id[contrib-id-type='orcid']")?.textContent || "";
+
+        // Get affiliation
+        const affRef = corrAuthor.querySelector("xref[ref-type='aff']")?.getAttribute("rid");
+        let affiliation = "";
+        if (affRef) {
+            const affNode = articleMeta.querySelector(`aff[id='${affRef}']`);
+            const institution = affNode?.querySelector("institution")?.textContent || "";
+            const dept = affNode?.querySelector("institution[content-type='dept']")?.textContent || "";
+            const position = affNode?.querySelector("institution[content-type='position']")?.textContent || "";
+            const city = affNode?.querySelector("addr-line[content-type='city']")?.textContent || "";
+            const zipcode = affNode?.querySelector("addr-line[content-type='zipcode']")?.textContent || "";
+            const country = affNode?.querySelector("country")?.textContent || "";
+            const phone = affNode?.querySelector("phone")?.textContent || "";
+
+            affiliation = [institution, dept, position, city, zipcode, country].filter(Boolean).join(", ");
+            if (phone) affiliation += `\nPhone: ${phone}`;
+        }
+
+        const fullName = [prefix, givenNames, surname].filter(Boolean).join(" ");
+        data.correspondingAuthor = [
+            labelLine("Name", fullName),
+            labelLine("Degrees", degrees),
+            labelLine("Email", email),
+            labelLine("ORCID", orcid ? `https://orcid.org/${orcid}` : ""),
+            labelLine("Affiliation", affiliation)
+        ].filter(line => !line.endsWith(": ")).join("\n");
+    } else {
+        data.correspondingAuthor = "";
+    }
+
+    // History
+    let historyHTML = "<table><thead><tr><th>Event</th><th>Date</th></tr></thead><tbody>";
+    const history = articleMeta.querySelector("history");
+    if (history) {
+        const dates = history.querySelectorAll("date");
+        dates.forEach(dateNode => {
+            const dateType = dateNode.getAttribute("date-type");
+            const day = dateNode.querySelector("day")?.textContent || "";
+            const month = dateNode.querySelector("month")?.textContent || "";
+            const year = dateNode.querySelector("year")?.textContent || "";
+
+            if (year && month && day) {
+                historyHTML += `<tr><td>${dateType.toUpperCase().replace(/-/g, ' ')}</td><td>${day.padStart(2,'0')}-${month.padStart(2,'0')}-${year}</td></tr>`;
+            }
+        });
+    }
+    historyHTML += "</tbody></table>";
+    data.historyTable = historyHTML;
+
+    // Figures and Supplementary Materials
+    let figuresHTML = "<h3>Figures</h3>";
+    const figures = xmlDoc.querySelectorAll("fig");
+    if (figures.length > 0) {
+        figuresHTML += "<ul>";
+        figures.forEach(fig => {
+            const label = fig.querySelector("label")?.textContent || "";
+            const graphic = fig.querySelector("graphic")?.getAttribute("xlink:href") || "";
+            figuresHTML += `<li><strong>${label}</strong><br>File: ${graphic}</li>`;
+        });
+        figuresHTML += "</ul>";
+    } else {
+        figuresHTML += "<p>No figures</p>";
+    }
+
+    figuresHTML += "<h3>Supplementary Materials</h3>";
+    const supplements = xmlDoc.querySelectorAll("supplementary-material");
+    if (supplements.length > 0) {
+        figuresHTML += "<ul>";
+        supplements.forEach(supp => {
+            const label = supp.querySelector("label")?.textContent || "";
+            const href = supp.getAttribute("xlink:href") || "";
+            figuresHTML += `<li><strong>${label}</strong><br>File: ${href}</li>`;
+        });
+        figuresHTML += "</ul>";
+    } else {
+        figuresHTML += "<p>No supplementary materials</p>";
+    }
+
+    data.figuresSupplement = figuresHTML;
+
+    // Funding
+    const fundingGroup = articleMeta.querySelector("funding-group");
+    data.fundrefInfo = fundingGroup ? "Funding group present (details in XML)" : "No funding information";
+
+    // Defaults
+    data.plainSummary = "";
+    data.authorKeywords = [];
+    data.companionPapers = "";
+    data.creditRoles = "";
+
+    return data;
+}
+
 function parseNewFormat(xmlDoc) {
     const data = {};
 
-    // Article Info
     const articleInfo = xmlDoc.querySelector("articleinfo");
     const journalTitle = articleInfo?.querySelector("journal-title")?.textContent || "";
     const articleTitle = articleInfo?.querySelector("article-title")?.textContent || "";
     const manuscriptNumber = articleInfo?.querySelector("manuscript-number")?.textContent || "";
 
-    // Manuscript Type
     const manuscriptType = xmlDoc.querySelector("manuscript-type")?.textContent || "";
 
     data.journalDetails = [
@@ -183,7 +398,6 @@ function parseNewFormat(xmlDoc) {
         labelLine("Manuscript Type", manuscriptType)
     ].join("\n\n");
 
-    // Corresponding Author
     const corrInfo = xmlDoc.querySelector("corrinfo");
     if (corrInfo) {
         const firstName = corrInfo.querySelector("corresponding-author-firstname")?.textContent || "";
@@ -218,7 +432,6 @@ function parseNewFormat(xmlDoc) {
         data.correspondingAuthor = "";
     }
 
-    // Authors
     let authorTableHTML = "";
     const firstAuthor = xmlDoc.querySelector("first-author");
     const otherAuthors = xmlDoc.querySelectorAll("other-author");
@@ -227,6 +440,7 @@ function parseNewFormat(xmlDoc) {
     if (firstAuthor) allAuthors.push(firstAuthor);
     otherAuthors.forEach(author => allAuthors.push(author));
 
+    let orcidCount = 0;
     allAuthors.forEach(author => {
         const firstName = author.querySelector("first-author-firstname, other-author-firstname")?.textContent || "";
         const middleName = author.querySelector("first-author-middlename, other-author-middlename")?.textContent || "";
@@ -238,13 +452,19 @@ function parseNewFormat(xmlDoc) {
         
         if (orcid && authenticated === "true") {
             authorTableHTML += `${fullName} https://orcid.org/${orcid}<p/>\n`;
+            orcidCount++;
         }
     });
 
-    data.authorTable = authorTableHTML;
-    data.creditRoles = ""; // New format doesn't have credit roles in the provided example
+    // If no authenticated ORCIDs found
+    if (orcidCount === 0) {
+        authorTableHTML = "No ORCID";
+    }
 
-    // History
+    data.authorTable = authorTableHTML;
+    data.orcidCount = orcidCount;
+    data.creditRoles = "";
+
     let historyHTML = "<table><thead><tr><th>Event</th><th>Date</th></tr></thead><tbody>";
     const history = xmlDoc.querySelector("history");
     if (history) {
@@ -259,7 +479,6 @@ function parseNewFormat(xmlDoc) {
     historyHTML += "</tbody></table>";
     data.historyTable = historyHTML;
 
-    // Companion Papers
     const companionPapers = xmlDoc.querySelectorAll("companion-paper");
     let companionText = "";
     companionPapers.forEach(paper => {
@@ -268,13 +487,16 @@ function parseNewFormat(xmlDoc) {
     });
     data.companionPapers = companionText;
 
-    // Defaults for fields not in new format
     data.abstract = "";
     data.plainSummary = "";
     data.keywords = "";
     data.fundrefInfo = "";
     data.authorKeywords = [];
     data.editorKeywords = [];
+    data.figuresSupplement = "";
+    data.articleCategories = "";
+    data.editorInfo = "";
+    data.orcidCount = 0;
 
     return data;
 }
@@ -292,6 +514,7 @@ function parseOldFormat(xmlDoc) {
     const authors = xmlDoc.querySelectorAll("author_list > author");
     let authorTableHTML = "";
     let credits = "";
+    let orcidCount = 0;
 
     for (let author of authors) {
         const authorSeq = author.getAttribute("author_seq") || "";
@@ -303,6 +526,7 @@ function parseOldFormat(xmlDoc) {
 
             if (orcid && validation === "TRUE") {
                 authorTableHTML += `${first} ${last} https://orcid.org/${orcid}<p/>\n`;
+                orcidCount++;
             }
         }
 
@@ -311,6 +535,11 @@ function parseOldFormat(xmlDoc) {
         const roles = [...author.querySelectorAll("credit_taxonomy_role")]
             .map(r => r.textContent.trim());
         credits += `${first} ${last}: ${roles.join(", ")}\n`;
+    }
+
+    // If no authenticated ORCIDs found
+    if (orcidCount === 0) {
+        authorTableHTML = "No ORCID";
     }
 
     const journal = xmlDoc.querySelector("journal");
@@ -381,6 +610,10 @@ function parseOldFormat(xmlDoc) {
     data.editorKeywords = editorKeywordsList;
     data.correspondingAuthor = "";
     data.companionPapers = "";
+    data.figuresSupplement = "";
+    data.articleCategories = "";
+    data.editorInfo = "";
+    data.orcidCount = 0;
 
     return data;
 }
@@ -395,7 +628,9 @@ function handleFile(file) {
         document.getElementById("formatIndicator").textContent = `Detected Format: ${format.toUpperCase()}`;
 
         let data;
-        if (format === "new") {
+        if (format === "jats") {
+            data = parseJATSFormat(xmlDoc);
+        } else if (format === "new") {
             data = parseNewFormat(xmlDoc);
         } else if (format === "old") {
             data = parseOldFormat(xmlDoc);
@@ -404,17 +639,28 @@ function handleFile(file) {
             return;
         }
 
-        // Set values to textareas and divs
         document.getElementById("journal_details").value = data.journalDetails;
         document.getElementById("fundref_info").value = data.fundrefInfo || "";
         document.getElementById("history_table").innerHTML = data.historyTable;
         document.getElementById("abstract").value = data.abstract;
         document.getElementById("plain_summary").value = data.plainSummary;
         document.getElementById("keywords").value = data.keywords;
-        document.getElementById("author_table").innerHTML = data.authorTable;
+        document.getElementById("author_table").innerHTML = data.authorTable || "<p>No ORCID information available</p>";
         document.getElementById("credit_roles").value = data.creditRoles;
         document.getElementById("corresponding_author").value = data.correspondingAuthor || "";
         document.getElementById("companion_papers").value = data.companionPapers || "";
+        document.getElementById("article_categories").value = data.articleCategories || "";
+        document.getElementById("figures_supplement").innerHTML = data.figuresSupplement || "<p>No figures or supplementary materials</p>";
+        
+        // Update ORCID heading based on count
+        const orcidHeading = document.getElementById("orcid_heading");
+        if (data.orcidCount === 1) {
+            orcidHeading.textContent = "ORCID iD";
+        } else if (data.orcidCount > 1) {
+            orcidHeading.textContent = "ORCID iDs";
+        } else {
+            orcidHeading.textContent = "ORCID iD";
+        }
         
         if (data.authorKeywords && data.authorKeywords.length > 0) {
             document.getElementById("author_keywords").innerHTML = generatePeopleTable(data.authorKeywords);
@@ -424,8 +670,10 @@ function handleFile(file) {
         
         if (data.editorKeywords && data.editorKeywords.length > 0) {
             document.getElementById("editor_keywords").innerHTML = generatePeopleTable(data.editorKeywords);
+        } else if (data.editorInfo) {
+            document.getElementById("editor_keywords").innerHTML = `<pre>${data.editorInfo}</pre>`;
         } else {
-            document.getElementById("editor_keywords").innerHTML = "<p>No editor keywords available</p>";
+            document.getElementById("editor_keywords").innerHTML = "<p>No editor information available</p>";
         }
     }
     reader.readAsText(file);
