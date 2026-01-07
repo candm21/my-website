@@ -763,23 +763,58 @@
             summaryEl.innerHTML = summaryHTML;
         }
 
-        function getTextBeforeElement(elementId, wordCount = 4) {
+		function getTextBeforeElement(elementId, wordCount = 3) {
             const element = document.getElementById(elementId);
             if (!element) return '';
             
-            // Get the text content of the entire preview
-            const previewText = document.getElementById('htmlPreview').textContent || '';
-            const elementText = element.textContent || '';
+            // Get the HTML content to work with actual structure
+            const previewDiv = document.getElementById('htmlPreview');
             
-            // Find the position of the element text in the preview text
-            const elementIndex = previewText.indexOf(elementText);
-            if (elementIndex === -1) return '';
+            // Create a temporary div to parse and clean the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = previewDiv.innerHTML;
             
-            // Get the text before the element
-            const textBefore = previewText.substring(0, elementIndex);
+            // Find the target element in the temporary div
+            const targetElement = tempDiv.querySelector(`#${elementId}`);
+            if (!targetElement) return '';
+            
+            // Get all text nodes before this element
+            let textBefore = '';
+            const walker = document.createTreeWalker(
+                tempDiv,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let currentNode;
+            while (currentNode = walker.nextNode()) {
+                // Check if we've reached our target element
+                if (targetElement.contains(currentNode)) {
+                    break;
+                }
+                // Only add text that's not inside our target or after it
+                let parent = currentNode.parentNode;
+                let shouldInclude = true;
+                while (parent && parent !== tempDiv) {
+                    if (parent === targetElement) {
+                        shouldInclude = false;
+                        break;
+                    }
+                    parent = parent.parentNode;
+                }
+                if (shouldInclude) {
+                    textBefore += currentNode.textContent;
+                }
+            }
+            
+            // Clean and normalize the text
+            textBefore = textBefore
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .trim();
             
             // Split into words and get the last N words
-            const words = textBefore.trim().split(/\s+/).filter(word => word.length > 0);
+            const words = textBefore.split(/\s+/).filter(word => word.length > 0);
             const startIndex = Math.max(0, words.length - wordCount);
             const beforeWords = words.slice(startIndex).join(' ');
             
@@ -791,7 +826,7 @@
                 event.stopPropagation(); // Prevent triggering the parent click event
             }
             
-            const beforeText = getTextBeforeElement(elementId, 4);
+            const beforeText = getTextBeforeElement(elementId, 3);
             if (beforeText) {
                 copyToClipboard(beforeText);
                 showNotification(`Copied to clipboard: "${beforeText}"`);
