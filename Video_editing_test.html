@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Editing Masterclass | Premium Edition</title>
+    <style>
+        :root {
+            --royal-navy: #0a192f;
+            --gold-accent: #c5a059;
+            --gold-light: #e2c275;
+            --ice-white: #f4f7f9;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --card-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #112240 0%, #020c1b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Playfair Display', serif, system-ui;
+            color: var(--ice-white);
+        }
+
+        .presentation-container {
+            width: 90%;
+            max-width: 1100px;
+            position: relative;
+        }
+
+        /* Top Right Control Cluster */
+        .control-cluster {
+            position: absolute;
+            top: -20px;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .slide-counter {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 300;
+            color: var(--gold-accent);
+            letter-spacing: 4px;
+            background: var(--glass-bg);
+            padding: 5px 15px;
+            border-radius: 4px;
+            border-right: 2px solid var(--gold-accent);
+        }
+
+        .nav-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--gold-accent);
+            color: var(--gold-accent);
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            transition: all 0.4s ease;
+            text-transform: uppercase;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--gold-accent);
+            color: var(--royal-navy);
+            box-shadow: 0 0 15px rgba(197, 160, 89, 0.4);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+
+        /* Slide Card */
+        .slide-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            border-radius: 2px;
+            padding: 80px 60px;
+            min-height: 580px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Decorative Gold Corner */
+        .slide-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100px;
+            height: 100px;
+            border-top: 1px solid var(--gold-accent);
+            border-left: 1px solid var(--gold-accent);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 40px;
+            color: var(--gold-accent);
+            font-weight: 400;
+            line-height: 1.2;
+        }
+
+        .content-area {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 300;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+
+        .gold-divider {
+            width: 60px;
+            height: 2px;
+            background: var(--gold-accent);
+            margin-bottom: 30px;
+        }
+
+        .asset-list {
+            list-style: none;
+        }
+
+        .asset-item {
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .asset-item span { color: var(--gold-light); }
+
+        .timecode-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .tc-gold { color: var(--gold-accent); font-weight: 600; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600&family=Playfair+Display:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="presentation-container">
+        <div class="control-cluster">
+            <div class="slide-counter" id="counter">I / IV</div>
+            <div class="nav-group">
+                <button class="nav-btn" id="prevBtn">Prev</button>
+                <button class="nav-btn" id="nextBtn">Next</button>
+            </div>
+        </div>
+
+        <div id="slideContent" class="slide-card">
+            </div>
+    </div>
+
+    <script>
+        const slides = [
+            {
+                title: "Technical<br>Specifications",
+                content: `
+                    <div class="gold-divider"></div>
+                    <div class="content-area">
+                        <p style="margin-bottom: 20px; font-style: italic;">Foundation for a seamless production workflow.</p>
+                        <div class="asset-item">Primary NLE <span>Adobe Premiere Pro</span></div>
+                        <div class="asset-item">Monitoring <span>3.5mm Reference Headset</span></div>
+                        <div class="asset-item">Hardware Port <span>Direct Green Output</span></div>
+                    </div>
+                `
+            },
+            {
+                title: "Cinematic<br>Assets",
+                content: `
+                    <div class="gold-divider"></div>
+                    <div class="asset-list">
+                        <div class="asset-item">Raw Footage <span>01_Stringout.mp4</span></div>
+                        <div class="asset-item">Source Material <span>Rough Video.mp4</span></div>
+                        <div class="asset-item">Project Master <span>Rough Video.prproj</span></div>
+                        <div class="asset-item">Reference Edit <span>Rough Video Sample.mp4</span></div>
+                    </div>
+                `
+            },
+            {
+                title: "Assessment<br>Protocols",
+                content: `
+                    <div class="gold-divider"></div>
+                    <div class="content-area">
+                        <h2 style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Phase I: Narrative Cleaning (30m)</h2>
+                        <p style="margin-bottom: 25px;">Edit the video file named <b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">"01_Stringout.mp4"</b> (approx. 10 minutes long). Listen carefully and remove unwanted parts such as "umm" and "ahh" fillers. Make the video cleaner and more polished. <b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Time limit: 30 minutes.</b></p>
+                        
+                        
+                        <h2 style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Phase II: Visual Replication (30m)</h2>
+                        <p>Use the video file <b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">"Rough Video Sample.mp4"</b> as a reference. Following the given timecode, replicate the sample video exactly. Update the intro, title, author intro, and bullet points as shown. Use the provided template for text and effects. Video length: approx. 6 minutes 40 seconds. <b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Time limit: 30 minutes.</b></p>
+                    </div>
+                `
+            },
+            {
+                title: "Reference<br>Timecodes",
+                content: `
+                    <div class="gold-divider"></div>
+                    <div class="timecode-row"><span class="tc-gold">00:00</span> <span><b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">SRMV Intro</b></span></div>
+					<div class="timecode-row"><span class="tc-gold">next</span> <span><b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Main Title:</b> Understanding and Addressing Nonresponse in Surveys</span></div>
+					<div class="timecode-row"><span class="tc-gold">00:01</span> <span><b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Lower Third:</b> Jeffrey Stanton | Professor | Syracuse University</span></div>
+                    <div class="timecode-row"><span class="tc-gold">01:07</span> <span><b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">Intertitle Slide:</b> What is Nonresponse and Why Does It Matter?</span></div>
+					<div class="timecode-row"><span class="tc-gold">01:37</span> <span><b style="color:var(--gold-accent); margin-bottom: 10px; font-size: 1.2rem;">FT: </b> bias</span></div>
+                    <div class="timecode-row"><span class="tc-gold">04:04 to 06:40</span> <span>1.	Compare demographics to external benchmarks<br/>2.	Early vs. late responses<br/>3.	Subsample follow-ups<br/>4.	Response propensity modeling<br/>5.	Nonresponse proxy variables</span></div>                    
+                `
+            }
+        ];
+
+        let currentIdx = 0;
+        const romanNumerals = ["I", "II", "III", "IV"];
+
+        function renderSlide(idx) {
+            const slide = slides[idx];
+            document.getElementById('slideContent').innerHTML = `<h1>${slide.title}</h1>${slide.content}`;
+            document.getElementById('counter').innerText = `${romanNumerals[idx]} / IV`;
+            
+            document.getElementById('prevBtn').disabled = idx === 0;
+            document.getElementById('nextBtn').disabled = idx === slides.length - 1;
+        }
+
+        document.getElementById('prevBtn').onclick = () => { if(currentIdx > 0) renderSlide(--currentIdx); };
+        document.getElementById('nextBtn').onclick = () => { if(currentIdx < slides.length - 1) renderSlide(++currentIdx); };
+
+        // Initialize
+        renderSlide(0);
+    </script>
+</body>
+</html>
