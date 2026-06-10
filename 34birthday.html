@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happy 34th Birthday Bestie 🐼</title>
+<link rel="stylesheet" href="https://cdn.fontsource.org/fonts/playfair-display.css">
+<link rel="stylesheet" href="https://cdn.fontsource.org/fonts/cormorant-garamond.css">
+<link rel="stylesheet" href="https://cdn.fontsource.org/fonts/nunito.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+height:100vh;overflow:hidden;
+background:#F8F5F0;
+font-family:'Nunito',sans-serif;
+display:flex;justify-content:center;align-items:center;
+}
+
+/* Plain background with heart pattern */
+.hearts-bg{
+position:fixed;width:100%;height:100%;
+pointer-events:none;overflow:hidden;z-index:0;
+}
+
+.heart-float{
+position:absolute;
+animation:floatUp linear infinite;
+opacity:0.15;
+font-size:20px;
+}
+
+@keyframes floatUp{
+0%{transform:translateY(100vh) rotate(0deg);opacity:0}
+10%{opacity:0.15}
+90%{opacity:0.15}
+100%{transform:translateY(-50px) rotate(360deg);opacity:0}
+}
+
+/* Main container */
+.main{
+position:relative;z-index:10;
+width:100%;max-width:450px;
+padding:20px;
+}
+
+/* Card slider */
+.card-wrapper{
+position:relative;
+width:100%;
+height:580px;
+perspective:1000px;
+}
+
+.card{
+position:absolute;
+width:100%;
+height:100%;
+transition:transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s;
+transform-style:preserve-3d;
+cursor:pointer;
+border-radius:32px;
+}
+
+.card.hidden{
+opacity:0;
+pointer-events:none;
+transform:translateX(100px) scale(0.95);
+}
+
+.card.prev{
+opacity:0;
+pointer-events:none;
+transform:translateX(-100px) scale(0.95);
+}
+
+.card.flipped{
+transform:rotateY(180deg);
+}
+
+/* Card faces */
+.card-face{
+position:absolute;
+width:100%;
+height:100%;
+backface-visibility:hidden;
+border-radius:32px;
+padding:40px 30px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+background:#FFFFFF;
+box-shadow:0 20px 50px rgba(0,0,0,0.08);
+border:1px solid rgba(232,122,144,0.1);
+}
+
+.back{
+transform:rotateY(180deg);
+background:linear-gradient(135deg, #FFF5F7, #FFFFFF);
+}
+
+/* Top decoration line */
+.card-face::before{
+content:'';
+position:absolute;
+top:0;left:0;right:0;
+height:4px;
+background:linear-gradient(90deg, #E87A90, #D4AF37, #E87A90);
+border-radius:32px 32px 0 0;
+}
+
+/* Chapter badge */
+.chapter-badge{
+position:absolute;
+top:18px;
+left:20px;
+font-size:0.7rem;
+text-transform:uppercase;
+letter-spacing:2px;
+color:#E87A90;
+font-weight:700;
+background:rgba(247,214,221,0.4);
+padding:4px 12px;
+border-radius:20px;
+}
+
+/* Slide counter */
+.slide-counter{
+position:absolute;
+top:18px;
+right:20px;
+font-size:0.8rem;
+color:#3D2C2E;
+opacity:0.4;
+font-weight:600;
+}
+
+/* Panda SVG */
+.panda-container{
+margin-bottom:20px;
+position:relative;
+}
+
+.panda-container svg{
+width:100px;
+height:100px;
+filter:drop-shadow(0 4px 8px rgba(0,0,0,0.05));
+}
+
+/* Panda animations */
+.panda-bounce{
+animation:bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce{
+0%,100%{transform:translateY(0)}
+50%{transform:translateY(-10px)}
+}
+
+.panda-pulse{
+animation:pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse{
+0%,100%{transform:scale(1)}
+50%{transform:scale(1.05)}
+}
+
+.panda-wiggle{
+animation:wiggle 2s ease-in-out infinite;
+}
+
+@keyframes wiggle{
+0%,100%{transform:rotate(-3deg)}
+50%{transform:rotate(3deg)}
+}
+
+/* Quote text - made larger and clearer */
+.quote-text{
+font-family:'Cormorant Garamond',serif;
+font-size:1.7rem;
+line-height:1.6;
+text-align:center;
+color:#3D2C2E;
+font-weight:500;
+max-width:380px;
+margin-bottom:20px;
+}
+
+.quote-text em{
+color:#E87A90;
+font-style:italic;
+}
+
+/* Accent text */
+.accent-text{
+font-size:0.85rem;
+color:#E87A90;
+font-weight:700;
+letter-spacing:1px;
+display:flex;
+align-items:center;
+gap:6px;
+}
+
+/* Footer */
+.card-footer{
+position:absolute;
+bottom:20px;
+font-family:'Cormorant Garamond',serif;
+font-style:italic;
+color:#E87A90;
+font-size:1rem;
+}
+
+/* Back side secret message */
+.secret-msg{
+font-family:'Cormorant Garamond',serif;
+font-size:1.5rem;
+line-height:1.6;
+text-align:center;
+color:#3D2C2E;
+font-weight:600;
+font-style:italic;
+max-width:350px;
+}
+
+.secret-emoji{
+font-size:2.5rem;
+display:block;
+margin-top:15px;
+}
+
+/* Flip hint */
+.flip-hint{
+position:absolute;
+bottom:20px;
+left:20px;
+font-size:0.65rem;
+color:#3D2C2E;
+opacity:0.3;
+display:flex;
+align-items:center;
+gap:4px;
+}
+
+/* Navigation */
+.nav-controls{
+margin-top:25px;
+display:flex;
+justify-content:center;
+align-items:center;
+gap:20px;
+}
+
+.nav-btn{
+border:none;
+padding:12px 24px;
+border-radius:30px;
+background:#FFFFFF;
+cursor:pointer;
+font-size:18px;
+box-shadow:0 8px 20px rgba(0,0,0,0.08);
+transition:all 0.3s ease;
+color:#3D2C2E;
+font-weight:700;
+}
+
+.nav-btn:hover{
+transform:translateY(-3px);
+box-shadow:0 12px 25px rgba(0,0,0,0.12);
+}
+
+.nav-btn:disabled{
+opacity:0.3;
+cursor:not-allowed;
+transform:none;
+}
+
+/* Counter */
+.counter-display{
+margin-top:15px;
+text-align:center;
+font-size:0.8rem;
+color:#3D2C2E;
+opacity:0.4;
+font-weight:600;
+}
+
+/* Progress dots */
+.dots-nav{
+margin-top:12px;
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+gap:4px;
+max-width:400px;
+}
+
+.dot-btn{
+width:6px;
+height:6px;
+border-radius:50%;
+background:#E87A90;
+opacity:0.2;
+border:none;
+padding:0;
+cursor:pointer;
+transition:all 0.3s ease;
+}
+
+.dot-btn.active{
+opacity:1;
+transform:scale(1.3);
+}
+
+/* Cover card special styling */
+.cover-card .quote-text{
+font-size:1.5rem;
+}
+
+.cover-title{
+font-family:'Playfair Display',serif;
+font-size:2rem;
+color:#3D2C2E;
+text-align:center;
+margin-top:15px;
+line-height:1.3;
+}
+
+.cover-subtitle{
+font-family:'Cormorant Garamond',serif;
+font-size:1.1rem;
+color:#E87A90;
+font-style:italic;
+margin-top:8px;
+text-align:center;
+}
+
+.start-btn{
+margin-top:25px;
+padding:12px 30px;
+border:none;
+border-radius:30px;
+background:linear-gradient(135deg, #E87A90, #D4AF37);
+color:white;
+font-weight:700;
+cursor:pointer;
+box-shadow:0 8px 20px rgba(232,122,144,0.3);
+transition:all 0.3s ease;
+}
+
+.start-btn:hover{
+transform:translateY(-2px);
+box-shadow:0 12px 30px rgba(232,122,144,0.4);
+}
+
+/* Finale card */
+.finale-card .quote-text{
+font-size:1.4rem;
+}
+
+.finale-title{
+font-family:'Playfair Display',serif;
+font-size:1.8rem;
+color:#3D2C2E;
+text-align:center;
+margin-top:15px;
+}
+
+/* Responsive */
+@media(max-width:500px){
+.card-wrapper{height:540px}
+.card-face{padding:30px 20px}
+.quote-text{font-size:1.4rem}
+.cover-title{font-size:1.6rem}
+.panda-container svg{width:80px;height:80px}
+}
+</style>
+</head>
+<body>
+
+<!-- Background hearts -->
+<div class="hearts-bg" id="heartsBg"></div>
+
+<!-- Main content -->
+<div class="main">
+<div class="card-wrapper" id="cardWrapper"></div>
+
+<div class="nav-controls">
+<button class="nav-btn" id="prevBtn" onclick="prevCard()">⬅</button>
+<button class="nav-btn" id="nextBtn" onclick="nextCard()">➡</button>
+</div>
+
+<div class="counter-display" id="counterDisplay">1 / 34</div>
+<div class="dots-nav" id="dotsNav"></div>
+</div>
+
+<script>
+// All 34 messages
+const messages = [
+{msg:"You popped into my life and turned every ordinary day into something worth celebrating.", accent:"♥ Happy 34th, love", secret:"From the moment we met, I knew you'd change everything.", emoji:"", panda:"happy", chapter:"The Beginning"},
+{msg:"Every time I look at you, I fall more in love with who you are — deeper and rosier each time.", accent:"♥ More beautiful every year", secret:"Your beauty grows with every passing day.", emoji:"🌹", panda:"love", chapter:"The Beginning"},
+{msg:"Under every star the universe made, I would find you and choose you again.", accent:"♥ Written in the stars", secret:"Destiny brought us together, and I'm forever grateful.", emoji:"⭐", panda:"dreamy", chapter:"The Beginning"},
+{msg:"You have my heart — the whole ridiculous, glittering thing — completely yours.", accent:"♥ Always and always", secret:"Every beat says your name.", emoji:"💖", panda:"heart", chapter:"Things I Love"},
+{msg:"Life looks like rose petals when I see it through your eyes. Thank you for that view.", accent:"♥ My rose-coloured world", secret:"You taught me to see beauty everywhere.", emoji:"🌸", panda:"gentle", chapter:"Things I Love"},
+{msg:"I pinky promise to annoy you, hold you, laugh with you, forever and a day.", accent:"♥ No take-backs, ever", secret:"A promise I'll keep for all of eternity.", emoji:"🤙", panda:"cheeky", chapter:"Things I Love"},
+{msg:"Everything — every single thing — is better, lighter, and sweeter with you by my side.", accent:"♥ My forever better half", secret:"You're the sugar in my tea, the sun in my sky.", emoji:"", panda:"sun", chapter:"Things I Love"},
+{msg:"You make my heart skip a beat, then two, then a whole song. Still going.", accent:"♥ My favourite rhythm", secret:"You are the music I never knew I needed.", emoji:"", panda:"dancing", chapter:"Things I Love"},
+{msg:"We make a great pair — not just pears — but a whole universe in two people.", accent:"♥ Unbeatable together", secret:"Two halves, one whole, infinite love.", emoji:"", panda:"hug", chapter:"Things I Love"},
+{msg:"My love for you: increasing day by day, with no ceiling, no limit, no end.", accent:"♥ Off every chart", secret:"Love like ours knows no boundaries.", emoji:"📈", panda:"sparkle", chapter:"Things I Love"},
+{msg:"Cheek to cheek, hand in hand — that is how every memory with you feels to me.", accent:"♥ Heaven, I am in heaven", secret:"Every moment with you is paradise.", emoji:"🌈", panda:"dreamy", chapter:"Things I Love"},
+{msg:"You are the comfort I reach for. The warmth I come home to. The safe place.", accent:"♥ My softest home", secret:"Home isn't a place — it's you.", emoji:"🏠", panda:"gentle", chapter:"Things I Love"},
+{msg:"34 years the universe spent making you — and it did its absolute finest work.", accent:"♥ A masterpiece, truly", secret:"34 years of perfection, and counting.", emoji:"✨", panda:"crown", chapter:"Things I Love"},
+{msg:"You carry so much care for others. Today, let the whole world carry you.", accent:"♥ Rest in being loved", secret:"You deserve all the love you give and more.", emoji:"💕", panda:"care", chapter:"Memories"},
+{msg:"You understand me without a single word. That is the rarest, most beautiful gift.", accent:"♥ My person, always", secret:"Silent understanding is the deepest love.", emoji:"🤫", panda:"wise", chapter:"Memories"},
+{msg:"The stars aligned, the universe conspired, and somehow — you became my bestie.", accent:"♥ Best decision, cosmos", secret:"The best gift the universe ever gave me.", emoji:"🌟", panda:"star", chapter:"Memories"},
+{msg:"Your laughter is the most beautiful sound I know. May it never stop.", accent:"♥ Laugh forever, love", secret:"I'd walk miles just to hear you laugh again.", emoji:"😂", panda:"laugh", chapter:"Memories"},
+{msg:"You are not just kind — you are the kind of kind that changes people. That changed me.", accent:"♥ You made me better", secret:"Because of you, I am a better person.", emoji:"🦋", panda:"gentle", chapter:"Memories"},
+{msg:"In every universe, across every timeline, I would find my way back to you.", accent:"♥ Cosmic besties", secret:"Our bond transcends space and time.", emoji:"🔮", panda:"dreamy", chapter:"Memories"},
+{msg:"You hold space for everyone. I hope someone holds space for you today.", accent:"♥ You deserve that", secret:"Today, the world holds you gently.", emoji:"", panda:"hug", chapter:"Memories"},
+{msg:"There is something radiant about you — like the world gets brighter when you walk in.", accent:"♥ My sunshine person", secret:"You light up every room, every heart.", emoji:"☀️", panda:"sun", chapter:"Memories"},
+{msg:"You are patience, warmth, wisdom and wildness all at once. A wonder, really.", accent:"♥ My favourite wonder", secret:"A beautiful contradiction, perfectly you.", emoji:"🌺", panda:"dance", chapter:"Memories"},
+{msg:"The universe knew what it was doing when it put us in the same story.", accent:"♥ Best chapter of my life", secret:"Our story is my favourite story ever.", emoji:"📖", panda:"book", chapter:"Forever"},
+{msg:"You feel like the first breath of morning — quiet, golden, and full of hope.", accent:"♥ My everyday gold", secret:"Every morning is a gift because of you.", emoji:"🌅", panda:"peaceful", chapter:"Forever"},
+{msg:"I love you not just on birthdays — but in all the ordinary Tuesdays too.", accent:"♥ Every day, truly", secret:"The ordinary days with you are extraordinary.", emoji:"📅", panda:"happy", chapter:"Forever"},
+{msg:"You are the friend everyone hopes to find. I found you. I am the lucky one.", accent:"♥ The luckiest, I am", secret:"Finding you was my greatest fortune.", emoji:"🍀", panda:"lucky", chapter:"Forever"},
+{msg:"Your soul is ancient and kind and brave and I am honoured to know it.", accent:"♥ Old souls, new joy", secret:"An ancient soul with the freshest joy.", emoji:"🕯️", panda:"wise", chapter:"Forever"},
+{msg:"Comfort is knowing you exist. That you are somewhere in this world. Mine.", accent:"♥ My anchor", secret:"You anchor me to everything good.", emoji:"⚓", panda:"gentle", chapter:"Forever"},
+{msg:"You bloom like something that was always meant to be beautiful. And you are.", accent:"♥ In full bloom", secret:"Your bloom inspires everyone around you.", emoji:"🌷", panda:"bloom", chapter:"Forever"},
+{msg:"The way you love people — fiercely, quietly, completely — is who I want to be.", accent:"♥ My role model", secret:"I aspire to love as deeply as you do.", emoji:"💪", panda:"strong", chapter:"Forever"},
+{msg:"May 34 bring you every softness, every adventure, every dream you haven't said aloud yet.", accent:"♥ All of it, for you", secret:"Every dream you've ever had is waiting for you.", emoji:"🌠", panda:"wish", chapter:"Forever"},
+{msg:"You are somebody's whole world. You are my whole world. Happy birthday, love.", accent:"♥ My whole heart", secret:"You are my universe, my everything.", emoji:"💝", panda:"heart", chapter:"Forever"},
+{msg:"Here is to 34 years of you — and to every magnificent year still to come.", accent:"♥ The best is ahead", secret:"The best chapters of your life are yet to be written.", emoji:"🥂", panda:"celebrate", chapter:"Forever"},
+{msg:"You are the universe in a person — vast, warm, full of light, endlessly surprising.", accent:"♥ Happy 34th, my universe", secret:"My entire universe wrapped in one beautiful soul.", emoji:"🌌", panda:"celebrate", chapter:"Finale"}
+];
+
+// Panda SVG paths
+const pandaSVGs = {
+happy: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="62" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="38" r="12" fill="#3D2C2E"/><circle cx="82" cy="38" r="12" fill="#3D2C2E"/><circle cx="38" cy="38" r="5" fill="#5a5a5a"/><circle cx="82" cy="38" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,56)"/><ellipse cx="72" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,56)"/><circle cx="49" cy="54" r="4" fill="white"/><circle cx="71" cy="54" r="4" fill="white"/><circle cx="49" cy="54" r="2" fill="#3D2C2E"/><circle cx="71" cy="54" r="2" fill="#3D2C2E"/><circle cx="50" cy="53" r="0.7" fill="white"/><circle cx="72" cy="53" r="0.7" fill="white"/><ellipse cx="60" cy="66" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,72 Q60,77 66,72" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="40" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.8"/><ellipse cx="80" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.8"/><ellipse cx="60" cy="98" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+love: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><g transform="translate(43,50) scale(0.7)"><path d="M8,3 Q8,0 5,0 Q2,0 2,3 Q2,6 8,10 Q14,6 14,3 Q14,0 11,0 Q8,0 8,3" fill="#E87A90"/></g><g transform="translate(65,50) scale(0.7)"><path d="M8,3 Q8,0 5,0 Q2,0 2,3 Q2,6 8,10 Q14,6 14,3 Q14,0 11,0 Q8,0 8,3" fill="#E87A90"/></g><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M53,70 Q60,76 67,70" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+dreamy: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="62" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="38" r="12" fill="#3D2C2E"/><circle cx="82" cy="38" r="12" fill="#3D2C2E"/><circle cx="38" cy="38" r="5" fill="#5a5a5a"/><circle cx="82" cy="38" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,56)"/><ellipse cx="72" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,56)"/><path d="M44,54 Q48,58 52,54" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M62,54 Q66,58 70,54" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="60" cy="66" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,71 Q60,74 65,71" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="98" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+heart: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="58" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="34" r="12" fill="#3D2C2E"/><circle cx="82" cy="34" r="12" fill="#3D2C2E"/><circle cx="38" cy="34" r="5" fill="#5a5a5a"/><circle cx="82" cy="34" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="52" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,52)"/><ellipse cx="72" cy="52" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,52)"/><circle cx="49" cy="50" r="4" fill="white"/><circle cx="71" cy="50" r="4" fill="white"/><circle cx="49" cy="50" r="2" fill="#3D2C2E"/><circle cx="71" cy="50" r="2" fill="#3D2C2E"/><circle cx="50" cy="49" r="0.8" fill="white"/><circle cx="72" cy="49" r="0.8" fill="white"/><ellipse cx="60" cy="63" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,68 Q60,73 66,68" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="40" cy="64" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="64" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="94" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+gentle: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="62" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="38" r="12" fill="#3D2C2E"/><circle cx="82" cy="38" r="12" fill="#3D2C2E"/><circle cx="38" cy="38" r="5" fill="#5a5a5a"/><circle cx="82" cy="38" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,56)"/><ellipse cx="72" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,56)"/><circle cx="49" cy="54" r="3.5" fill="white"/><circle cx="71" cy="54" r="3.5" fill="white"/><circle cx="49" cy="54" r="1.8" fill="#3D2C2E"/><circle cx="71" cy="54" r="1.8" fill="#3D2C2E"/><circle cx="50" cy="53" r="0.6" fill="white"/><circle cx="72" cy="53" r="0.6" fill="white"/><ellipse cx="60" cy="66" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,71 Q60,74 65,71" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="98" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+cheeky: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4.5" fill="white"/><circle cx="71" cy="52" r="4.5" fill="white"/><circle cx="49" cy="52" r="2.2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2.2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.8" fill="white"/><circle cx="72" cy="51" r="0.8" fill="white"/><path d="M44,47 L50,49" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M52,70 Q60,78 68,70" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="58" cy="75" rx="5" ry="3.5" fill="#E87A90"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+sun: `<svg viewBox="0 0 120 120"><g opacity="0.3"><line x1="60" y1="5" x2="60" y2="15" stroke="#D4AF37" stroke-width="2"/><line x1="28" y1="15" x2="36" y2="22" stroke="#D4AF37" stroke-width="2"/><line x1="92" y1="15" x2="84" y2="22" stroke="#D4AF37" stroke-width="2"/></g><ellipse cx="60" cy="62" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="38" r="12" fill="#3D2C2E"/><circle cx="82" cy="38" r="12" fill="#3D2C2E"/><circle cx="38" cy="38" r="5" fill="#5a5a5a"/><circle cx="82" cy="38" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,56)"/><ellipse cx="72" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,56)"/><circle cx="49" cy="54" r="4" fill="white"/><circle cx="71" cy="54" r="4" fill="white"/><circle cx="49" cy="54" r="2" fill="#3D2C2E"/><circle cx="71" cy="54" r="2" fill="#3D2C2E"/><ellipse cx="60" cy="66" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M52,72 Q60,80 68,72" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="40" cy="67" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="80" cy="67" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="60" cy="98" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+dancing: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="58" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="34" r="12" fill="#3D2C2E"/><circle cx="82" cy="34" r="12" fill="#3D2C2E"/><circle cx="38" cy="34" r="5" fill="#5a5a5a"/><circle cx="82" cy="34" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="52" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,52)"/><ellipse cx="72" cy="52" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,52)"/><path d="M44,50 Q48,55 52,50" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M62,50 Q66,55 70,50" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="60" cy="63" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M52,68 Q60,78 68,68" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="58" cy="74" rx="5" ry="3.5" fill="#E87A90"/><ellipse cx="40" cy="64" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="64" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="94" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><ellipse cx="28" cy="86" rx="7" ry="11" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(-25,28,86)"/><ellipse cx="92" cy="86" rx="7" ry="11" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(25,92,86)"/></svg>`,
+hug: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="62" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="38" r="12" fill="#3D2C2E"/><circle cx="82" cy="38" r="12" fill="#3D2C2E"/><circle cx="38" cy="38" r="5" fill="#5a5a5a"/><circle cx="82" cy="38" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,56)"/><ellipse cx="72" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,56)"/><circle cx="49" cy="54" r="4" fill="white"/><circle cx="71" cy="54" r="4" fill="white"/><circle cx="49" cy="54" r="2" fill="#3D2C2E"/><circle cx="71" cy="54" r="2" fill="#3D2C2E"/><ellipse cx="60" cy="66" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,71 Q60,75 66,71" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="67" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="80" cy="67" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="60" cy="98" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><ellipse cx="35" cy="90" rx="8" ry="10" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(-10,35,90)"/><ellipse cx="85" cy="90" rx="8" ry="10" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(10,85,90)"/></svg>`,
+sparkle: `<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="42" fill="#F7D6DD" opacity="0.3"/><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.8" fill="white"/><circle cx="72" cy="51" r="0.8" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,74 66,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+care: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="3.5" fill="white"/><circle cx="71" cy="52" r="3.5" fill="white"/><circle cx="49" cy="52" r="1.8" fill="#3D2C2E"/><circle cx="71" cy="52" r="1.8" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.6" fill="white"/><circle cx="72" cy="51" r="0.6" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,70 Q60,73 65,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+wise: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="62" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="38" r="12" fill="#3D2C2E"/><circle cx="82" cy="38" r="12" fill="#3D2C2E"/><circle cx="38" cy="38" r="5" fill="#5a5a5a"/><circle cx="82" cy="38" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,56)"/><ellipse cx="72" cy="56" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,56)"/><circle cx="49" cy="54" r="3" fill="white"/><circle cx="71" cy="54" r="3" fill="white"/><circle cx="49" cy="54" r="1.5" fill="#3D2C2E"/><circle cx="71" cy="54" r="1.5" fill="#3D2C2E"/><ellipse cx="60" cy="66" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,71 Q60,74 65,71" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="67" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="98" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+laugh: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="58" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="34" r="12" fill="#3D2C2E"/><circle cx="82" cy="34" r="12" fill="#3D2C2E"/><circle cx="38" cy="34" r="5" fill="#5a5a5a"/><circle cx="82" cy="34" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="52" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,52)"/><ellipse cx="72" cy="52" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,52)"/><path d="M44,50 Q48,55 52,50" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M62,50 Q66,55 70,50" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/><circle cx="47" cy="56" r="1.5" fill="#89CFF0" opacity="0.7"/><circle cx="73" cy="56" r="1.5" fill="#89CFF0" opacity="0.7"/><ellipse cx="60" cy="63" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M50,68 Q60,80 70,68" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="40" cy="64" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="64" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="94" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+star: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.7" fill="white"/><circle cx="72" cy="51" r="0.7" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,74 66,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+peaceful: `<svg viewBox="0 0 120 120"><path d="M15,50 Q60,10 105,50" fill="none" stroke="#E87A90" stroke-width="2" opacity="0.4"/><ellipse cx="60" cy="65" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="41" r="12" fill="#3D2C2E"/><circle cx="82" cy="41" r="12" fill="#3D2C2E"/><circle cx="38" cy="41" r="5" fill="#5a5a5a"/><circle cx="82" cy="41" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="60" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,60)"/><ellipse cx="72" cy="60" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,60)"/><circle cx="49" cy="58" r="3.5" fill="white"/><circle cx="71" cy="58" r="3.5" fill="white"/><circle cx="49" cy="58" r="1.8" fill="#3D2C2E"/><circle cx="71" cy="58" r="1.8" fill="#3D2C2E"/><ellipse cx="60" cy="70" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,75 Q60,78 65,75" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="71" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="71" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="100" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+crown: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.8" fill="white"/><circle cx="72" cy="51" r="0.8" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,74 66,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><polygon points="45,22 50,10 55,22 60,8 65,22 70,10 75,22" fill="#D4AF37" stroke="#3D2C2E" stroke-width="1"/><circle cx="55" cy="16" r="2" fill="#E87A90"/><circle cx="60" cy="13" r="2" fill="#E87A90"/><circle cx="65" cy="16" r="2" fill="#E87A90"/></svg>`,
+book: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="54" r="3.5" fill="white"/><circle cx="71" cy="54" r="3.5" fill="white"/><circle cx="49" cy="55" r="1.8" fill="#3D2C2E"/><circle cx="71" cy="55" r="1.8" fill="#3D2C2E"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,70 Q60,73 65,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><rect x="28" y="88" width="22" height="16" rx="1" fill="#F7D6DD" stroke="#3D2C2E" stroke-width="1.5"/><line x1="39" y1="88" x2="39" y2="104" stroke="#3D2C2E" stroke-width="1"/></svg>`,
+bloom: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="3.5" fill="white"/><circle cx="71" cy="52" r="3.5" fill="white"/><circle cx="49" cy="52" r="1.8" fill="#3D2C2E"/><circle cx="71" cy="52" r="1.8" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.6" fill="white"/><circle cx="72" cy="51" r="0.6" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,70 Q60,73 65,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+lucky: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.7" fill="white"/><circle cx="72" cy="51" r="0.7" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,74 66,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+strong: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="3.5" fill="white"/><circle cx="71" cy="52" r="3.5" fill="white"/><circle cx="49" cy="52" r="1.8" fill="#3D2C2E"/><circle cx="71" cy="52" r="1.8" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.6" fill="white"/><circle cx="72" cy="51" r="0.6" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M55,70 Q60,73 65,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><ellipse cx="28" cy="88" rx="7" ry="10" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(-20,28,88)"/><ellipse cx="92" cy="88" rx="7" ry="10" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(20,92,88)"/></svg>`,
+wish: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.8" fill="white"/><circle cx="72" cy="51" r="0.8" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,73 65,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="80" cy="66" rx="6" ry="4" fill="#F7D6DD" opacity="0.7"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+celebrate: `<svg viewBox="0 0 120 120"><polygon points="60,0 50,28 70,28" fill="#E87A90"/><line x1="54" y1="20" x2="66" y2="20" stroke="#D4AF37" stroke-width="2"/><line x1="57" y1="14" x2="63" y2="14" stroke="#D4AF37" stroke-width="2"/><circle cx="60" cy="0" r="4" fill="#D4AF37"/><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4.5" fill="white"/><circle cx="71" cy="52" r="4.5" fill="white"/><circle cx="49" cy="52" r="2.2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2.2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.8" fill="white"/><circle cx="72" cy="51" r="0.8" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M50,70 Q60,80 70,70" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="58" cy="76" rx="5" ry="3.5" fill="#E87A90"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><ellipse cx="28" cy="88" rx="7" ry="12" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(-25,28,88)"/><ellipse cx="92" cy="88" rx="7" ry="12" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(25,92,88)"/></svg>`,
+dance: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.7" fill="white"/><circle cx="72" cy="51" r="0.7" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,74 66,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+cover: `<svg viewBox="0 0 120 120"><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4" fill="white"/><circle cx="71" cy="52" r="4" fill="white"/><circle cx="49" cy="52" r="2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.7" fill="white"/><circle cx="72" cy="51" r="0.7" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M54,70 Q60,74 66,70" fill="none" stroke="#3D2C2E" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.8"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/></svg>`,
+finale: `<svg viewBox="0 0 120 120"><polygon points="60,2 50,30 70,30" fill="#E87A90"/><line x1="53" y1="22" x2="67" y2="22" stroke="#D4AF37" stroke-width="2"/><line x1="56" y1="15" x2="64" y2="15" stroke="#D4AF37" stroke-width="2"/><circle cx="60" cy="2" r="4" fill="#D4AF37"/><ellipse cx="60" cy="60" rx="32" ry="30" fill="white" stroke="#3D2C2E" stroke-width="2"/><circle cx="38" cy="36" r="12" fill="#3D2C2E"/><circle cx="82" cy="36" r="12" fill="#3D2C2E"/><circle cx="38" cy="36" r="5" fill="#5a5a5a"/><circle cx="82" cy="36" r="5" fill="#5a5a5a"/><ellipse cx="48" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(-8,48,54)"/><ellipse cx="72" cy="54" rx="10" ry="11" fill="#3D2C2E" transform="rotate(8,72,54)"/><circle cx="49" cy="52" r="4.5" fill="white"/><circle cx="71" cy="52" r="4.5" fill="white"/><circle cx="49" cy="52" r="2.2" fill="#3D2C2E"/><circle cx="71" cy="52" r="2.2" fill="#3D2C2E"/><circle cx="50" cy="51" r="0.8" fill="white"/><circle cx="72" cy="51" r="0.8" fill="white"/><ellipse cx="60" cy="65" rx="3.5" ry="3" fill="#3D2C2E"/><path d="M50,70 Q60,80 70,70" fill="none" stroke="#3D2C2E" stroke-width="2" stroke-linecap="round"/><ellipse cx="58" cy="76" rx="5" ry="3.5" fill="#E87A90"/><ellipse cx="40" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="80" cy="66" rx="7" ry="4.5" fill="#F7D6DD" opacity="0.9"/><ellipse cx="60" cy="96" rx="22" ry="15" fill="white" stroke="#3D2C2E" stroke-width="2"/><ellipse cx="28" cy="88" rx="7" ry="12" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(-25,28,88)"/><ellipse cx="92" cy="88" rx="7" ry="12" fill="white" stroke="#3D2C2E" stroke-width="1.5" transform="rotate(25,92,88)"/></svg>`
+};
+
+const pandaAnimations = ['panda-bounce', 'panda-pulse', 'panda-wiggle'];
+
+function renderCards() {
+const wrapper = document.getElementById('cardWrapper');
+const dotsNav = document.getElementById('dotsNav');
+
+// Cover card
+let html = `
+<div class="card" data-index="0" id="card-0">
+<div class="card-face front">
+<div class="panda-container"><div class="panda-bounce">${pandaSVGs.cover}</div></div>
+<h2 class="cover-title">Happy 34th Birthday,<br>My Dearest Bestie</h2>
+<p class="cover-subtitle">34 reasons the universe is better with you in it</p>
+<button class="start-btn" onclick="nextCard()">Begin the Magic ✨</button>
+<div class="card-footer" style="position:relative;bottom:auto;margin-top:20px">♥ Always & Always</div>
+<div class="counter-display" style="position:relative;margin-top:10px;bottom:auto">1 / 34</div>
+</div>
+</div>`;
+
+// Message cards
+messages.forEach((msg, i) => {
+const idx = i + 1;
+const pandaType = msg.panda || 'happy';
+const animClass = pandaAnimations[i % 3];
+const svg = pandaSVGs[pandaType] || pandaSVGs.happy;
+const isFinale = idx === 34;
+
+html += `
+<div class="card hidden" data-index="${idx}" id="card-${idx}">
+<div class="card-face front ${isFinale ? 'finale-card' : ''}">
+<span class="chapter-badge">${msg.chapter}</span>
+<span class="slide-counter">${idx + 1} / 34</span>
+<div class="panda-container"><div class="${animClass}">${svg}</div></div>
+<blockquote class="quote-text">${msg.msg}</blockquote>
+<div class="accent-text">${msg.accent}</div>
+<span class="flip-hint">👆 Tap to flip</span>
+<div class="card-footer">♥ Always & Always</div>
+</div>
+<div class="card-face back">
+<span class="slide-counter">${idx + 1} / 34</span>
+<div class="panda-container"><div class="panda-pulse">${svg}</div></div>
+<div class="secret-msg">${msg.secret}<span class="secret-emoji">${msg.emoji}</span></div>
+<div class="card-footer">♥ Always & Always</div>
+</div>
+</div>`;
+});
+
+wrapper.innerHTML = html;
+
+// Dots
+let dotsHTML = '';
+for (let i = 0; i < 34; i++) {
+dotsHTML += `<button class="dot-btn ${i === 0 ? 'active' : ''}" onclick="goToCard(${i})"></button>`;
+}
+dotsNav.innerHTML = dotsHTML;
+}
+
+let currentCard = 0;
+let isAnimating = false;
+
+function updateDisplay() {
+const cards = document.querySelectorAll('.card');
+cards.forEach((card, i) => {
+card.classList.remove('hidden', 'prev');
+if (i === currentCard) {
+// Show current card
+} else if (i < currentCard) {
+card.classList.add('prev');
+} else {
+card.classList.add('hidden');
+}
+});
+
+// Update dots
+document.querySelectorAll('.dot-btn').forEach((dot, i) => {
+dot.classList.toggle('active', i === currentCard);
+});
+
+// Update counter
+document.getElementById('counterDisplay').textContent = `${currentCard + 1} / 34`;
+
+// Update button states
+document.getElementById('prevBtn').disabled = currentCard === 0;
+document.getElementById('nextBtn').disabled = currentCard === 33;
+}
+
+function nextCard() {
+if (isAnimating || currentCard >= 33) return;
+isAnimating = true;
+currentCard++;
+updateDisplay();
+setTimeout(() => isAnimating = false, 600);
+}
+
+function prevCard() {
+if (isAnimating || currentCard <= 0) return;
+isAnimating = true;
+currentCard--;
+updateDisplay();
+setTimeout(() => isAnimating = false, 600);
+}
+
+function goToCard(index) {
+if (isAnimating || index === currentCard) return;
+isAnimating = true;
+currentCard = index;
+updateDisplay();
+setTimeout(() => isAnimating = false, 600);
+}
+
+// Card flip
+document.addEventListener('click', function(e) {
+const cardFace = e.target.closest('.card-face');
+if (cardFace) {
+const card = cardFace.closest('.card');
+card.classList.toggle('flipped');
+}
+});
+
+// Floating hearts background
+function createHearts() {
+const container = document.getElementById('heartsBg');
+const symbols = ['♥', '♡', '💕', '💖', '💗'];
+setInterval(() => {
+const heart = document.createElement('div');
+heart.className = 'heart-float';
+heart.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+heart.style.left = Math.random() * 100 + '%';
+heart.style.animationDuration = (8 + Math.random() * 8) + 's';
+heart.style.fontSize = (15 + Math.random() * 15) + 'px';
+heart.style.color = ['#E87A90', '#D4AF37', '#F7D6DD'][Math.floor(Math.random() * 3)];
+container.appendChild(heart);
+setTimeout(() => heart.remove(), 16000);
+}, 600);
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+if (e.key === 'ArrowRight' || e.key === ' ') nextCard();
+if (e.key === 'ArrowLeft') prevCard();
+});
+
+// Touch support
+let startX = 0;
+document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', e => {
+const diff = startX - e.changedTouches[0].clientX;
+if (Math.abs(diff) > 50) {
+if (diff > 0) nextCard();
+else prevCard();
+}
+}, { passive: true });
+
+// Initialize
+renderCards();
+createHearts();
+updateDisplay();
+</script>
+</body>
+</html>
