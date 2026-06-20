@@ -173,7 +173,15 @@ function findOrphanCitations(bodyContent, entries) {
     const candidates = [sur1, sur2].filter(Boolean);
     if (!candidates.length) continue;
     if (candidates.some((s) => knownPairs.has(`${s.toLowerCase()}_${yearClean}`))) continue;
-    if (["table", "figure", "see", "chapter", "section", "equation", "note"].includes(sur1.toLowerCase())) continue;
+    const falsePositiveWords = [
+      "table", "figure", "see", "chapter", "section", "equation", "note",
+      "january", "february", "march", "april", "may", "june", "july",
+      "august", "september", "october", "november", "december",
+    ];
+    if (falsePositiveWords.includes(sur1.toLowerCase())) continue;
+
+    const tail = cleanBody.slice(m.index + m[0].length, m.index + m[0].length + 6);
+    if (/^-\d/.test(tail)) continue;
 
     const key = `${sur1}|${sur2 || ""}|${yearClean}`;
     if (!orphans[key]) {
