@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference Cross-Link Checker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; background: #f1f5f9; color: #1a202c;
+  }
+  header {
+    background: #0f172a; color: #fff; padding: 22px 30px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header .title h1 { margin: 0; font-size: 20px; }
+  header .title p { margin: 6px 0 0; color: #94a3b8; font-size: 13px; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+  .wrap.full-width { max-width: 100%; padding: 0; }
+  #dropzone {
+    border: 3px dashed #94a3b8; border-radius: 12px; background: #fff;
+    padding: 50px 20px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  #dropzone.dragover { border-color: #3b82f6; background: #eff6ff; }
+  #dropzone .icon { font-size: 40px; margin-bottom: 10px; }
+  #dropzone .main-text { font-size: 16px; font-weight: 600; color: #0f172a; }
+  #dropzone .sub-text { font-size: 13px; color: #64748b; margin-top: 6px; }
+  #fileInput { display: none; }
+  #status {
+    margin: 16px 20px 0; padding: 12px 16px; border-radius: 8px; font-size: 14px;
+    display: none;
+  }
+  #status.show { display: block; }
+  #status.busy { background: #eff6ff; color: #1d4ed8; }
+  #status.error { background: #fef2f2; color: #b91c1c; }
+  #status.ok { background: #f0fdf4; color: #15803d; }
+  /* floating actions, top-right corner, shown only once a report exists */
+  .actions {
+    position: fixed; top: 16px; right: 20px; z-index: 50;
+    display: none; gap: 8px;
+  }
+  .actions.show { display: flex; }
+  button {
+    border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px;
+    cursor: pointer; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-secondary { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
+  #reportFrame {
+    width: 100%; height: 0; border: none; display: block;
+    background: #fff; transition: height .1s;
+  }
+  footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0; }
+  footer.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">
+    <h1>Reference Cross-Link Checker</h1>
+    <p>Drag a .docx in, get a citation audit report back — runs entirely in your browser, no upload to any server.</p>
+  </div>
+</header>
+
+<div class="actions" id="actions">
+  <button class="btn-primary" id="downloadBtn">Download report</button>
+  <button class="btn-secondary" id="resetBtn">Check another file</button>
+</div>
+
+<div class="wrap" id="uploadWrap">
+  <div id="dropzone">
+    <div class="icon">📄</div>
+    <div class="main-text">Drop a .docx file here, or click to browse</div>
+    <div class="sub-text">Checks in-text citations against your reference list — duplicates, unlinked refs, and orphan citations.</div>
+    <input type="file" id="fileInput" accept=".docx">
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<iframe id="reportFrame"></iframe>
+
+<footer id="pageFooter">Processed locally in your browser via mammoth.js — your document is never uploaded anywhere.</footer>
+
+<script src="crossref-core-browser.js"></script>
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const status = document.getElementById('status');
+const actions = document.getElementById('actions');
+const reportFrame = document.getElementById('reportFrame');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const uploadWrap = document.getElementById('uploadWrap');
+const pageFooter = document.getElementById('pageFooter');
+
+let lastReportHtml = null;
+
+function setStatus(msg, type) {
+  status.textContent = msg;
+  status.className = 'show ' + (type || '');
+}
+
+function resizeFrameToContent() {
+  try {
+    const doc = reportFrame.contentDocument || reportFrame.contentWindow.document;
+    const height = doc.documentElement.scrollHeight;
+    reportFrame.style.height = height + 'px';
+  } catch (e) {
+    reportFrame.style.height = '1400px';
+  }
+}
+
+function clearAll() {
+  status.className = '';
+  actions.classList.remove('show');
+  reportFrame.style.height = '0';
+  reportFrame.srcdoc = '';
+  lastReportHtml = null;
+  fileInput.value = '';
+  uploadWrap.style.display = '';
+  pageFooter.classList.remove('hidden');
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.docx')) {
+    setStatus('Please drop a .docx file.', 'error');
+    return;
+  }
+  setStatus(`Converting "${file.name}"...`, 'busy');
+  actions.classList.remove('show');
+  reportFrame.style.height = '0';
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    // mammoth converts the docx body to HTML in-browser (math equations are
+    // not converted - mammoth has no MathML support - everything else does)
+    const result = await mammoth.convertToHtml({ arrayBuffer });
+    const htmlContent = result.value;
+
+    const reportHtml = generateReport(htmlContent);
+    lastReportHtml = reportHtml;
+
+    reportFrame.srcdoc = reportHtml;
+    reportFrame.onload = resizeFrameToContent;
+
+    // hide the dropzone/header text and footer - only the floating
+    // download / check-another buttons remain visible, top-right
+    uploadWrap.style.display = 'none';
+    pageFooter.classList.add('hidden');
+    actions.classList.add('show');
+
+    if (result.messages && result.messages.length) {
+      console.log('mammoth conversion notes:', result.messages);
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('Something went wrong reading that file: ' + err.message, 'error');
+  }
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+['dragenter', 'dragover'].forEach((evt) =>
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  })
+);
+['dragleave', 'drop'].forEach((evt) =>
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+  })
+);
+dropzone.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files[0];
+  handleFile(file);
+});
+
+downloadBtn.addEventListener('click', () => {
+  if (!lastReportHtml) return;
+  const blob = new Blob([lastReportHtml], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'reference_crosslink_report.html';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+resetBtn.addEventListener('click', clearAll);
+</script>
+
+</body>
+</html>
