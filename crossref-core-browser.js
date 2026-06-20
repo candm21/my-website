@@ -85,7 +85,9 @@ function parseBibEntries(bibContent) {
           continue;
         }
         const candidate = word.replace(/[^A-Za-zÀ-ÿ'\-]/g, "");
-        if (candidate && /^[A-ZÀ-Ý]/.test(candidate) && candidate.length > 1) {
+        const isBareInitials = /^[A-Z]{1,3}(-[A-Z]{1,3})?$/.test(candidate || "");
+        if (isBareInitials && run.length) break;
+        if (candidate && /^[A-ZÀ-Ý]/.test(candidate) && candidate.length > 1 && !isBareInitials) {
           run.push(candidate);
         } else if (run.length) {
           break;
