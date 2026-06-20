@@ -1,81 +1,480 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reference Cross-Link Checker</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-<style>
-  :root { color-scheme: light; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0; background: #f1f5f9; color: #1a202c;
-  }
-  header {
-    background: #0f172a; color: #fff; padding: 22px 30px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  header .title h1 { margin: 0; font-size: 20px; }
-  header .title p { margin: 6px 0 0; color: #94a3b8; font-size: 13px; }
-  .wrap { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
-  .wrap.full-width { max-width: 100%; padding: 0; }
-  #dropzone {
-    border: 3px dashed #94a3b8; border-radius: 12px; background: #fff;
-    padding: 50px 20px; text-align: center; cursor: pointer;
-    transition: border-color .15s, background .15s;
-  }
-  #dropzone.dragover { border-color: #3b82f6; background: #eff6ff; }
-  #dropzone .icon { font-size: 40px; margin-bottom: 10px; }
-  #dropzone .main-text { font-size: 16px; font-weight: 600; color: #0f172a; }
-  #dropzone .sub-text { font-size: 13px; color: #64748b; margin-top: 6px; }
-  #fileInput { display: none; }
-  #status {
-    margin: 16px 20px 0; padding: 12px 16px; border-radius: 8px; font-size: 14px;
-    display: none;
-  }
-  #status.show { display: block; }
-  #status.busy { background: #eff6ff; color: #1d4ed8; }
-  #status.error { background: #fef2f2; color: #b91c1c; }
-  #status.ok { background: #f0fdf4; color: #15803d; }
-  /* floating actions, top-right corner, shown only once a report exists */
-  .actions {
-    position: fixed; top: 16px; right: 20px; z-index: 50;
-    display: none; gap: 8px;
-  }
-  .actions.show { display: flex; }
-  button {
-    border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px;
-    cursor: pointer; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.15);
-  }
-  .btn-primary { background: #2563eb; color: #fff; }
-  .btn-secondary { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
-  #reportFrame {
-    width: 100%; height: 0; border: none; display: block;
-    background: #fff; transition: height .1s;
-  }
-  footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0; }
-  footer.hidden { display: none; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>✨ SelvaPrabhu ✨ Reference Cross‑Link Checker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      color-scheme: light;
+      --bg: #f0f7f4;
+      --surface: #ffffff;
+      --primary: #0a1410;
+      --accent: #10b981;
+      --accent-soft: #ecfdf5;
+      --border: #d1fae5;
+      --text: #064e3b;
+      --muted: #047857;
+      --radius: 16px;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.02);
+      
+      /* Green Gradient from Qwen page */
+      --green-gradient-wide: linear-gradient(
+        90deg,
+        #6ee7b7, #34d399, #10b981, #14b8a6, #84cc16, #a3e635, #6ee7b7
+      );
+      --green-gradient: linear-gradient(
+        120deg,
+        #6ee7b7 0%, #34d399 20%, #10b981 40%, #14b8a6 60%, #84cc16 80%, #a3e635 100%
+      );
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* header with gradient and glow - Light Green Theme */
+    header {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 30%, #a7f3d0 60%, #6ee7b7 100%);
+      color: #064e3b;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 2px solid rgba(16, 185, 129, 0.2);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 60%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--green-gradient-wide);
+      background-size: 200% 100%;
+      animation: gradientShift 4s linear infinite;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    header .title {
+      position: relative;
+      z-index: 1;
+    }
+    header .title h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header .title h1 .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+    header .title h1 .brand .name {
+      font-weight: 800;
+      font-size: 28px;
+      letter-spacing: 1px;
+      background: var(--green-gradient-wide);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 4s linear infinite;
+      transition: all 0.3s ease;
+    }
+    header .title h1 .brand .name:hover {
+      transform: scale(1.05);
+      background-size: 400% 100%;
+      animation-duration: 2s;
+    }
+    header .title h1 .brand .emoji {
+      -webkit-text-fill-color: initial;
+      font-size: 30px;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    header .title h1 .brand .sparkle {
+      -webkit-text-fill-color: initial;
+      color: #059669;
+      font-size: 16px;
+      animation: sparkle 2s infinite;
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+      50% { opacity: 0.6; transform: scale(1.2) rotate(20deg); }
+    }
+    header .title h1 .badge {
+      background: var(--green-gradient);
+      background-size: 200% 200%;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 40px;
+      color: #064e3b;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      box-shadow: 0 2px 12px rgba(16, 185, 129, 0.2);
+      animation: gradientShift 4s linear infinite;
+      -webkit-text-fill-color: #064e3b;
+    }
+    header .title p {
+      margin: 6px 0 0;
+      color: #065f46;
+      font-size: 14px;
+      max-width: 500px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+    }
+    .badge-local {
+      background: rgba(255, 255, 255, 0.5);
+      padding: 10px 20px;
+      border-radius: 40px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #065f46;
+      border: 1px solid rgba(16, 185, 129, 0.15);
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.08);
+    }
+    .badge-local .dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse-dot 2s infinite;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      flex: 1;
+      width: 100%;
+    }
+    .wrap.full-width {
+      max-width: 100%;
+      padding: 0;
+    }
+    
+    #dropzone {
+      border: 2.5px dashed #6ee7b7;
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 60px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: var(--shadow);
+      position: relative;
+      border-color: #a7f3d0;
+    }
+    #dropzone:hover {
+      border-color: #34d399;
+      background: #fafffe;
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 0 30px rgba(16, 185, 129, 0.05);
+    }
+    #dropzone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08), 0 20px 40px rgba(0, 0, 0, 0.06);
+      transform: translateY(-2px);
+    }
+    #dropzone .icon {
+      font-size: 52px;
+      margin-bottom: 12px;
+      display: block;
+      line-height: 1;
+    }
+    #dropzone .main-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #064e3b;
+      letter-spacing: -0.2px;
+    }
+    #dropzone .sub-text {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 8px;
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #dropzone .browse-hint {
+      margin-top: 24px;
+      display: inline-block;
+      background: var(--green-gradient);
+      background-size: 200% 200%;
+      color: #064e3b;
+      padding: 12px 32px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.2);
+      animation: gradientShift 4s linear infinite;
+    }
+    #dropzone:hover .browse-hint {
+      transform: scale(1.02);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+    #fileInput {
+      display: none;
+    }
+
+    #status {
+      margin: 24px 0 0;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+      font-weight: 500;
+      align-items: center;
+      gap: 10px;
+    }
+    #status.show {
+      display: flex;
+    }
+    #status.busy {
+      background: var(--accent-soft);
+      color: #059669;
+      border: 1px solid #6ee7b7;
+    }
+    #status.error {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+    #status.ok {
+      background: #f0fdf4;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+
+    /* floating actions — top right */
+    .actions {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      z-index: 60;
+      display: none;
+      gap: 10px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      padding: 8px 12px;
+      border-radius: 60px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.15);
+    }
+    .actions.show {
+      display: flex;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .actions button {
+      border: none;
+      border-radius: 40px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: #064e3b;
+    }
+    .actions .btn-primary {
+      background: var(--green-gradient);
+      background-size: 200% 200%;
+      color: #064e3b;
+      box-shadow: 0 2px 12px rgba(16, 185, 129, 0.2);
+      animation: gradientShift 4s linear infinite;
+    }
+    .actions .btn-primary:hover {
+      transform: scale(0.95);
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    }
+    .actions .btn-secondary {
+      background: transparent;
+      border: 1px solid #d1fae5;
+    }
+    .actions .btn-secondary:hover {
+      background: #ecfdf5;
+      border-color: #6ee7b7;
+    }
+
+    #reportFrame {
+      width: 100%;
+      height: 0;
+      border: none;
+      display: block;
+      background: transparent;
+      transition: height 0.15s ease;
+      margin-top: 0;
+    }
+
+    footer {
+      text-align: center;
+      color: #047857;
+      font-size: 13px;
+      padding: 32px 20px 24px;
+      border-top: 1px solid #d1fae5;
+      background: white;
+      margin-top: auto;
+    }
+    footer.hidden {
+      display: none;
+    }
+    footer span {
+      background: var(--green-gradient-wide);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+      animation: gradientShift 4s linear infinite;
+    }
+
+    /* responsive */
+    @media (max-width: 768px) {
+      header {
+        padding: 20px 20px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      header .title h1 {
+        font-size: 20px;
+      }
+      header .title h1 .brand .name {
+        font-size: 22px;
+      }
+      header .title h1 .brand .emoji {
+        font-size: 24px;
+      }
+      .badge-local {
+        align-self: flex-start;
+        font-size: 11px;
+        padding: 8px 16px;
+      }
+      .wrap {
+        padding: 24px 16px;
+      }
+      #dropzone {
+        padding: 40px 16px;
+      }
+      .actions {
+        top: 12px;
+        right: 12px;
+        padding: 6px 10px;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.95);
+      }
+      .actions button {
+        font-size: 12px;
+        padding: 6px 14px;
+      }
+    }
+    @media (max-width: 480px) {
+      header .title h1 {
+        font-size: 17px;
+      }
+      header .title h1 .brand .name {
+        font-size: 18px;
+      }
+      header .title p {
+        font-size: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
 
 <header>
   <div class="title">
-    <h1>Reference Cross-Link Checker</h1>
-    <p>Drag a .docx in, get a citation audit report back — runs entirely in your browser, no upload to any server.</p>
+    <h1>
+      <span class="brand">
+        <span class="emoji">✨</span>
+        <span class="name">SelvaPrabhu</span>
+        <span class="sparkle">✦</span>
+      </span>
+      <span class="badge">Reference Checker</span>
+    
+	</h1>
+    
   </div>
+  <div class="badge-local">
+        <span class="badge">⚡ 100% local ⚡</span>
+</div>
 </header>
 
 <div class="actions" id="actions">
-  <button class="btn-primary" id="downloadBtn">Download report</button>
-  <button class="btn-secondary" id="resetBtn">Check another file</button>
+  <button class="btn-primary" id="downloadBtn">⬇ Download report</button>
+  <button class="btn-secondary" id="resetBtn">↺ New file</button>
 </div>
 
 <div class="wrap" id="uploadWrap">
   <div id="dropzone">
-    <div class="icon">📄</div>
-    <div class="main-text">Drop a .docx file here, or click to browse</div>
-    <div class="sub-text">Checks in-text citations against your reference list — duplicates, unlinked refs, and orphan citations.</div>
+    <span class="icon">📄</span>
+    <div class="main-text">Drop your .docx here</div>
+    <div class="sub-text">or click to browse — we'll check in‑text citations against your reference list.</div>
+    <span class="browse-hint">Choose file</span>
     <input type="file" id="fileInput" accept=".docx">
   </div>
 
@@ -84,119 +483,143 @@
 
 <iframe id="reportFrame"></iframe>
 
-<footer id="pageFooter">Processed locally in your browser via mammoth.js — your document is never uploaded anywhere.</footer>
+<footer id="pageFooter">🔒 Your document never leaves your device · <span>copyright C&amp;M Digitals</span></footer>
 
 <script src="crossref-core-browser.js"></script>
 <script>
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('fileInput');
-const status = document.getElementById('status');
-const actions = document.getElementById('actions');
-const reportFrame = document.getElementById('reportFrame');
-const downloadBtn = document.getElementById('downloadBtn');
-const resetBtn = document.getElementById('resetBtn');
-const uploadWrap = document.getElementById('uploadWrap');
-const pageFooter = document.getElementById('pageFooter');
+  (function() {
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+    const actions = document.getElementById('actions');
+    const reportFrame = document.getElementById('reportFrame');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const uploadWrap = document.getElementById('uploadWrap');
+    const pageFooter = document.getElementById('pageFooter');
 
-let lastReportHtml = null;
+    let lastReportHtml = null;
 
-function setStatus(msg, type) {
-  status.textContent = msg;
-  status.className = 'show ' + (type || '');
-}
-
-function resizeFrameToContent() {
-  try {
-    const doc = reportFrame.contentDocument || reportFrame.contentWindow.document;
-    const height = doc.documentElement.scrollHeight;
-    reportFrame.style.height = height + 'px';
-  } catch (e) {
-    reportFrame.style.height = '1400px';
-  }
-}
-
-function clearAll() {
-  status.className = '';
-  actions.classList.remove('show');
-  reportFrame.style.height = '0';
-  reportFrame.srcdoc = '';
-  lastReportHtml = null;
-  fileInput.value = '';
-  uploadWrap.style.display = '';
-  pageFooter.classList.remove('hidden');
-}
-
-async function handleFile(file) {
-  if (!file) return;
-  if (!file.name.toLowerCase().endsWith('.docx')) {
-    setStatus('Please drop a .docx file.', 'error');
-    return;
-  }
-  setStatus(`Converting "${file.name}"...`, 'busy');
-  actions.classList.remove('show');
-  reportFrame.style.height = '0';
-
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    // mammoth converts the docx body to HTML in-browser (math equations are
-    // not converted - mammoth has no MathML support - everything else does)
-    const result = await mammoth.convertToHtml({ arrayBuffer });
-    const htmlContent = result.value;
-
-    const reportHtml = generateReport(htmlContent);
-    lastReportHtml = reportHtml;
-
-    reportFrame.srcdoc = reportHtml;
-    reportFrame.onload = resizeFrameToContent;
-
-    // hide the dropzone/header text and footer - only the floating
-    // download / check-another buttons remain visible, top-right
-    uploadWrap.style.display = 'none';
-    pageFooter.classList.add('hidden');
-    actions.classList.add('show');
-
-    if (result.messages && result.messages.length) {
-      console.log('mammoth conversion notes:', result.messages);
+    function setStatus(msg, type) {
+      status.textContent = msg;
+      status.className = 'show ' + (type || '');
     }
-  } catch (err) {
-    console.error(err);
-    setStatus('Something went wrong reading that file: ' + err.message, 'error');
-  }
-}
 
-dropzone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+    function resizeFrameToContent() {
+      try {
+        const doc = reportFrame.contentDocument || reportFrame.contentWindow.document;
+        const height = doc.documentElement.scrollHeight || 1200;
+        reportFrame.style.height = Math.max(height, 400) + 'px';
+      } catch (e) {
+        reportFrame.style.height = '1400px';
+      }
+    }
 
-['dragenter', 'dragover'].forEach((evt) =>
-  dropzone.addEventListener(evt, (e) => {
-    e.preventDefault();
-    dropzone.classList.add('dragover');
-  })
-);
-['dragleave', 'drop'].forEach((evt) =>
-  dropzone.addEventListener(evt, (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('dragover');
-  })
-);
-dropzone.addEventListener('drop', (e) => {
-  const file = e.dataTransfer.files[0];
-  handleFile(file);
-});
+    function goHome() {
+      status.className = '';
+      actions.classList.remove('show');
+      reportFrame.style.height = '0';
+      reportFrame.srcdoc = '';
+      lastReportHtml = null;
+      fileInput.value = '';
+      uploadWrap.style.display = '';
+      pageFooter.classList.remove('hidden');
+      dropzone.classList.remove('dragover');
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => dropzone.focus(), 400);
+    }
 
-downloadBtn.addEventListener('click', () => {
-  if (!lastReportHtml) return;
-  const blob = new Blob([lastReportHtml], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'reference_crosslink_report.html';
-  a.click();
-  URL.revokeObjectURL(url);
-});
+    async function handleFile(file) {
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith('.docx')) {
+        setStatus('⚠️ Please drop a .docx file.', 'error');
+        return;
+      }
+      setStatus(`⏳ Converting "${file.name}" …`, 'busy');
+      actions.classList.remove('show');
+      reportFrame.style.height = '0';
 
-resetBtn.addEventListener('click', clearAll);
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        const htmlContent = result.value;
+
+        const reportHtml = generateReport(htmlContent);
+        lastReportHtml = reportHtml;
+
+        reportFrame.srcdoc = reportHtml;
+        reportFrame.onload = resizeFrameToContent;
+
+        uploadWrap.style.display = 'none';
+        pageFooter.classList.add('hidden');
+        actions.classList.add('show');
+
+        if (result.messages && result.messages.length) {
+          console.log('mammoth conversion notes:', result.messages);
+        }
+        setStatus('✅ Report ready', 'ok');
+        setTimeout(() => {
+          if (status.className.includes('ok')) {
+            status.className = '';
+          }
+        }, 2800);
+      } catch (err) {
+        console.error(err);
+        setStatus('❌ Something went wrong: ' + err.message, 'error');
+        actions.classList.remove('show');
+      }
+    }
+
+    // ----- event binding -----
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    ['dragenter', 'dragover'].forEach((evt) =>
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      })
+    );
+    ['dragleave', 'drop'].forEach((evt) =>
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      })
+    );
+    dropzone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!lastReportHtml) return;
+      const blob = new Blob([lastReportHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reference_crosslink_report.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    resetBtn.addEventListener('click', goHome);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && actions.classList.contains('show')) {
+        goHome();
+      }
+    });
+
+    reportFrame.addEventListener('load', resizeFrameToContent);
+    window.addEventListener('resize', () => {
+      if (reportFrame.srcdoc) resizeFrameToContent();
+    });
+  })();
 </script>
-
 </body>
 </html>
