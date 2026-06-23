@@ -1,0 +1,2545 @@
+<!DOCTYPE html>
+<!-- saved from url=(0053)https://candm21.github.io/my-website/xml_comment.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Selva JATS XML Viewer</title>
+<link rel="icon" type="image/png" href="logo.png">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 20px; line-height: 1.8; background: #f5f5f5; color: #2c3e50; }
+  
+  .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  
+  .drop-zone { border: 3px dashed #3498db; border-radius: 12px; padding: 60px 20px; text-align: center; margin-bottom: 30px; background: #ecf7fd; cursor: pointer; transition: all 0.3s; max-width: 900px; margin: 0 auto 30px; }
+  .drop-zone.dragover { background: #d4edff; border-color: #2980b9; transform: scale(1.02); }
+  .drop-zone-icon { font-size: 48px; margin-bottom: 15px; }
+  .drop-zone-text { font-size: 18px; color: #34495e; margin-bottom: 10px; }
+  .drop-zone-hint { font-size: 14px; color: #7f8c8d; }
+  .file-input { display: none; }
+  
+  /* Floating buttons */
+  .floating-buttons {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+  }
+  .floating-btn {
+    padding: 10px 15px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .floating-btn:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .export-bar { max-width: 900px; margin: 0 auto 20px; display: none; justify-content: flex-end; gap: 10px; }
+  .export-bar.visible { display: flex; }
+  .export-btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+  .export-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+  .export-pdf { background: #e74c3c; color: white; }
+  .export-pdf:hover { background: #c0392b; }
+  .export-html { background: #27ae60; color: white; }
+  .export-html:hover { background: #229954; }
+  
+  .metadata-section { max-width: 900px; margin: 0 auto 30px; background: #fff; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
+  .metadata-section.visible { display: block; }
+  .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .metadata-column h3 { color: #2c3e50; font-size: 1.3em; margin-bottom: 15px; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  .metadata-item { margin: 10px 0; font-size: 0.95em; }
+  .metadata-label { font-weight: 600; color: #555; display: inline-block; min-width: 150px; }
+  .metadata-value { color: #2c3e50; }
+  
+  /* Validation Section Styles */
+  .validation-section { max-width: 900px; margin: 0 auto 30px; background: #fff; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; border-left: 4px solid #e74c3c; }
+  .validation-section.visible { display: block; }
+  .validation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ecf0f1; }
+  .validation-title { font-size: 1.4em; font-weight: 600; color: #2c3e50; }
+  .validation-stats { display: flex; gap: 20px; }
+  .stat-item { padding: 8px 15px; background: #f8f9fa; border-radius: 6px; font-size: 0.9em; font-weight: 600; }
+  .errors-list { max-height: 400px; overflow-y: auto; }
+  .error-item { padding: 15px; margin-bottom: 10px; background: #fff5f5; border-left: 4px solid #e74c3c; border-radius: 4px; }
+  .error-type { font-weight: 600; color: #c0392b; margin-bottom: 5px; }
+  .error-line { color: #7f8c8d; font-size: 0.9em; margin-bottom: 5px; }
+  .error-details { color: #2c3e50; margin-bottom: 8px; }
+  .error-code { background: #2c3e50; color: white; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 0.85em; margin-top: 8px; }
+  
+  .article-header { border-bottom: 3px solid #34495e; padding-bottom: 20px; margin-bottom: 30px; }
+  .article-type { display: inline-block; background: #3498db; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; text-transform: uppercase; margin-bottom: 15px; font-weight: bold; }
+  .article-title { font-size: 2.2em; color: #2c3e50; margin: 15px 0; font-weight: 700; line-height: 1.3; }
+  .article-subtitle { font-size: 1.4em; color: #7f8c8d; margin: 10px 0; font-style: italic; }
+  
+  .authors { margin: 20px 0; font-size: 1.1em; }
+  .author { display: inline; color: #2c3e50; }
+  .author-sup { color: #3498db; font-size: 0.9em; vertical-align: super; }
+  .author:not(:last-child)::after { content: ", "; }
+  
+  .affiliations { margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #3498db; }
+  .aff-item { margin: 8px 0; font-size: 0.95em; color: #555; }
+  .aff-label { font-weight: bold; color: #3498db; margin-right: 6px; }
+  
+  .correspondence { margin: 20px 0; padding: 15px; background: #fff9e6; border-left: 4px solid #f39c12; }
+  .correspondence-label { font-weight: bold; color: #e67e22; margin-right: 8px; }
+  
+  /* Enhanced Abstract Styles */
+  .abstract { margin: 30px 0; padding: 25px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; }
+  .abstract h2 { margin-top: 0; color: #2c3e50; font-size: 1.4em; border-bottom: 2px solid #3498db; padding-bottom: 8px; font-style: italic;}
+  .abstract-section { margin: 20px 0; }
+  .abstract-section-title { font-weight: 600; color: #2c3e50; margin-bottom: 8px; font-size: 1.1em; }
+  .abstract-section-content { margin-left: 20px; }
+  .abstract-section-content p { margin: 8px 0; }
+  
+  /* Appendix Styles */
+  .app-group { margin: 40px 0; padding: 30px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; }
+  .app-group h2 { color: #8e44ad; border-bottom: 2px solid #8e44ad; padding-bottom: 8px; }
+  .app { margin: 25px 0; padding: 20px; background: white; border-radius: 6px; border-left: 4px solid #9b59b6; }
+  .app-title { color: #8e44ad; font-size: 1.4em; margin-bottom: 15px; font-weight: 600; }
+  
+  /* Biography Styles */
+  .bio { margin: 30px 0; padding: 25px; background: #f0f8ff; border-radius: 8px; border: 1px solid #bde0fe; }
+  .bio h3 { color: #2980b9; margin-top: 0; border-bottom: 1px solid #3498db; padding-bottom: 8px; }
+  
+  section { margin: 30px 0; position: relative; }
+  /* Heading styles with distinct colors and sizes */
+  h1 { font-size: 1.8em; color: #2c3e50; margin-top: 40px; margin-bottom: 20px; font-weight: 700; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+  h2 { font-size: 1.5em; color: #34495e; margin-top: 35px; margin-bottom: 15px; font-weight: 600; border-left: 4px solid #3498db; padding-left: 12px; font-style: italic;}
+  h3 { font-size: 1.3em; color: #2980b9; margin-top: 30px; margin-bottom: 12px; font-weight: 600; }
+  h4 { font-size: 1.1em; color: #5d6d7e; margin-top: 25px; margin-bottom: 10px; font-weight: 600; font-style: italic; }
+  h5 { font-size: 1em; color: #7f8c8d; margin-top: 20px; margin-bottom: 8px; font-weight: 600; }
+  h6 { font-size: 0.9em; color: #95a5a6; margin-top: 18px; margin-bottom: 6px; font-weight: 600; }
+  
+  /* Section ID indicator */
+  .section-id { 
+    position: absolute; 
+    top: 5px; 
+    right: 5px; 
+    background: #e74c3c; 
+    color: white; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 1em; 
+    font-family: monospace; 
+    opacity: 0.7; 
+  }
+  
+  p { margin: 15px 0; text-align: justify; }
+  
+  /* Source tag styling - italic */
+  .citation-source { font-style: italic; color: #0080ff; }
+  
+  /* Highlighted italic and bold text */
+  em, i { 
+    background-color: #ccff99; 
+    padding: 1px 4px; 
+    border-radius: 3px; 
+  }
+  
+  strong, b { 
+    background-color: #b3ff99; 
+    padding: 1px 4px; 
+    border-radius: 3px; 
+  }
+  
+  .table-wrap { margin: 25px 0; overflow-x: auto; position: relative; }
+  .table-id { 
+    position: absolute; 
+    top: 5px; 
+    right: 5px; 
+    background: #27ae60; 
+    color: white; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 1em; 
+    font-family: monospace; 
+    opacity: 0.7; 
+  }
+  table { border-collapse: collapse; width: 100%; margin: 15px 0; background: #fff; font-size: 0.95em; }
+  caption { font-weight: bold; text-align: left; padding: 10px 0; color: #2c3e50; font-size: 1.1em; }
+  .table-label { font-weight: bold; color: #3498db; margin-right: 8px; }
+  th, td { border: 1px solid #bdc3c7; padding: 10px 12px; vertical-align: top; text-align: left; }
+  th { background: #ecf0f1; font-weight: 600; color: #2c3e50; }
+  tr:hover { background: #f8f9fa; }
+  .table-footer { font-size: 0.9em; color: #7f8c8d; margin-top: 8px; font-style: italic; }
+  .table-footnote { font-size: 0.85em; color: #7f8c8d; margin-top: 5px; padding-left: 10px; border-left: 2px solid #bdc3c7; }
+  
+  .fig-wrap { margin: 25px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e1e4e8; text-align: center; position: relative; }
+  .fig-id { 
+    position: absolute; 
+    top: 5px; 
+    right: 5px; 
+    background: #f39c12; 
+    color: white; 
+    padding: 2px 8px; 
+    border-radius: 4px; 
+    font-size: 1em; 
+    font-family: monospace; 
+    opacity: 0.7; 
+  }
+  .fig-label { font-weight: bold; color: #3498db; margin-right: 8px; }
+  .fig-caption { margin-top: 15px; text-align: left; font-size: 0.95em; color: #555; }
+  .fig-graphic { max-width: 100%; height: auto; margin: 15px 0; border: 1px solid #ddd; }
+  
+  /* XRef styling */
+  .xref { color: #e74c3c; font-weight: 600; text-decoration: underline; cursor: pointer; }
+  .xref:hover { color: #c0392b; background: #fff5f5; }
+  
+  /* Inline formula styling */
+  .inline-formula { 
+    background: #ffefbf; 
+    padding: 2px 6px; 
+    border-radius: 4px; 
+    border: 1px solid #e1e4e8; 
+    font-family: "Times New Roman", serif; 
+  }
+  
+  ul, ol { margin: 15px 0; padding-left: 30px; }
+  li { margin: 8px 0; }
+  
+  .references { margin-top: 40px; padding-top: 30px; border-top: 3px solid #34495e; }
+  .references h2 { color: #2c3e50; font-size: 1.6em; margin-bottom: 20px; }
+  .ref-item {
+  margin-bottom: 15px; 
+  padding-left: 30px; 
+  text-indent: -30px; 
+  font-size: 0.95em; 
+  position: relative;
+  cursor: help;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  padding: 10px 15px 10px 45px;
+  margin-left: -15px;
+  margin-right: -15px;
+}
+
+.ref-item:hover {
+  background: linear-gradient(135deg, #e8f4fd, #d4edff);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+  border-left: 4px solid #3498db;
+  transform: translateX(5px);
+}
+
+.ref-label {
+  font-weight: bold; 
+  color: #3498db; 
+  margin-right: 8px;
+  transition: all 0.3s ease;
+}
+
+.ref-item:hover .ref-label {
+  color: #2c3e50;
+  font-size: 1.05em;
+  text-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
+}
+
+/* Citation tooltip styles */
+.citation-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #2c3e50;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  max-width: 300px;
+  min-width: 200px;
+  text-align: left;
+}
+
+.citation-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  border: 6px solid transparent;
+  border-top-color: #2c3e50;
+}
+
+.ref-item:hover .citation-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Enhanced tooltip colors */
+.tooltip-pubtype {
+  background: #8e44ad;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+
+}
+
+.tooltip-journal {
+  color: #3498db;
+  font-weight: bold;
+}
+
+.tooltip-year {
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.tooltip-volume {
+  color: #27ae60;
+}
+
+.tooltip-pages {
+  color: #e74c3c;
+}
+
+.tooltip-chapter {
+  color: #9b59b6;
+  font-style: italic;
+}
+
+.tooltip-publisher {
+  color: #e67e22;
+}
+
+.tooltip-edition {
+  color: #16a085;
+}
+
+.tooltip-issue {
+  color: #d35400;
+}
+.footnotes { 
+  margin-top: 40px; 
+  padding: 25px; 
+  background: #f8f9fa; 
+  border-radius: 8px; 
+  border: 1px solid #e1e4e8;
+  page-break-inside: avoid;
+}
+.footnotes h2 { 
+  color: #2c3e50; 
+  font-size: 1.4em; 
+  margin-bottom: 20px; 
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+.fn-item { 
+  margin-bottom: 25px; 
+  padding: 0;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e1e4e8;
+  overflow: hidden;
+}
+.fn-label { 
+  font-weight: bold; 
+  color: white;
+  background: #e67e22;
+  margin: 0;
+  font-size: 1.1em;
+  padding: 12px 15px;
+  display: block;
+  border-bottom: 1px solid #d35400;
+}
+.fn-content {
+  padding: 15px;
+}
+.fn-paragraph {
+  margin: 15px 0;
+  line-height: 1.6;
+  text-align: justify;
+  color: #2c3e50;
+}
+.fn-paragraph:first-child {
+  margin-top: 5px;
+}
+.fn-paragraph:last-child {
+  margin-bottom: 5px;
+}
+
+/* Print styles for footnotes */
+@media print {
+  .footnotes {
+    background: #f8f9fa !important;
+    border: 1px solid #ddd !important;
+  }
+  .fn-item {
+    background: white !important;
+    border: 1px solid #ddd !important;
+  }
+  .fn-label {
+    background: #e67e22 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+  
+  .keywords { margin: 20px 0; }
+  .keywords-label { font-weight: bold; color: #2c3e50; margin-right: 8px; }
+  .keyword { display: inline-block; background: #ecf0f1; padding: 4px 10px; margin: 4px; border-radius: 4px; font-size: 0.9em; }
+  
+  /* Style for unstyled elements */
+  .unstyled-element { 
+    margin: 15px 0; 
+    padding: 10px; 
+    background: #f9f9f9; 
+    border-left: 3px solid #95a5a6; 
+    border: 2px dashed #e74c3c;
+  }
+  .unstyled-tag { 
+    background: #fff5f5; 
+    color: #c0392b; 
+    padding: 2px 4px; 
+    border-radius: 3px; 
+    font-family: monospace; 
+    font-size: 0.9em; 
+    margin: 0 2px; 
+  }
+  
+  /* Print styles */
+  @media print {
+    body {
+      background: white !important;
+      font-family: "Times New Roman", Times, serif !important;
+      font-size: 12pt;
+      line-height: 1.6;
+      color: #000;
+      padding: 15mm;
+      margin: 0;
+    }
+    .container {
+      max-width: 100%;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+    }
+    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons { 
+      display: none !important; 
+    }
+    .article-type {
+      background: #3498db !important;
+      color: white !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .affiliations {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .correspondence {
+      background: #fff9e6 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .abstract {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    th {
+      background: #ecf0f1 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .fig-wrap {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .keyword {
+      background: #ecf0f1 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .footnotes {
+      background: #f8f9fa !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    /* Remove background highlights for print */
+    em, i, strong, b {
+      background-color: transparent !important;
+      padding: 0 !important;
+    }
+    /* Page break controls */
+    h1, h2, h3 {
+      page-break-after: avoid;
+    }
+    table, .table-wrap, .fig-wrap {
+      page-break-inside: avoid;
+    }
+    .references {
+      page-break-before: auto;
+    }
+    /* Hide section IDs and other UI elements */
+    .section-id, .table-id, .fig-id, .citation-tooltip { display: none !important; }
+  }
+</style>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+</style></head>
+<body>
+  <!-- Floating buttons -->
+  <div class="floating-buttons">
+    <button id="browseBtn" class="floating-btn">
+      <span>📁</span> Browse
+    </button>
+    <button id="refreshBtn" class="floating-btn">
+      <span>🔄</span> Refresh
+    </button>
+  </div>
+  
+  <div id="dropZone" class="drop-zone">
+    <div class="drop-zone-icon">📄</div>
+    <div class="drop-zone-text">Drag &amp; Drop your NLM XML file here</div>
+    <div class="drop-zone-hint">or click to browse</div>
+    <input type="file" id="fileInput" class="file-input" accept=".xml">
+  </div>
+  
+  <div id="exportBar" class="export-bar">
+    <button class="export-btn export-html" onclick="exportHTML()">
+      <span>📄</span> Export HTML
+    </button>
+    <button class="export-btn export-pdf" onclick="exportPDF()">
+      <span>📑</span> Print / Save as PDF
+    </button>
+  </div>
+  
+  <div id="metadataSection" class="metadata-section">
+    <div class="metadata-grid">
+      <div class="metadata-column">
+        <h3>Journal Information</h3>
+        <div id="journalInfo"></div>
+      </div>
+      <div class="metadata-column">
+        <h3>Article Information</h3>
+        <div id="articleInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Validation Section -->
+  <div id="validationSection" class="validation-section">
+    <div class="validation-header">
+      <div class="validation-title">XML Validation Results</div>
+      <div class="validation-stats">
+        <div class="stat-item" id="totalTags">Tags: 0</div>
+        <div class="stat-item" id="totalLines">Lines: 0</div>
+        <div class="stat-item" id="totalErrors">Errors: 0</div>
+        <div class="stat-item" id="commentErrors">Comment Errors: 0</div>
+      </div>
+    </div>
+    <div id="errorsList" class="errors-list"></div>
+  </div>
+  
+  <div id="output"></div>
+
+<script src="./JATS XML Viewer_files/tex-mml-chtml.min.js.download"></script>
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const output = document.getElementById('output');
+const exportBar = document.getElementById('exportBar');
+const metadataSection = document.getElementById('metadataSection');
+const validationSection = document.getElementById('validationSection');
+const journalInfo = document.getElementById('journalInfo');
+const articleInfo = document.getElementById('articleInfo');
+const errorsList = document.getElementById('errorsList');
+const totalTagsEl = document.getElementById('totalTags');
+const totalLinesEl = document.getElementById('totalLines');
+const totalErrorsEl = document.getElementById('totalErrors');
+const commentErrorsEl = document.getElementById('commentErrors');
+const browseBtn = document.getElementById('browseBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+let currentArticleTitle = 'article';
+let currentFile = null;
+
+// Global counters for metadata
+let totalTables = 0;
+let totalFigures = 0;
+let totalInlineFormulas = 0;
+let totalDisplayFormulas = 0;
+let totalRefs = 0;
+
+// Track unstyled elements
+let unstyledElements = new Set();
+
+// Event listeners for floating buttons
+browseBtn.addEventListener('click', () => fileInput.click());
+refreshBtn.addEventListener('click', () => {
+  if (currentFile) {
+    processFile(currentFile);
+  } else {
+    alert('No file loaded. Please browse for a file first.');
+  }
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.xml')) {
+    currentFile = file;
+    processFile(file);
+  } else {
+    alert('Please drop a valid XML file');
+  }
+});
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    currentFile = file;
+    processFile(file);
+  }
+});
+
+async function processFile(file) {
+  try {
+    const text = await file.text();
+    // Run XML validation
+    validateXML(text);
+    // Process and display XML content
+    processXMLText(text);
+    // Hide drop zone after successful file load
+    dropZone.style.display = 'none';
+  } catch (error) {
+    output.innerHTML = `<div class="container"><p style="color: red;">Error processing file: ${error.message}</p></div>`;
+    console.error(error);
+  }
+}
+
+function validateXML(content) {
+  setTimeout(() => {
+    const errors = [];
+    const lines = content.split('\n');
+    let totalTags = 0;
+    let commentErrors = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNumber = i + 1;
+
+      const commentErrorsInLine = checkCommentErrors(line, lineNumber);
+      errors.push(...commentErrorsInLine);
+      commentErrors += commentErrorsInLine.length;
+
+      const tagMatches = line.match(/<[^>]+>/g);
+      if (tagMatches) {
+        totalTags += tagMatches.length;
+      }
+    }
+
+    displayValidationResults(errors, {
+      totalTags,
+      commentErrors,
+      totalLines: lines.length,
+      totalErrors: errors.length
+    });
+  }, 100);
+}
+
+function checkCommentErrors(line, lineNumber) {
+  const errors = [];
+  const commentRegex = /<!--[\s\S]*?-->/g;
+  let match;
+
+  while ((match = commentRegex.exec(line)) !== null) {
+    const comment = match[0];
+    const commentContent = comment.slice(4, -3);
+    
+    const tagMatches = commentContent.match(/<[^>]*>/g);
+    if (tagMatches) {
+      const tagStack = [];
+      
+      tagMatches.forEach(tag => {
+        const cleanTag = tag.replace(/[<>]/g, '');
+        
+        if (cleanTag.startsWith('/')) {
+          const tagName = cleanTag.substring(1);
+          if (tagStack.length === 0 || tagStack[tagStack.length - 1] !== tagName) {
+            errors.push({
+              type: 'Comment Tag Error',
+              line: lineNumber,
+              details: `Closing tag "${tagName}" without matching opening tag in comment`,
+              code: comment
+            });
+          } else {
+            tagStack.pop();
+          }
+        } else if (!cleanTag.endsWith('/')) {
+          const tagName = cleanTag.split(' ')[0];
+          tagStack.push(tagName);
+        }
+      });
+
+      tagStack.forEach(tagName => {
+        errors.push({
+          type: 'Comment Tag Error',
+          line: lineNumber,
+          details: `Opening tag "${tagName}" without matching closing tag in comment`,
+          code: comment
+        });
+      });
+    }
+  }
+  
+  return errors;
+}
+
+function displayValidationResults(errors, stats) {
+  // Update stats
+  totalTagsEl.textContent = `Tags: ${stats.totalTags}`;
+  totalLinesEl.textContent = `Lines: ${stats.totalLines}`;
+  totalErrorsEl.textContent = `Errors: ${stats.totalErrors}`;
+  commentErrorsEl.textContent = `Comment Errors: ${stats.commentErrors}`;
+  
+  // Display errors
+  errorsList.innerHTML = '';
+  
+  if (errors.length === 0) {
+    errorsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #27ae60;">No validation errors found!</div>';
+  } else {
+    errors.forEach(error => {
+      const errorEl = document.createElement('div');
+      errorEl.className = 'error-item';
+      errorEl.innerHTML = `
+        <div class="error-type">${error.type}</div>
+        <div class="error-line">Line ${error.line}</div>
+        <div class="error-details">${error.details}</div>
+        ${error.code ? `<div class="error-code">${error.code}</div>` : ''}
+      `;
+      errorsList.appendChild(errorEl);
+    });
+  }
+  
+  validationSection.classList.add('visible');
+}
+
+function processXMLText(text) {
+  try {
+    // Reset counters and trackers
+    totalTables = 0;
+    totalFigures = 0;
+    totalInlineFormulas = 0;
+    totalDisplayFormulas = 0;
+    totalRefs = 0;
+    unstyledElements.clear();
+    
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "text/xml");
+    
+    if (xml.querySelector('parsererror')) {
+      output.innerHTML = '<div class="container"><p style="color: red;">Error parsing XML file. Please check the file format.</p></div>';
+      return;
+    }
+    
+    // Count elements
+    countElements(xml);
+    
+    // Extract and display metadata
+    displayMetadata(xml);
+    
+    let html = '<div class="container">';
+    
+    const articleType = xml.querySelector('article')?.getAttribute('article-type') || 'research-article';
+    html += `<div class="article-type">${formatText(articleType.replace(/-/g, ' '))}</div>`;
+    
+    html += '<div class="article-header">';
+    
+    const title = xml.querySelector("article-title");
+    if (title) {
+      currentArticleTitle = title.textContent.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+      html += `<h1 class="article-title">${formatContent(title)}</h1>`;
+    }
+    
+    const subtitle = xml.querySelector("subtitle");
+    if (subtitle) {
+      html += `<div class="article-subtitle">${formatContent(subtitle)}</div>`;
+    }
+    
+    const contribGroup = xml.querySelector("contrib-group");
+    if (contribGroup) {
+      const authors = contribGroup.querySelectorAll('contrib[contrib-type="author"]');
+      if (authors.length > 0) {
+        html += '<div class="authors">';
+        authors.forEach((author) => {
+          const name = author.querySelector('name');
+          if (name) {
+            const surname = name.querySelector('surname')?.textContent || '';
+            const givenNames = name.querySelector('given-names')?.textContent || '';
+            const xrefs = author.querySelectorAll('xref[ref-type="aff"]');
+            let supText = '';
+            xrefs.forEach(xref => {
+              supText += `<span class="author-sup">${xref.textContent}</span>`;
+            });
+            html += `<span class="author">${givenNames} ${surname}${supText}</span>`;
+          }
+        });
+        html += '</div>';
+      }
+    }
+    
+    const affs = xml.querySelectorAll('aff');
+    if (affs.length > 0) {
+      html += '<div class="affiliations">';
+      affs.forEach(aff => {
+        const label = aff.querySelector('label')?.textContent || '';
+        const affText = getTextContent(aff, ['label']);
+        html += `<div class="aff-item">`;
+        if (label) html += `<span class="aff-label">${label}</span>`;
+        html += `${affText}</div>`;
+      });
+      html += '</div>';
+    }
+    
+    const corresp = xml.querySelector('author-notes corresp, corresp');
+    if (corresp) {
+      const correspText = formatContent(corresp);
+      html += `<div class="correspondence"><span class="correspondence-label">*Correspondence:</span> ${correspText}</div>`;
+    }
+    
+    html += '</div>';
+    
+    const abstract = xml.querySelector('abstract');
+    if (abstract) {
+      html += renderAbstract(abstract);
+    }
+    
+    const kwdGroup = xml.querySelector('kwd-group');
+    if (kwdGroup) {
+      html += '<div class="keywords">';
+      const kwdTitle = kwdGroup.querySelector('title')?.textContent || 'Keywords';
+      html += `<span class="keywords-label">${kwdTitle}:</span>`;
+      kwdGroup.querySelectorAll('kwd').forEach(kwd => {
+        html += `<span class="keyword">${kwd.textContent}</span>`;
+      });
+      html += '</div>';
+    }
+    
+    const body = xml.querySelector('body');
+    if (body) {
+      html += processElement(body);
+    }
+    
+    // Process appendices
+    const appGroup = xml.querySelector('app-group');
+    if (appGroup) {
+      html += renderAppGroup(appGroup);
+    }
+    
+    // Process biographies
+    const bio = xml.querySelector('bio');
+    if (bio) {
+      html += renderBio(bio);
+    }
+    
+const fnGroup = xml.querySelector('fn-group');
+if (fnGroup) {
+  html += '<div class="footnotes"><h2>Back Matter</h2>';
+  fnGroup.querySelectorAll('fn').forEach(fn => {
+    const label = fn.querySelector('label')?.textContent || '';
+    
+    html += `<div class="fn-item">`;
+    if (label) html += `<div class="fn-label">${label}</div>`;
+    html += `<div class="fn-content">`;
+    
+    // Process all child nodes except label
+    fn.childNodes.forEach(node => {
+      if (node.nodeType === 1) { // Element node
+        const tagName = node.tagName.toLowerCase();
+        if (tagName === 'label') {
+          // Skip label as we already processed it
+          return;
+        } else if (tagName === 'p') {
+          // Handle paragraphs with proper spacing
+          html += `<div class="fn-paragraph">${formatContent(node)}</div>`;
+        } else {
+          // Handle other elements (lists, tables, etc.)
+          html += processElement(node);
+        }
+      } else if (node.nodeType === 3 && node.textContent.trim()) {
+        // Handle text nodes directly inside fn (without p wrapper)
+        html += `<div class="fn-paragraph">${escapeHtml(node.textContent)}</div>`;
+      }
+    });
+    
+    html += `</div></div>`;
+  });
+  html += '</div>';
+}
+    
+    const refList = xml.querySelector('ref-list');
+    if (refList) {
+      html += renderReferences(refList);
+    }
+    
+    // Show unstyled elements warning if any
+    if (unstyledElements.size > 0) {
+      html += `<div class="unstyled-element" style="margin-top: 30px;">
+        <strong>Unstyled Elements Found:</strong> The following XML tags were rendered as paragraphs: 
+        ${Array.from(unstyledElements).map(tag => `<span class="unstyled-tag">${tag}</span>`).join(', ')}
+      </div>`;
+    }
+    
+    html += '</div>';
+    output.innerHTML = html;
+    exportBar.classList.add('visible');
+    
+    // Render MathJax formulas
+    if (window.MathJax) {
+      MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+    }
+    
+  } catch (error) {
+    output.innerHTML = `<div class="container"><p style="color: red;">Error processing XML: ${error.message}</p></div>`;
+    console.error(error);
+  }
+}
+
+function countElements(xml) {
+  // Count tables
+  totalTables = xml.querySelectorAll('table-wrap').length;
+  
+  // Count figures
+  totalFigures = xml.querySelectorAll('fig').length;
+  
+  // Count formulas
+  totalInlineFormulas = xml.querySelectorAll('inline-formula').length;
+  totalDisplayFormulas = xml.querySelectorAll('disp-formula').length;
+  
+  // Count references
+  totalRefs = xml.querySelectorAll('ref-list ref').length;
+}
+
+function renderAbstract(abstract) {
+  let html = '<div class="abstract">';
+  
+  const abstractTitle = abstract.querySelector('title')?.textContent || 'Abstract';
+  html += `<h2>${abstractTitle}</h2>`;
+  
+  // Check if abstract has sections
+  const sections = abstract.querySelectorAll('sec');
+  if (sections.length > 0) {
+    // Abstract with sections (structured abstract)
+    sections.forEach(section => {
+      const sectionTitle = section.querySelector('title')?.textContent || '';
+      const sectionContent = section.querySelector('p');
+      const sectionId = section.getAttribute('id');
+      
+      html += '<div class="abstract-section">';
+      if (sectionTitle) {
+        html += `<div class="abstract-section-title">${sectionTitle}</div>`;
+      }
+      if (sectionContent) {
+        html += `<div class="abstract-section-content"><p>${formatContent(sectionContent)}</p></div>`;
+      }
+      if (sectionId) {
+        html += `<div class="section-id">${sectionId}</div>`;
+      }
+      html += '</div>';
+    });
+  } else {
+    // Traditional abstract without sections
+    abstract.querySelectorAll('p').forEach(p => {
+      html += `<p>${formatContent(p)}</p>`;
+    });
+  }
+  
+  html += '</div>';
+  return html;
+}
+
+function renderAppGroup(appGroup) {
+  let html = '<div class="app-group">';
+  
+  const appGroupTitle = appGroup.querySelector('title');
+  if (appGroupTitle) {
+    html += `<h2>${formatContent(appGroupTitle)}</h2>`;
+  } else {
+    html += '<h2>Appendix</h2>';
+  }
+  
+  const apps = appGroup.querySelectorAll('app');
+  apps.forEach(app => {
+    const appId = app.getAttribute('id') || '';
+    html += `<div class="app" id="${appId}">`;
+    
+    const appTitle = app.querySelector('title');
+    if (appTitle) {
+      html += `<div class="app-title">${formatContent(appTitle)}</div>`;
+    }
+    
+    html += processElement(app);
+    html += '</div>';
+  });
+  
+  html += '</div>';
+  return html;
+}
+
+function renderBio(bio) {
+  let html = '<div class="bio">';
+  
+  const bioTitle = bio.querySelector('title');
+  if (bioTitle) {
+    html += `<h3>${formatContent(bioTitle)}</h3>`;
+  } else {
+    html += '<h3>Biography</h3>';
+  }
+  
+  html += processElement(bio);
+  html += '</div>';
+  return html;
+}
+
+function renderReferences(refList) {
+  let html = '<div class="references">';
+  
+  const refTitle = refList.querySelector('title')?.textContent || 'References';
+  html += `<h2>${refTitle}</h2>`;
+  
+  // Always use normal list format (no table)
+  refList.querySelectorAll('ref').forEach(ref => {
+    const label = ref.querySelector('label')?.textContent || '';
+    const citation = ref.querySelector('mixed-citation, element-citation');
+    let refText = '';
+    let tooltipContent = '';
+    
+    if (citation) {
+      refText = formatCitationContent(citation);
+      tooltipContent = extractJournalCitation(citation);
+    } else {
+      refText = getTextContent(ref, ['label']);
+    }
+    
+    html += `<div class="ref-item">`;
+    if (label) html += `<span class="ref-label">${label}</span>`;
+    html += `${refText}`;
+    
+    // Add tooltip if we have journal citation data
+    if (tooltipContent) {
+      html += `<div class="citation-tooltip">${tooltipContent}</div>`;
+    }
+    
+    html += `</div>`;
+  });
+  
+  html += '</div>';
+  return html;
+}
+
+function extractJournalCitation(citation) {
+  const pubType = citation.getAttribute('publication-type') || '';
+  const journal = citation.querySelector('source')?.textContent || '';
+  const year = citation.querySelector('year')?.textContent || '';
+  const volume = citation.querySelector('volume')?.textContent || '';
+  const issue = citation.querySelector('issue')?.textContent || '';
+  const fpage = citation.querySelector('fpage')?.textContent || '';
+  const lpage = citation.querySelector('lpage')?.textContent || '';
+  
+  // Book-specific elements
+  const publisherName = citation.querySelector('publisher-name')?.textContent || '';
+  const publisherLoc = citation.querySelector('publisher-loc')?.textContent || '';
+  const edition = citation.querySelector('edition')?.textContent || '';
+  const chapterTitle = citation.querySelector('chapter-title')?.textContent || '';
+  
+  let tooltip = '';
+  
+  // Add publication type badge
+  if (pubType) {
+    tooltip += `<span class="tooltip-pubtype">${pubType.toUpperCase()}</span><br>`;
+  }
+  
+  if (pubType === 'book') {
+    // Book-specific formatting
+    if (chapterTitle) {
+      tooltip += `<span class="tooltip-chapter">Chapter: ${chapterTitle}</span><br>`;
+    }
+    
+    if (publisherName) {
+      tooltip += `<span class="tooltip-publisher">Publisher: ${publisherName}</span>`;
+      if (publisherLoc) {
+        tooltip += `, ${publisherLoc}`;
+      }
+      tooltip += '<br>';
+    }
+    
+    if (edition) {
+      tooltip += `<span class="tooltip-edition">Edition: ${edition}</span><br>`;
+    }
+  } else {
+    // Journal/article formatting
+    if (journal) {
+      tooltip += `<span class="tooltip-journal">Source: ${journal}</span>`;
+    }
+    
+    if (volume) {
+      if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+      tooltip += `<span class="tooltip-volume">Volume: ${volume}</span>`;
+    }
+    
+    if (issue) {
+      if (volume) {
+        tooltip += `(<span class="tooltip-issue">${issue}</span>)`;
+      } else {
+        if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+        tooltip += `<span class="tooltip-issue">Issue: ${issue}</span>`;
+      }
+    }
+  }
+  
+  // Common elements for all publication types
+  if (year) {
+    if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+    tooltip += `<span class="tooltip-year">Year: ${year}</span>`;
+  }
+  
+  if (fpage) {
+    if (tooltip && !tooltip.endsWith('<br>')) tooltip += '<br>';
+    if (lpage) {
+      tooltip += `<span class="tooltip-pages">Pages: ${fpage}-${lpage}</span>`;
+    } else {
+      tooltip += `<span class="tooltip-pages">Page: ${fpage}</span>`;
+    }
+  }
+  
+  return tooltip || 'No citation information available';
+}
+
+function formatCitationContent(citation) {
+  let html = '';
+  
+  // Extract author names from person-group
+  const personGroup = citation.querySelector('person-group');
+  if (personGroup) {
+    const authors = personGroup.querySelectorAll('name');
+    const authorList = [];
+    
+    authors.forEach(author => {
+      const surname = author.querySelector('surname')?.textContent || '';
+      const givenNames = author.querySelector('given-names')?.textContent || '';
+      if (surname || givenNames) {
+        authorList.push(`${surname} ${givenNames}`.trim());
+      }
+    });
+    
+    if (authorList.length > 0) {
+      html += authorList.join(', ') + '';
+    }
+  }
+  
+  // Process the rest of the citation content
+  citation.childNodes.forEach(node => {
+    if (node.nodeType === 1) { // Element node
+      const tagName = node.tagName.toLowerCase();
+      
+      // Skip person-group and name elements since we already processed them
+      if (!['person-group', 'name', 'surname', 'given-names'].includes(tagName)) {
+        switch(tagName) {
+          case 'year':
+            html += `<span class="citation-year">${formatContent(node)}</span>`;
+            break;
+          case 'article-title':
+            html += `<span class="citation-article-title">${formatContent(node)}</span>`;
+            break;
+          case 'source':
+            // Source tag is now properly styled with italic
+            html += `<span class="citation-source">${formatContent(node)}</span>`;
+            break;
+          case 'volume':
+            html += `<span class="citation-volume">${formatContent(node)}</span>`;
+            break;
+          case 'issue':
+            html += `<span class="citation-issue">${formatContent(node)}</span>`;
+            break;
+          case 'fpage':
+            html += `<span class="citation-pages">${formatContent(node)}</span>`;
+            break;
+          case 'lpage':
+            html += `<span class="citation-pages">${formatContent(node)}</span>`;
+            break;
+          case 'publisher-name':
+            html += `<span class="citation-publisher">${formatContent(node)}</span>`;
+            break;
+          case 'publisher-loc':
+            html += `<span class="citation-publisher-loc">${formatContent(node)}</span>`;
+            break;
+          case 'edition':
+            html += `<span class="citation-edition">${formatContent(node)}</span> ed.`;
+            break;
+          case 'ext-link':
+            const href = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
+            html += `<span class="citation-ext-link"><a href="${href}" target="_blank">${formatContent(node) || href}</a></span>`;
+            break;
+          case 'uri':
+            const uri = node.getAttribute('xlink:href') || node.getAttribute('href') || node.textContent;
+            html += `<span class="citation-uri"><a href="${uri}" target="_blank">${formatContent(node) || uri}</a></span>`;
+            break;
+          default:
+            html += formatContent(node);
+        }
+      }
+    } else if (node.nodeType === 3) { // Text node
+      // Only add text content if it's not just whitespace
+      if (node.textContent.trim()) {
+        const text = escapeHtml(node.textContent);
+        // Handle common punctuation and formatting
+        if (text === ',' || text === '.' || text === ':' || text === ';') {
+          html += text;
+        } else if (text.includes('–') || text.includes('-')) {
+          html += `<span class="citation-page-range">${text}</span>`;
+        } else {
+          html += `${text}`;
+        }
+      }
+    }
+  });
+  
+  return html;
+}
+
+function processElement(element, level = 1) {
+  let html = '';
+  
+  // Process all direct children of the element
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 1) { // Element node
+      const tagName = node.tagName.toLowerCase();
+      
+      switch(tagName) {
+        case 'sec':
+          html += processSection(node, level);
+          break;
+        case 'p':
+          html += `<p>${formatContent(node)}</p>`;
+          break;
+        case 'list':
+          html += renderList(node);
+          break;
+        case 'table-wrap':
+          html += renderTableWrap(node);
+          break;
+        case 'fig':
+          html += renderFigure(node);
+          break;
+        case 'disp-formula':
+          html += renderDispFormula(node);
+          break;
+        case 'title':
+          // Handle title elements with proper heading level
+          const headingLevel = Math.min(level, 6);
+          html += `<span style="font-weight: bold; color: #2c3e50;">${formatContent(node)}</span>`;
+          break;
+        default:
+          // For any other elements without specific styling, render as paragraph with warning
+          if (node.textContent && node.textContent.trim()) {
+            unstyledElements.add(tagName);
+            html += `<div class="unstyled-element">${formatContent(node)}</div>`;
+          }
+      }
+    }
+  });
+  
+  return html;
+}
+
+
+function processSection(sec, level = 1) {
+  const secId = sec.getAttribute('id');
+  let html = `<section${secId ? ` id="${secId}"` : ''}>`;
+  
+  // Add section ID indicator
+  if (secId) {
+    html += `<div class="section-id">${secId}</div>`;
+  }
+  
+  // Handle section title with proper heading level
+  const secTitle = sec.querySelector(':scope > title');
+  const headingLevel = Math.min(level, 6);
+  let titleProcessed = false;
+  
+  if (secTitle) {
+    html += `<h${headingLevel}>${formatContent(secTitle)}</h${headingLevel}>`;
+    titleProcessed = true;
+  }
+  
+  // Process all direct children except the main title
+  sec.childNodes.forEach(node => {
+    if (node.nodeType === 1) { // Element node
+      const tagName = node.tagName.toLowerCase();
+      
+      // Skip the main title if we already processed it
+      if (titleProcessed && node === secTitle) {
+        return;
+      }
+      
+      switch(tagName) {
+        case 'p':
+          html += `<p>${formatContent(node)}</p>`;
+          break;
+        case 'list':
+          html += renderList(node);
+          break;
+        case 'sec':
+          html += processSection(node, level + 1);
+          break;
+        case 'table-wrap':
+          html += renderTableWrap(node);
+          break;
+        case 'fig':
+          html += renderFigure(node);
+          break;
+        case 'disp-formula':
+          html += renderDispFormula(node);
+          break;
+        case 'title':
+          // This handles nested titles or titles in unexpected locations
+          html += `<h${Math.min(level + 1, 6)}>${formatContent(node)}</h${Math.min(level + 1, 6)}>`;
+          break;
+        default:
+          if (node.textContent && node.textContent.trim()) {
+            unstyledElements.add(tagName);
+            html += `<div class="unstyled-element">${formatContent(node)}</div>`;
+          }
+      }
+    }
+  });
+  
+  html += '</section>';
+  return html;
+}
+
+function renderList(list) {
+  const listType = list.getAttribute('list-type') || 'bullet';
+  const tag = (listType === 'order' || listType === 'ordered') ? 'ol' : 'ul';
+  let html = `<${tag}>`;
+  
+  list.querySelectorAll(':scope > list-item').forEach(item => {
+    html += '<li>';
+    
+    // Process all content in the list item
+    item.childNodes.forEach(node => {
+      if (node.nodeType === 1) { // Element node
+        const tagName = node.tagName.toLowerCase();
+        
+        switch(tagName) {
+          case 'p':
+            html += `<p>${formatContent(node)}</p>`;
+            break;
+          case 'list':
+            html += renderList(node);
+            break;
+          default:
+            html += formatContent(node);
+        }
+      } else if (node.nodeType === 3 && node.textContent.trim()) {
+        html += node.textContent;
+      }
+    });
+    
+    html += '</li>';
+  });
+  
+  html += `</${tag}>`;
+  return html;
+}
+
+function renderTableWrap(tableWrap) {
+  const tableId = tableWrap.getAttribute('id');
+  let html = `<div class="table-wrap"${tableId ? ` id="${tableId}"` : ''}>`;
+  
+  // Add table ID indicator
+  if (tableId) {
+    html += `<div class="table-id">${tableId}</div>`;
+  }
+  
+  const label = tableWrap.querySelector('label')?.textContent || '';
+  const caption = tableWrap.querySelector('caption');
+  if (label || caption) {
+    html += '<div>';
+    if (label) html += `<span class="table-label">${label}</span>`;
+    if (caption) {
+      const captionTitle = caption.querySelector('title')?.textContent || '';
+      const captionP = caption.querySelector('p');
+      if (captionTitle) html += captionTitle;
+      if (captionP) html += ' ' + formatContent(captionP);
+    }
+    html += '</div>';
+  }
+  
+  const table = tableWrap.querySelector('table');
+  if (table) {
+    html += '<table>';
+    const thead = table.querySelector('thead');
+    if (thead) {
+      html += '<thead>';
+      thead.querySelectorAll('tr').forEach(tr => {
+        html += '<tr>';
+        tr.querySelectorAll('th, td').forEach(cell => {
+          const tag = cell.tagName.toLowerCase();
+          const colspan = cell.getAttribute('colspan') || '';
+          const rowspan = cell.getAttribute('rowspan') || '';
+          let attrs = '';
+          if (colspan) attrs += ` colspan="${colspan}"`;
+          if (rowspan) attrs += ` rowspan="${rowspan}"`;
+          html += `<${tag}${attrs}>${formatContent(cell)}</${tag}>`;
+        });
+        html += '</tr>';
+      });
+      html += '</thead>';
+    }
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+      html += '<tbody>';
+      tbody.querySelectorAll('tr').forEach(tr => {
+        html += '<tr>';
+        tr.querySelectorAll('th, td').forEach(cell => {
+          const tag = cell.tagName.toLowerCase();
+          const colspan = cell.getAttribute('colspan') || '';
+          const rowspan = cell.getAttribute('rowspan') || '';
+          let attrs = '';
+          if (colspan) attrs += ` colspan="${colspan}"`;
+          if (rowspan) attrs += ` rowspan="${rowspan}"`;
+          html += `<${tag}${attrs}>${formatContent(cell)}</${tag}>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tbody>';
+    }
+    const tfoot = table.querySelector('tfoot');
+    if (tfoot) {
+      html += '<tfoot>';
+      tfoot.querySelectorAll('tr').forEach(tr => {
+        html += '<tr>';
+        tr.querySelectorAll('th, td').forEach(cell => {
+          const tag = cell.tagName.toLowerCase();
+          html += `<${tag}>${formatContent(cell)}</${tag}>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tfoot>';
+    }
+    html += '</table>';
+  }
+  
+  // Handle table footnotes
+  const tableFootnotes = tableWrap.querySelectorAll('table-wrap-foot fn');
+  if (tableFootnotes.length > 0) {
+    tableFootnotes.forEach(fn => {
+      const fnLabel = fn.querySelector('label')?.textContent || '';
+      const fnText = getTextContent(fn, ['label']);
+      html += `<div class="table-footnote">`;
+      if (fnLabel) html += `<strong>${fnLabel}</strong> `;
+      html += `${fnText}</div>`;
+    });
+  }
+  
+  const tableFn = tableWrap.querySelectorAll('table-wrap-foot fn');
+  if (tableFn.length > 0) {
+    tableFn.forEach(fn => {
+      const fnText = formatContent(fn);
+      html += `<div class="table-footer">${fnText}</div>`;
+    });
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderFigure(fig) {
+  const figId = fig.getAttribute('id');
+  let html = `<div class="fig-wrap"${figId ? ` id="${figId}"` : ''}>`;
+  
+  // Add figure ID indicator
+  if (figId) {
+    html += `<div class="fig-id">${figId}</div>`;
+  }
+  
+  const label = fig.querySelector('label')?.textContent || '';
+  const caption = fig.querySelector('caption');
+  
+  if (label) html += `<div class="fig-label">${label}</div>`;
+  
+  // Find and display ALL graphics in the figure
+  const graphics = fig.querySelectorAll('graphic, inline-graphic');
+  
+  if (graphics.length > 0) {
+    html += '<div class="graphics-container">';
+    graphics.forEach((graphic, index) => {
+      const graphicId = graphic.getAttribute('id') || `graphic-${index + 1}`;
+      const href = graphic.getAttribute('xlink:href') || graphic.getAttribute('href') || '';
+      const tagName = graphic.tagName.toLowerCase();
+      
+      html += `<div class="graphic-item">`;
+      html += `<div class="graphic-info">`;
+      if (graphic.getAttribute('id')) {
+        html += `<strong><span class="graphic-id">ID: ${graphic.getAttribute('id')}</span></strong>`;
+      }
+      html += `<strong><span class="graphic-href">ID: ${href}</span></strong>`;
+      html += `</div>`;
+      
+      if (href) {
+        html += `<div class="graphic-image">`;
+        html += `<img src="${href}" alt="${label} - Graphic ${index + 1}" class="fig-graphic" onerror="this.style.display='none'; console.log('Failed to load image: ${href}')">`;
+        html += `</div>`;
+      }
+      
+      html += `</div>`;
+    });
+    html += '</div>';
+  }
+  
+  if (caption) {
+    html += '<div class="fig-caption">';
+    const captionTitle = caption.querySelector('title');
+    const captionP = caption.querySelector('p');
+    if (captionTitle) html += `<strong>${formatContent(captionTitle)}</strong> `;
+    if (captionP) html += formatContent(captionP);
+    html += '</div>';
+  }
+  
+  html += '</div>';
+  return html;
+}
+
+function formatContent(element) {
+  if (!element) return '';
+  let html = '';
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 3) {
+      html += escapeHtml(node.textContent);
+    } else if (node.nodeType === 1) {
+      const tag = node.tagName.toLowerCase();
+      switch(tag) {
+        case 'bold':
+        case 'b':
+          html += `<strong>${formatContent(node)}</strong>`;
+          break;
+        case 'italic':
+        case 'i':
+          html += `<em>${formatContent(node)}</em>`;
+          break;
+        case 'underline':
+        case 'u':
+          html += `<u>${formatContent(node)}</u>`;
+          break;
+        case 'sup':
+          html += `<sup>${formatContent(node)}</sup>`;
+          break;
+        case 'sub':
+          html += `<sub>${formatContent(node)}</sub>`;
+          break;
+        case 'source':
+          html += `<em>${formatContent(node)}</em>`;
+          break;
+        case 'year':
+          html += `<span>${formatContent(node)}</span>`;
+          break;
+        case 'publisher-name':
+          html += `<span>${formatContent(node)}</span>`;
+          break;
+        case 'person-group':
+          // Skip person-group as it's handled separately in citation functions
+          break;
+        case 'name':
+          // Skip name as it's handled separately in citation functions
+          break;
+        case 'surname':
+          // Skip surname as it's handled separately in citation functions
+          break;
+        case 'given-names':
+          // Skip given-names as it's handled separately in citation functions
+          break;
+        case 'xref':
+          const refType = node.getAttribute('ref-type');
+          const rid = node.getAttribute('rid');
+          html += `<span class="xref" data-ref-type="${refType}" data-rid="${rid}">${formatContent(node)}</span>`;
+          break;
+        case 'ext-link':
+        case 'uri':
+          const href = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
+          html += `<a href="${href}" target="_blank">${formatContent(node) || href}</a>`;
+          break;
+        case 'email':
+          html += `<a href="mailto:${node.textContent}">${node.textContent}</a>`;
+          break;
+        case 'inline-formula':
+          html += renderInlineFormula(node);
+          break;
+        case 'disp-formula':
+          html += renderDispFormula(node);
+          break;
+        case 'label':
+          break;
+        default:
+          html += formatContent(node);
+      }
+    }
+  });
+  return html;
+}
+
+function getTextContent(element, skipTags = []) {
+  let text = '';
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 3) {
+      text += node.textContent;
+    } else if (node.nodeType === 1) {
+      if (!skipTags.includes(node.tagName.toLowerCase())) {
+        text += getTextContent(node, skipTags);
+      }
+    }
+  });
+  return text.trim();
+}
+
+function formatText(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function renderInlineFormula(formulaNode) {
+  const texMath = formulaNode.querySelector('tex-math');
+  const mml = formulaNode.querySelector('mml\\:math, math');
+  
+  // Get the raw text content directly from the formula node if no tex-math or mml
+  let latex = '';
+  if (texMath) {
+    latex = texMath.textContent.trim();
+  } else if (mml) {
+    return `<span class="inline-formula">${mml.outerHTML}</span>`;
+  } else {
+    // Get direct text content
+    latex = formulaNode.textContent.trim();
+  }
+  
+  // Remove $ delimiters if present
+  latex = latex.replace(/^\$+|\$+$/g, '');
+  
+  // Replace XML entities
+  latex = latex.replace(/\\plus\s*/g, '+');
+  latex = latex.replace(/\\equals\s*/g, '=');
+  latex = latex.replace(/\\bi\s*/g, '\\boldsymbol');
+  latex = latex.replace(/\\amp\s*/g, '&');
+  latex = latex.replace(/\\lpar\s*/g, '(');
+  latex = latex.replace(/\\rpar\s*/g, ')');
+  latex = latex.replace(/\\comma\s*/g, ',');
+  
+  return `<span class="inline-formula">\\(${latex}\\)</span>`;
+}
+
+function renderDispFormula(formulaNode) {
+  const label = formulaNode.querySelector('label')?.textContent || '';
+  const texMath = formulaNode.querySelector('tex-math');
+  const mml = formulaNode.querySelector('mml\\:math, math');
+  
+  let formulaHTML = '<div class="disp-formula">';
+  
+  if (label) {
+    formulaHTML += `<div style="text-align: right; font-weight: bold; color: #3498db; margin-bottom: 10px;">${label}</div>`;
+  }
+  
+  let latex = '';
+  if (texMath) {
+    latex = texMath.textContent.trim();
+  } else if (mml) {
+    formulaHTML += `<div>${mml.outerHTML}</div>`;
+    formulaHTML += '</div>';
+    return formulaHTML;
+  } else {
+    latex = formulaNode.textContent.trim();
+    if (label) {
+      latex = latex.replace(label, '').trim();
+    }
+  }
+  
+  // Remove $ delimiters if present
+  latex = latex.replace(/^\$+|\$+$/g, '');
+  
+  // Replace XML entities
+  latex = latex.replace(/\\plus\s*/g, '+');
+  latex = latex.replace(/\\equals\s*/g, '=');
+  latex = latex.replace(/\\bi\s*/g, '\\boldsymbol');
+  latex = latex.replace(/\\amp\s*/g, '&');
+  latex = latex.replace(/\\lpar\s*/g, '(');
+  latex = latex.replace(/\\rpar\s*/g, ')');
+  latex = latex.replace(/\\comma\s*/g, ',');
+
+  formulaHTML += `<div>\\[${latex}\\]</div>`;
+  formulaHTML += '</div>';
+  return formulaHTML;
+}
+
+function displayMetadata(xml) {
+  // Extract journal metadata
+  const journalMeta = xml.querySelector('journal-meta');
+  let journalHTML = '';
+  
+  if (journalMeta) {
+    const journalId = journalMeta.querySelector('journal-id[journal-id-type="publisher-id"]')?.textContent || 'N/A';
+    const hwpId = journalMeta.querySelector('journal-id[journal-id-type="hwp"]')?.textContent || 'N/A';
+    const issnPpub = journalMeta.querySelector('issn[pub-type="ppub"]')?.textContent || 'N/A';
+    const issnEpub = journalMeta.querySelector('issn[pub-type="epub"]')?.textContent || 'N/A';
+    const publisherName = journalMeta.querySelector('publisher-name')?.textContent || 'N/A';
+    const publisherLoc = journalMeta.querySelector('publisher-loc')?.textContent || 'N/A';
+    
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Journal publisher-id ID:</span> <span class="metadata-value">${journalId}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Journal hwp ID:</span> <span class="metadata-value">${hwpId}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">ISSN - ppub:</span> <span class="metadata-value">${issnPpub}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">ISSN - epub:</span> <span class="metadata-value">${issnEpub}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Publisher Name:</span> <span class="metadata-value">${publisherName}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Publisher Location:</span> <span class="metadata-value">${publisherLoc}</span></div>`;
+    
+    // Add counts
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Tables:</span> <span class="metadata-value">${totalTables}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Figures:</span> <span class="metadata-value">${totalFigures}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Inline Formulas:</span> <span class="metadata-value">${totalInlineFormulas}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total Display Formulas:</span> <span class="metadata-value">${totalDisplayFormulas}</span></div>`;
+    journalHTML += `<div class="metadata-item"><span class="metadata-label">Total References:</span> <span class="metadata-value">${totalRefs}</span></div>`;
+  }
+  
+  // Extract article metadata
+  const articleMeta = xml.querySelector('article-meta');
+  let articleHTML = '';
+  
+  if (articleMeta) {
+    const doi = articleMeta.querySelector('article-id[pub-id-type="doi"]')?.textContent || 'N/A';
+    const publisherId = articleMeta.querySelector('article-id[pub-id-type="publisher-id"]')?.textContent || 'N/A';
+    const elocationId = articleMeta.querySelector('elocation-id')?.textContent || 'N/A';
+    const volume = articleMeta.querySelector('volume')?.textContent || 'N/A';
+    
+    const pubDate = articleMeta.querySelector('pub-date[pub-type="epub"]') || articleMeta.querySelector('pub-date');
+    let pubMonth = 'N/A', pubYear = 'N/A';
+    if (pubDate) {
+      pubMonth = pubDate.querySelector('month')?.textContent || 'N/A';
+      pubYear = pubDate.querySelector('year')?.textContent || 'N/A';
+    }
+    
+    const history = articleMeta.querySelector('history');
+    let receivedDate = 'N/A', acceptedDate = 'N/A';
+    if (history) {
+      const received = history.querySelector('date[date-type="received"]');
+      if (received) {
+        const rDay = received.querySelector('day')?.textContent || '';
+        const rMonth = received.querySelector('month')?.textContent || '';
+        const rYear = received.querySelector('year')?.textContent || '';
+        receivedDate = `Day: ${rDay} Month: ${rMonth} Year: ${rYear}`;
+      }
+      
+      const accepted = history.querySelector('date[date-type="accepted"]');
+      if (accepted) {
+        const aDay = accepted.querySelector('day')?.textContent || '';
+        const aMonth = accepted.querySelector('month')?.textContent || '';
+        const aYear = accepted.querySelector('year')?.textContent || '';
+        acceptedDate = `Day: ${aDay} Month: ${aMonth} Year: ${aYear}`;
+      }
+    }
+    
+    const permissions = articleMeta.querySelector('permissions');
+    let copyrightStatement = 'N/A', copyrightYear = 'N/A', copyrightHolder = 'N/A', license = '';
+    if (permissions) {
+      copyrightStatement = permissions.querySelector('copyright-statement')?.textContent || 'N/A';
+      copyrightYear = permissions.querySelector('copyright-year')?.textContent || 'N/A';
+      copyrightHolder = permissions.querySelector('copyright-holder')?.textContent || 'N/A';
+      const licenseP = permissions.querySelector('license p');
+      if (licenseP) {
+        license = licenseP.textContent;
+      }
+    }
+    
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">DOI:</span> <span class="metadata-value">${doi}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Publisher ID:</span> <span class="metadata-value">${publisherId}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Month:</span> <span class="metadata-value">${pubMonth}</span> <span class="metadata-label">Year:</span> <span class="metadata-value">${pubYear}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Volume:</span> <span class="metadata-value">${volume}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Elocation-ID:</span> <span class="metadata-value">${elocationId}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Received Date:</span> <span class="metadata-value">${receivedDate}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Accepted Date:</span> <span class="metadata-value">${acceptedDate}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Copyright Statement:</span> <span class="metadata-value">${copyrightStatement}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Copyright Year:</span> <span class="metadata-value">${copyrightYear}</span></div>`;
+    articleHTML += `<div class="metadata-item"><span class="metadata-label">Copyright Holder:</span> <span class="metadata-value">${copyrightHolder}</span></div>`;
+    if (license) {
+      articleHTML += `<div class="metadata-item" style="margin-top: 10px;"><span class="metadata-value">${license}</span></div>`;
+    }
+  }
+  
+  journalInfo.innerHTML = journalHTML;
+  articleInfo.innerHTML = articleHTML;
+  metadataSection.classList.add('visible');
+}
+
+function exportHTML() {
+  const content = output.innerHTML;
+  const styles = Array.from(document.styleSheets)
+    .map(sheet => {
+      try {
+        return Array.from(sheet.cssRules)
+          .map(rule => rule.cssText)
+          .join('\n');
+      } catch (e) {
+        return '';
+      }
+    })
+    .join('\n');
+  
+  const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${currentArticleTitle}</title>
+<style>
+${styles}
+body { margin: 20px; padding: 0; background: #f5f5f5; }
+.export-bar { display: none !important; }
+.drop-zone { display: none !important; }
+.validation-section { display: none !important; }
+.floating-buttons { display: none !important; }
+</style>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+  
+  const blob = new Blob([fullHTML], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentArticleTitle}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF() {
+  // Create a clone of the content to avoid affecting the main page
+  const originalContent = document.getElementById('output').innerHTML;
+  
+  const printStyles = `
+    <style>
+      @media print {
+        body { margin: 0; padding: 20px; font-family: Georgia, "Times New Roman", serif; }
+        .container { max-width: 100%; box-shadow: none; padding: 0; }
+		        @page {
+          margin-top: 15mm !important;
+          margin-bottom: 15mm !important;
+          margin-left: 10mm !important;
+          margin-right: 10mm !important;
+        }
+      }
+	  
+      .container { 
+        max-width: 100%;
+        background: white;
+        padding: 0;
+        box-shadow: none;
+        margin: 0;
+      }
+      .article-type { 
+        display: inline-block;
+        background: #3498db !important;
+        color: white !important;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 10pt;
+        text-transform: uppercase;
+        margin-bottom: 15px;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .article-title { 
+        font-size: 18pt;
+        color: #000 !important;
+        margin: 15px 0;
+        font-weight: bold;
+        line-height: 1.3;
+      }
+      .article-subtitle { 
+        font-size: 14pt;
+        color: #555 !important;
+        margin: 10px 0;
+        font-style: italic;
+      }
+      .article-header { 
+        border-bottom: 2px solid #000 !important;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+      }
+      .authors { margin: 15px 0; font-size: 11pt; }
+      .author { display: inline; color: #000 !important; }
+      .author-sup { vertical-align: super; font-size: 9pt; }
+      .author:not(:last-child)::after { content: ", "; }
+      .affiliations { 
+        margin: 15px 0;
+        padding: 10px;
+        background: #f5f5f5 !important;
+        border-left: 3px solid #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .aff-item { margin: 5px 0; font-size: 10pt; color: #000 !important; }
+      .aff-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .correspondence { 
+        margin: 15px 0;
+        padding: 10px;
+        background: #fff9e6 !important;
+        border-left: 3px solid #f39c12 !important;
+        font-size: 10pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .correspondence-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .abstract { 
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9f9f9 !important;
+        border: 1px solid #ddd !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .abstract h2 { 
+        margin-top: 0;
+        font-size: 14pt;
+        margin-bottom: 10px;
+        color: #000 !important;
+      }
+      .abstract p { margin: 10px 0; text-align: justify; color: #000 !important; }
+      h1, h2, h3 { 
+        color: #000 !important;
+        page-break-after: avoid;
+      }
+      h1 { 
+        font-size: 16pt;
+        margin-top: 25px;
+        margin-bottom: 15px;
+        font-weight: bold;
+      }
+      h2 { 
+        font-size: 14pt;
+        margin-top: 20px;
+        margin-bottom: 12px;
+        font-weight: bold;
+		font-style: italic;
+      }
+      h3 { 
+        font-size: 12pt;
+        margin-top: 15px;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+      p { 
+        margin: 10px 0; 
+        text-align: justify; 
+        color: #000 !important;
+      }
+      section { margin: 20px 0; }
+      table { 
+        border-collapse: collapse;
+        width: 100%;
+        margin: 15px 0;
+        font-size: 10pt;
+        page-break-inside: avoid;
+      }
+      th, td { 
+        border: 1px solid #000 !important;
+        padding: 8px;
+        text-align: left;
+        color: #000 !important;
+      }
+      th { 
+        background: #e0e0e0 !important;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .table-wrap { 
+        margin: 20px 0; 
+        page-break-inside: avoid;
+      }
+      .table-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .table-footer { 
+        font-size: 9pt;
+        color: #555 !important;
+        margin-top: 5px;
+        font-style: italic;
+      }
+      .fig-wrap { 
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9f9f9 !important;
+        border: 1px solid #ddd !important;
+        text-align: center;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .fig-label { font-weight: bold; color: #000 !important; }
+      .fig-caption { 
+        margin-top: 10px;
+        text-align: left;
+        font-size: 10pt;
+        color: #000 !important;
+      }
+      .fig-graphic { 
+        max-width: 100%;
+        height: auto;
+        margin: 10px 0;
+      }
+      ul, ol { margin: 10px 0; padding-left: 25px; }
+      li { margin: 5px 0; color: #000 !important; }
+      .keywords { margin: 15px 0; font-size: 10pt; }
+      .keywords-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .keyword { 
+        display: inline-block;
+        background: #e0e0e0 !important;
+        padding: 3px 8px;
+        margin: 3px;
+        border-radius: 3px;
+        font-size: 9pt;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .references { 
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #000 !important;
+        page-break-before: auto;
+      }
+      .references h2 { 
+        font-size: 14pt;
+        margin-bottom: 15px;
+      }
+      .ref-item { 
+        margin-bottom: 10px;
+        padding-left: 25px;
+        text-indent: -25px;
+        font-size: 10pt;
+        color: #000 !important;
+      }
+      .ref-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      .footnotes { 
+        margin-top: 30px;
+        padding: 15px;
+        background: #f9f9f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+	  .citation-source { font-style: italic; color: #0080ff; }
+      .footnotes h2 { 
+        font-size: 13pt;
+        margin-bottom: 10px;
+        color: #000 !important;
+      }
+      .fn-item { margin-bottom: 8px; font-size: 10pt; color: #000 !important; }
+      .fn-label { font-weight: bold; margin-right: 5px; color: #000 !important; }
+      
+      /* Print-specific styles */
+      @media print {
+        body { 
+          margin: 0 !important; 
+          padding: 15mm !important;
+          font-family: "Times New Roman", Times, serif !important;
+        }
+        .container { 
+          padding: 0 !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+        }
+        .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons { 
+          display: none !important; 
+        }
+        /* Remove background highlights for print */
+        em, i, strong, b {
+          background-color: transparent !important;
+          padding: 0 !important;
+        }
+        /* Ensure page breaks work properly */
+        h1, h2, h3 {
+          page-break-after: avoid;
+        }
+        table, figure {
+          page-break-inside: avoid;
+        }
+        .table-wrap, .fig-wrap {
+          page-break-inside: avoid;
+        }
+        /* Hide section IDs and other UI elements */
+        .section-id, .table-id, .fig-id, .citation-tooltip { display: none !important; }
+      }
+      
+      /* Force colors in print */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    </style>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>${currentArticleTitle}</title>
+      ${printStyles}
+    </head>
+    <body>
+      <div class="container">
+        ${originalContent}
+      </div>
+      <script>
+        // Auto-print when content is loaded
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+          }, 500);
+        };
+        
+        // Close window after print
+        window.onafterprint = function() {
+          setTimeout(function() {
+            window.close();
+          }, 100);
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+}
+</script>
+
+</body></html>
