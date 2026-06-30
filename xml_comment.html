@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0053)https://candm21.github.io/my-website/xml_comment.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Selva JATS XML Viewer</title>
-<link rel="icon" type="image/png" href="logo.PNG">
+<link rel="icon" type="image/png" href="https://candm21.github.io/my-website/logo.PNG">
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 20px; line-height: 1.8; background: #f5f5f5; color: #2c3e50; }
+  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 86px 20px 20px; line-height: 1.8; background: #f5f5f5; color: #2c3e50; }
   
   .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   
@@ -18,35 +18,172 @@
   .drop-zone-hint { font-size: 14px; color: #7f8c8d; }
   .file-input { display: none; }
   
-  /* Floating buttons */
-  .floating-buttons {
+  /* Permanent top toolbar */
+  .app-toolbar {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    gap: 10px;
-    z-index: 1000;
-  }
-  .floating-btn {
-    padding: 10px 15px;
-    background: #3498db;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    top: 0; left: 0; right: 0;
+    height: 66px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 1000;
+    font-family: Arial, Helvetica, sans-serif;
+    gap: 16px;
+    flex-wrap: wrap;
   }
-  .floating-btn:hover {
-    background: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  .app-toolbar-title {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 1.15em; color: #2c3e50; white-space: nowrap;
   }
+  .app-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .app-toolbar-clock {
+    font-size: 0.85em; color: #7f8c8d; white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .toolbar-btn {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .toolbar-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+  .toolbar-btn-preview { background: #3498db; }
+  .toolbar-btn-preview.active { background: #2471a3; }
+  .toolbar-btn-editxml { background: #ecf0f1; color: #2c3e50; }
+  .toolbar-btn-editxml.active { background: #f1c40f; color: #2c3e50; }
+  .toolbar-btn-browse { background: #3498db; }
+  .toolbar-btn-refresh { background: #95a5a6; }
+  .toolbar-btn-html { background: #27ae60; }
+  .toolbar-btn-pdf { background: #e67e22; }
+
+  /* Main layout: sidebar + content */
+  .main-layout { display: flex; gap: 20px; align-items: flex-start; max-width: 1500px; margin: 0 auto; }
+  .toc-sidebar {
+    display: none;
+    width: 280px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 86px;
+    max-height: calc(100vh - 106px);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 18px;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .toc-sidebar.visible { display: block; }
+  .toc-title { font-weight: 700; color: #2c3e50; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
+  .toc-group-title { font-weight: 700; color: #7f8c8d; font-size: 0.85em; text-transform: uppercase; margin: 16px 0 8px; }
+  .toc-list, .toc-sublist { list-style: none; margin: 0; padding-left: 0; }
+  .toc-sublist { padding-left: 16px; margin-top: 4px; }
+  .toc-list li { margin: 4px 0; }
+  .toc-link { display: block; color: #34495e; text-decoration: none; font-size: 0.88em; padding: 4px 8px; border-radius: 4px; line-height: 1.3; }
+  .toc-link:hover { background: #ecf7fd; color: #2980b9; }
+  .toc-link.toc-float-link { color: #8e44ad; }
+  .output-flex { flex: 1; min-width: 0; }
+
+  /* Raw XML editor — fullscreen-feel modal popup */
+  .xml-editor-panel {
+    display: none;
+    position: fixed;
+    top: 3vh; left: 3vw; right: 3vw; bottom: 3vh;
+    width: 94vw; height: 94vh;
+    background: #1e1e1e;
+    border-radius: 10px;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+    overflow: hidden;
+    z-index: 2000;
+    flex-direction: column;
+  }
+  .xml-editor-panel.visible { display: flex; }
+  .xml-editor-panel.maximized {
+    top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; border-radius: 0;
+  }
+  .xml-modal-titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; background: #111; color: #ecf0f1;
+    font-family: Arial, sans-serif; font-size: 1em; font-weight: 700;
+  }
+  .xml-modal-titlebar-actions { display: flex; align-items: center; gap: 12px; }
+  .xml-font-group { display: flex; align-items: center; gap: 4px; }
+  .xml-font-label { font-size: 0.8em; color: #95a5a6; font-weight: 600; margin-right: 2px; }
+  .xml-font-btn {
+    padding: 5px 11px; border: none; border-radius: 5px; background: #333; color: #ecf0f1;
+    font-weight: 700; cursor: pointer; font-size: 0.8em;
+  }
+  .xml-font-btn:hover { background: #444; }
+  .xml-font-btn.active { background: #3498db; }
+  .xml-modal-maximize {
+    padding: 6px 14px; border: none; border-radius: 5px; background: #444; color: #fff;
+    font-weight: 700; cursor: pointer; font-size: 0.85em;
+  }
+  .xml-modal-maximize:hover { background: #555; }
+  .xml-modal-close {
+    padding: 6px 14px; border: none; border-radius: 5px; background: #c0392b; color: #fff;
+    font-weight: 700; cursor: pointer; font-size: 0.85em;
+  }
+  .xml-modal-close:hover { background: #a93226; }
+  .main-layout.hidden { display: none; }
+  .preview-extra.hidden { display: none !important; }
+
+  .xml-editor-toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 10px 14px; background: #2c2c2c; border-bottom: 1px solid #3a3a3a;
+  }
+  .xml-tool-input {
+    background: #1e1e1e; color: #d4d4d4; border: 1px solid #444; border-radius: 5px;
+    padding: 6px 10px; font-size: 0.85em; font-family: Arial, sans-serif; width: 150px;
+  }
+  .xml-editor-toolbar button {
+    padding: 6px 12px; border: none; border-radius: 5px; background: #444; color: #ecf0f1;
+    font-weight: 600; cursor: pointer; font-size: 0.82em; white-space: nowrap;
+  }
+  .xml-editor-toolbar button:hover { background: #555; }
+  .xml-editor-toolbar button.xml-primary-btn { background: #3498db; }
+  .xml-editor-toolbar button.xml-primary-btn:hover { background: #2980b9; }
+  .xml-toolbar-spacer { flex: 1; }
+  .xml-find-status { color: #95a5a6; font-size: 0.8em; font-family: Arial, sans-serif; min-width: 70px; }
+
+  .xml-editor-header {
+    padding: 6px 14px; background: #252525; color: #ecf0f1; font-family: Arial, sans-serif; font-size: 0.85em;
+  }
+  .xml-editor-status { color: #2ecc71; }
+  .xml-editor-status.error { color: #e74c3c; }
+
+  .xml-editor-body { display: flex; flex: 1; min-height: 0; }
+  .xml-line-numbers {
+    flex-shrink: 0; padding: 16px 10px 16px 16px; background: #1e1e1e; color: #6e6e6e;
+    font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6; text-align: right;
+    user-select: none; overflow: hidden; white-space: pre;
+  }
+  .xml-text-wrap { position: relative; flex: 1; min-width: 0; }
+  .xml-highlight-overlay, #xmlEditorTextarea {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; margin: 0;
+    padding: 16px; box-sizing: border-box;
+    font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; tab-size: 2;
+  }
+  .xml-highlight-overlay {
+    color: #d4d4d4; background: #1e1e1e; overflow: auto; pointer-events: none; z-index: 1;
+  }
+  .xml-highlight-overlay .xml-tag { color: #569cd6; }
+  .xml-highlight-overlay .xml-entity { color: #ce9178; }
+  #xmlEditorTextarea {
+    background: transparent; color: transparent; caret-color: #f1f1f1;
+    border: none; outline: none; resize: none; overflow: auto; z-index: 2;
+  }
+  .xml-editor-panel.font-large .xml-line-numbers { font-size: 18px; line-height: 1.7; }
+  .xml-editor-panel.font-large .xml-highlight-overlay,
+  .xml-editor-panel.font-large #xmlEditorTextarea { font-size: 18px; line-height: 1.7; }
   
   .export-bar { max-width: 900px; margin: 0 auto 20px; display: none; justify-content: flex-end; gap: 10px; }
   .export-bar.visible { display: flex; }
@@ -435,7 +572,7 @@
       padding: 0;
       margin: 0;
     }
-    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons { 
+    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons, .app-toolbar, .toc-sidebar { 
       display: none !important; 
     }
     .article-type {
@@ -498,35 +635,420 @@
     .section-id, .table-id, .fig-id, .citation-tooltip { display: none !important; }
   }
 </style>
-</head>
+<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
+.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
+.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
+.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
+</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
+.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
+.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
+.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
+.CtxtMenu_MenuClose:hover:focus {  outline:none}
+</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
+.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
+.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
+.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
+.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
+.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
+.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
+.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
+.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
+.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
+.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
+.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
+.CtxtMenu_MenuSlider {  left: .1em;}
+.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
+.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
+.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
+.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
+.CtxtMenu_MenuDisabled {  color:GrayText}
+.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
+.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
+.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
+.CtxtMenu_ContextMenu:focus {  outline:none}
+.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
+.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
+.CtxtMenu_SelectionItem {  padding-right: 1em;}
+.CtxtMenu_Selection {  right: 40%; width:50%; }
+.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
+.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
+.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
+</style><style id="MJX-CHTML-styles">
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+</style></head>
 <body>
-  <!-- Floating buttons -->
-  <div class="floating-buttons">
-    <button id="browseBtn" class="floating-btn">
-      <span>📁</span> Browse
-    </button>
-    <button id="refreshBtn" class="floating-btn">
-      <span>🔄</span> Refresh
-    </button>
+  <!-- Permanent top toolbar -->
+  <div class="app-toolbar">
+    <div class="app-toolbar-title"><span>📄</span> Selva JATS XML Viewer</div>
+    <div id="appClock" class="app-toolbar-clock"></div>
+    <div class="app-toolbar-actions">
+      <button id="tabPreviewBtn" class="toolbar-btn toolbar-btn-preview active">👁️ Preview</button>
+      <button id="tabXmlBtn" class="toolbar-btn toolbar-btn-editxml">📝 Edit XML</button>
+      <button id="browseBtn" class="toolbar-btn toolbar-btn-browse">📁 Browse</button>
+      <button id="refreshBtn" class="toolbar-btn toolbar-btn-refresh">🔄 Refresh</button>
+      <button class="toolbar-btn toolbar-btn-html" onclick="exportHTML()">📤 Export HTML</button>
+      <button class="toolbar-btn toolbar-btn-pdf" onclick="exportPDF()">🖨️ Print / Save as PDF</button>
+    </div>
   </div>
-  
+
+  <input type="file" id="fileInput" class="file-input" accept=".xml">
+
   <div id="dropZone" class="drop-zone">
     <div class="drop-zone-icon">📄</div>
-    <div class="drop-zone-text">Drag & Drop your NLM XML file here</div>
+    <div class="drop-zone-text">Drag &amp; Drop your NLM XML file here</div>
     <div class="drop-zone-hint">or click to browse</div>
-    <input type="file" id="fileInput" class="file-input" accept=".xml">
   </div>
   
-  <div id="exportBar" class="export-bar">
-    <button class="export-btn export-html" onclick="exportHTML()">
-      <span>📄</span> Export HTML
-    </button>
-    <button class="export-btn export-pdf" onclick="exportPDF()">
-      <span>📑</span> Print / Save as PDF
-    </button>
-  </div>
-  
-  <div id="metadataSection" class="metadata-section">
+  <div id="metadataSection" class="metadata-section preview-extra">
     <div class="metadata-grid">
       <div class="metadata-column">
         <h3>Journal Information</h3>
@@ -540,7 +1062,7 @@
   </div>
 
   <!-- Validation Section -->
-  <div id="validationSection" class="validation-section">
+  <div id="validationSection" class="validation-section preview-extra">
     <div class="validation-header">
       <div class="validation-title">XML Validation Results</div>
       <div class="validation-stats">
@@ -552,15 +1074,56 @@
     </div>
     <div id="errorsList" class="errors-list"></div>
   </div>
-  
-  <div id="output"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+  <!-- Raw XML Editor Modal -->
+  <div id="xmlEditorPanel" class="xml-editor-panel">
+    <div class="xml-modal-titlebar">
+      <span>📝 Raw XML Editor</span>
+      <span class="xml-modal-titlebar-actions">
+        <span class="xml-font-group">
+          <span class="xml-font-label">Font:</span>
+          <button id="fontMBtn" type="button" class="xml-font-btn active">M</button>
+          <button id="fontLBtn" type="button" class="xml-font-btn">L</button>
+        </span>
+        <button id="maximizeXmlBtn" type="button" class="xml-modal-maximize">⛶ Maximize</button>
+        <button id="closeXmlModalBtn" type="button" class="xml-modal-close">✕ Close</button>
+      </span>
+    </div>
+    <div class="xml-editor-toolbar">
+      <input type="text" id="xmlFindInput" placeholder="Find..." class="xml-tool-input">
+      <input type="text" id="xmlReplaceInput" placeholder="Replace with..." class="xml-tool-input">
+      <button id="xmlFindNextBtn" type="button">Find Next</button>
+      <button id="xmlReplaceBtn" type="button">Replace</button>
+      <button id="xmlReplaceAllBtn" type="button">Replace All</button>
+      <span id="xmlFindStatus" class="xml-find-status"></span>
+      <span class="xml-toolbar-spacer"></span>
+      <button id="updatePreviewBtn" type="button" class="xml-primary-btn">🔄 Update Preview</button>
+      <button id="downloadXmlBtn" type="button" class="xml-primary-btn">⬇️ Download XML</button>
+    </div>
+    <div class="xml-editor-header">
+      <span id="xmlEditorStatus" class="xml-editor-status">Up to date</span>
+    </div>
+    <div class="xml-editor-body">
+      <div id="xmlLineNumbers" class="xml-line-numbers">1</div>
+      <div class="xml-text-wrap">
+        <pre id="xmlHighlightPre" class="xml-highlight-overlay" aria-hidden="true"></pre>
+        <textarea id="xmlEditorTextarea" spellcheck="false" placeholder="Paste or load XML here..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Tab -->
+  <div id="previewPanel" class="main-layout">
+    <div id="tocSidebar" class="toc-sidebar"></div>
+    <div id="output" class="output-flex"></div>
+  </div>
+
+<script src="./Selva JATS XML Viewer_files/tex-mml-chtml.min.js.download"></script>
 <script>
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const output = document.getElementById('output');
-const exportBar = document.getElementById('exportBar');
+const exportBar = document.getElementById('exportBar'); // legacy ref, may be null
 const metadataSection = document.getElementById('metadataSection');
 const validationSection = document.getElementById('validationSection');
 const journalInfo = document.getElementById('journalInfo');
@@ -572,8 +1135,35 @@ const totalErrorsEl = document.getElementById('totalErrors');
 const commentErrorsEl = document.getElementById('commentErrors');
 const browseBtn = document.getElementById('browseBtn');
 const refreshBtn = document.getElementById('refreshBtn');
+const tabPreviewBtn = document.getElementById('tabPreviewBtn');
+const tabXmlBtn = document.getElementById('tabXmlBtn');
+const xmlEditorPanel = document.getElementById('xmlEditorPanel');
+const closeXmlModalBtn = document.getElementById('closeXmlModalBtn');
+const maximizeXmlBtn = document.getElementById('maximizeXmlBtn');
+const fontMBtn = document.getElementById('fontMBtn');
+const fontLBtn = document.getElementById('fontLBtn');
+const appClock = document.getElementById('appClock');
+const previewPanel = document.getElementById('previewPanel');
+const xmlEditorTextarea = document.getElementById('xmlEditorTextarea');
+const xmlHighlightPre = document.getElementById('xmlHighlightPre');
+const xmlLineNumbers = document.getElementById('xmlLineNumbers');
+const xmlEditorStatus = document.getElementById('xmlEditorStatus');
+const updatePreviewBtn = document.getElementById('updatePreviewBtn');
+const downloadXmlBtn = document.getElementById('downloadXmlBtn');
+const xmlFindInput = document.getElementById('xmlFindInput');
+const xmlReplaceInput = document.getElementById('xmlReplaceInput');
+const xmlFindNextBtn = document.getElementById('xmlFindNextBtn');
+const xmlReplaceBtn = document.getElementById('xmlReplaceBtn');
+const xmlReplaceAllBtn = document.getElementById('xmlReplaceAllBtn');
+const xmlFindStatus = document.getElementById('xmlFindStatus');
+const tocSidebar = document.getElementById('tocSidebar');
 let currentArticleTitle = 'article';
 let currentFile = null;
+let currentXMLText = '';
+let currentJournalId = '';
+let currentDoi = '';
+let xmlEditorDebounceTimer = null;
+let lastFindIndex = -1;
 
 // Global counters for metadata
 let totalTables = 0;
@@ -588,11 +1178,206 @@ let unstyledElements = new Set();
 // Event listeners for floating buttons
 browseBtn.addEventListener('click', () => fileInput.click());
 refreshBtn.addEventListener('click', () => {
-  if (currentFile) {
+  if (currentXMLText) {
+    validateXML(currentXMLText);
+    processXMLText(currentXMLText);
+  } else if (currentFile) {
     processFile(currentFile);
   } else {
     alert('No file loaded. Please browse for a file first.');
   }
+});
+
+// --- Tab switching ---
+function showTab(tab) {
+  const showXml = tab === 'xml';
+  xmlEditorPanel.classList.toggle('visible', showXml);
+  previewPanel.classList.toggle('hidden', showXml);
+  document.querySelectorAll('.preview-extra').forEach(el => el.classList.toggle('hidden', showXml));
+  tabXmlBtn.classList.toggle('active', showXml);
+  tabPreviewBtn.classList.toggle('active', !showXml);
+  if (showXml) {
+    xmlEditorTextarea.value = currentXMLText || '';
+    updateLineNumbers();
+    updateHighlight();
+    setEditorStatus(true);
+  }
+}
+tabPreviewBtn.addEventListener('click', () => showTab('preview'));
+tabXmlBtn.addEventListener('click', () => showTab('xml'));
+closeXmlModalBtn.addEventListener('click', () => showTab('preview'));
+
+maximizeXmlBtn.addEventListener('click', () => {
+  const nowMax = xmlEditorPanel.classList.toggle('maximized');
+  maximizeXmlBtn.textContent = nowMax ? '⛶ Restore' : '⛶ Maximize';
+});
+
+fontMBtn.addEventListener('click', () => {
+  xmlEditorPanel.classList.remove('font-large');
+  fontMBtn.classList.add('active');
+  fontLBtn.classList.remove('active');
+});
+fontLBtn.addEventListener('click', () => {
+  xmlEditorPanel.classList.add('font-large');
+  fontLBtn.classList.add('active');
+  fontMBtn.classList.remove('active');
+});
+
+// --- Live clock ---
+function updateClock() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  appClock.textContent = `${dateStr}  ${timeStr}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && xmlEditorPanel.classList.contains('visible')) showTab('preview');
+});
+
+function setEditorStatus(ok, message) {
+  xmlEditorStatus.classList.toggle('error', !ok);
+  xmlEditorStatus.textContent = message || (ok ? 'Up to date' : 'XML error \u2014 preview not updated');
+}
+
+// --- Line numbers ---
+function updateLineNumbers() {
+  const lineCount = xmlEditorTextarea.value.split('\n').length;
+  let nums = '';
+  for (let i = 1; i <= lineCount; i++) nums += i + '\n';
+  xmlLineNumbers.textContent = nums;
+}
+
+// --- Syntax highlighting: tags <xx></xx> and entities &xxx; ---
+function highlightXml(text) {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  return escaped.replace(
+    /(&lt;\/?[a-zA-Z][^&]*?&gt;)|(&amp;#x?[0-9a-fA-F]+;|&amp;[a-zA-Z][a-zA-Z0-9]*;)/g,
+    (match, tag, entity) => {
+      if (tag) return `<span class="xml-tag">${tag}</span>`;
+      if (entity) return `<span class="xml-entity">${entity}</span>`;
+      return match;
+    }
+  );
+}
+function updateHighlight() {
+  // Trailing newline keeps the overlay's height matched to the textarea
+  xmlHighlightPre.innerHTML = highlightXml(xmlEditorTextarea.value) + '\n';
+}
+xmlEditorTextarea.addEventListener('scroll', () => {
+  xmlLineNumbers.scrollTop = xmlEditorTextarea.scrollTop;
+  xmlHighlightPre.scrollTop = xmlEditorTextarea.scrollTop;
+  xmlHighlightPre.scrollLeft = xmlEditorTextarea.scrollLeft;
+});
+
+function applyEditorText(text, { silentIfInvalid = true } = {}) {
+  const parser = new DOMParser();
+  const testXml = parser.parseFromString(text, 'text/xml');
+  if (testXml.querySelector('parsererror')) {
+    setEditorStatus(false);
+    return false;
+  }
+  currentXMLText = text;
+  currentFile = null; // edits no longer correspond to the original uploaded file
+  validateXML(text);
+  processXMLText(text);
+  dropZone.style.display = 'none';
+  setEditorStatus(true, 'Up to date');
+  return true;
+}
+
+xmlEditorTextarea.addEventListener('input', () => {
+  updateLineNumbers();
+  updateHighlight();
+  setEditorStatus(true, 'Editing\u2026 (click Update Preview, or wait to auto-update)');
+  clearTimeout(xmlEditorDebounceTimer);
+  xmlEditorDebounceTimer = setTimeout(() => {
+    applyEditorText(xmlEditorTextarea.value);
+  }, 700);
+});
+
+updatePreviewBtn.addEventListener('click', () => {
+  clearTimeout(xmlEditorDebounceTimer);
+  const ok = applyEditorText(xmlEditorTextarea.value);
+  if (ok) showTab('preview');
+});
+
+// --- Download XML (preserves content & unicode characters exactly as edited) ---
+function buildDownloadFileName() {
+  const journalPart = currentJournalId ? currentJournalId.replace(/[^A-Za-z0-9]/g, '') : 'ARTICLE';
+  const doiDigits = currentDoi ? currentDoi.replace(/[^0-9]/g, '') : '';
+  const last7 = doiDigits.slice(-7).padStart(7, '0');
+  return journalPart + last7 + '.xml';
+}
+
+downloadXmlBtn.addEventListener('click', () => {
+  const text = xmlEditorTextarea.value;
+  const blob = new Blob([text], { type: 'application/xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fileName = buildDownloadFileName();
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// --- Find & Replace ---
+xmlFindNextBtn.addEventListener('click', () => {
+  const term = xmlFindInput.value;
+  if (!term) return;
+  const text = xmlEditorTextarea.value;
+  let startFrom = xmlEditorTextarea.selectionEnd || 0;
+  let idx = text.indexOf(term, startFrom);
+  if (idx === -1) idx = text.indexOf(term, 0); // wrap around
+  if (idx === -1) {
+    xmlFindStatus.textContent = 'Not found';
+    return;
+  }
+  xmlEditorTextarea.focus();
+  xmlEditorTextarea.setSelectionRange(idx, idx + term.length);
+  // Scroll the match into view
+  const upTo = text.substring(0, idx);
+  const lineNum = upTo.split('\n').length;
+  const lineHeight = 13 * 1.5;
+  xmlEditorTextarea.scrollTop = Math.max(0, (lineNum - 5) * lineHeight);
+  lastFindIndex = idx;
+  xmlFindStatus.textContent = '';
+});
+
+xmlReplaceBtn.addEventListener('click', () => {
+  const term = xmlFindInput.value;
+  if (!term) return;
+  const start = xmlEditorTextarea.selectionStart;
+  const end = xmlEditorTextarea.selectionEnd;
+  const selected = xmlEditorTextarea.value.substring(start, end);
+  if (selected === term) {
+    const replacement = xmlReplaceInput.value;
+    xmlEditorTextarea.setRangeText(replacement, start, end, 'end');
+    updateLineNumbers();
+    updateHighlight();
+    setEditorStatus(true, 'Editing\u2026 (click Update Preview, or wait to auto-update)');
+  }
+  xmlFindNextBtn.click();
+});
+
+xmlReplaceAllBtn.addEventListener('click', () => {
+  const term = xmlFindInput.value;
+  if (!term) return;
+  const replacement = xmlReplaceInput.value;
+  const text = xmlEditorTextarea.value;
+  const count = text.split(term).length - 1;
+  xmlEditorTextarea.value = text.split(term).join(replacement);
+  updateLineNumbers();
+  updateHighlight();
+  xmlFindStatus.textContent = count + ' replaced';
+  setEditorStatus(true, 'Editing\u2026 (click Update Preview, or wait to auto-update)');
 });
 
 dropZone.addEventListener('click', () => fileInput.click());
@@ -629,6 +1414,12 @@ fileInput.addEventListener('change', (e) => {
 async function processFile(file) {
   try {
     const text = await file.text();
+    currentXMLText = text;
+    if (xmlEditorPanel.classList.contains('visible')) {
+      xmlEditorTextarea.value = text;
+      updateLineNumbers();
+      updateHighlight();
+    }
     // Run XML validation
     validateXML(text);
     // Process and display XML content
@@ -916,7 +1707,8 @@ if (fnGroup) {
     
     html += '</div>';
     output.innerHTML = html;
-    exportBar.classList.add('visible');
+    if (exportBar) exportBar.classList.add('visible');
+    buildSidebar();
     
     // Render MathJax formulas
     if (window.MathJax) {
@@ -927,6 +1719,69 @@ if (fnGroup) {
     output.innerHTML = `<div class="container"><p style="color: red;">Error processing XML: ${error.message}</p></div>`;
     console.error(error);
   }
+}
+
+function buildSidebar() {
+  let secCounter = 0;
+  let floatCounter = 0;
+
+  function escapeForToc(str) {
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function walkSections(container) {
+    let listHtml = '';
+    Array.from(container.children).forEach(child => {
+      if (child.tagName === 'SECTION') {
+        secCounter++;
+        if (!child.id) child.id = 'toc-sec-' + secCounter;
+        const heading = child.querySelector(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6');
+        let title = heading ? heading.textContent.trim() : ('Section ' + secCounter);
+        if (!title) title = 'Section ' + secCounter;
+        listHtml += `<li><a href="#${child.id}" class="toc-link">${escapeForToc(title)}</a>`;
+        const nested = walkSections(child);
+        if (nested) listHtml += `<ul class="toc-sublist">${nested}</ul>`;
+        listHtml += '</li>';
+      }
+    });
+    return listHtml;
+  }
+
+  function walkFloats(container) {
+    let listHtml = '';
+    container.querySelectorAll('.fig-wrap, .table-wrap').forEach(node => {
+      floatCounter++;
+      if (!node.id) node.id = 'toc-float-' + floatCounter;
+      const isFig = node.classList.contains('fig-wrap');
+      const labelEl = node.querySelector(isFig ? '.fig-label' : '.table-label');
+      let title = labelEl ? labelEl.textContent.trim() : (isFig ? 'Figure' : 'Table') + ' ' + floatCounter;
+      const icon = isFig ? '🖼️' : '📊';
+      listHtml += `<li><a href="#${node.id}" class="toc-link toc-float-link">${icon} ${escapeForToc(title)}</a></li>`;
+    });
+    return listHtml;
+  }
+
+  const articleContainer = output.querySelector('.container') || output;
+  const secHtml = walkSections(articleContainer);
+  const floatHtml = walkFloats(articleContainer);
+
+  if (!secHtml && !floatHtml) {
+    tocSidebar.classList.remove('visible');
+    tocSidebar.innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="toc-title">📑 Contents</div>';
+  if (secHtml) {
+    html += `<ul class="toc-list">${secHtml}</ul>`;
+  }
+  if (floatHtml) {
+    html += '<div class="toc-group-title">Figures &amp; Tables</div>';
+    html += `<ul class="toc-list">${floatHtml}</ul>`;
+  }
+
+  tocSidebar.innerHTML = html;
+  tocSidebar.classList.add('visible');
 }
 
 function countElements(xml) {
@@ -1714,6 +2569,7 @@ function displayMetadata(xml) {
   
   if (journalMeta) {
     const journalId = journalMeta.querySelector('journal-id[journal-id-type="publisher-id"]')?.textContent || 'N/A';
+    currentJournalId = journalId !== 'N/A' ? journalId : '';
     const hwpId = journalMeta.querySelector('journal-id[journal-id-type="hwp"]')?.textContent || 'N/A';
     const issnPpub = journalMeta.querySelector('issn[pub-type="ppub"]')?.textContent || 'N/A';
     const issnEpub = journalMeta.querySelector('issn[pub-type="epub"]')?.textContent || 'N/A';
@@ -1741,6 +2597,7 @@ function displayMetadata(xml) {
   
   if (articleMeta) {
     const doi = articleMeta.querySelector('article-id[pub-id-type="doi"]')?.textContent || 'N/A';
+    currentDoi = doi !== 'N/A' ? doi : '';
     const publisherId = articleMeta.querySelector('article-id[pub-id-type="publisher-id"]')?.textContent || 'N/A';
     const elocationId = articleMeta.querySelector('elocation-id')?.textContent || 'N/A';
     const volume = articleMeta.querySelector('volume')?.textContent || 'N/A';
@@ -1831,6 +2688,7 @@ body { margin: 20px; padding: 0; background: #f5f5f5; }
 .drop-zone { display: none !important; }
 .validation-section { display: none !important; }
 .floating-buttons { display: none !important; }
+.app-toolbar { display: none !important; }
 </style>
 </head>
 <body>
@@ -2085,7 +2943,7 @@ function exportPDF() {
           margin: 0 !important;
           box-shadow: none !important;
         }
-        .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons { 
+        .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons, .app-toolbar, .toc-sidebar { 
           display: none !important; 
         }
         /* Remove background highlights for print */
@@ -2152,5 +3010,5 @@ function exportPDF() {
   printWindow.document.close();
 }
 </script>
-</body>
-</html>
+
+</body></html>
