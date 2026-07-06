@@ -6,11 +6,33 @@
 <title>Selva JATS XML Viewer</title>
 <link rel="icon" type="image/png" href="https://candm21.github.io/my-website/logo.PNG">
 <style>
+  :root {
+    --chrome-bg: #ffffff;
+    --chrome-bg2: #f5f6f7;
+    --chrome-border: #e0e0e0;
+    --chrome-text: #2c3e50;
+    --chrome-muted: #7f8c8d;
+    --page-bg: #f5f5f5;
+    --sidebar-bg: #ffffff;
+    --accent: #3498db;
+  }
+  [data-theme="dark"] {
+    --chrome-bg: #1b2431;
+    --chrome-bg2: #232f3f;
+    --chrome-border: #34445a;
+    --chrome-text: #e8edf2;
+    --chrome-muted: #9fb0c3;
+    --page-bg: #0f151d;
+    --sidebar-bg: #1b2431;
+  }
   * { box-sizing: border-box; }
-  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 86px 20px 20px; line-height: 1.8; background: #f5f5f5; color: #2c3e50; }
-  
+  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 74px 20px 20px; line-height: 1.8; background: var(--page-bg); color: #2c3e50; transition: background 0.25s; }
+
+  /* Note: .container and the article preview content intentionally keep fixed light/print
+     colors regardless of theme, to preserve the print-style reading view. Only the app
+     chrome (toolbar, sidebars, editor, modals) responds to the theme toggle. */
   .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  
+
   .drop-zone { border: 3px dashed #3498db; border-radius: 12px; padding: 60px 20px; text-align: center; margin-bottom: 30px; background: #ecf7fd; cursor: pointer; transition: all 0.3s; max-width: 900px; margin: 0 auto 30px; }
   .drop-zone.dragover { background: #d4edff; border-color: #2980b9; transform: scale(1.02); }
   .drop-zone-icon { font-size: 48px; margin-bottom: 15px; }
@@ -22,32 +44,33 @@
   .app-toolbar {
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: 66px;
-    background: #fff;
-    border-bottom: 1px solid #e0e0e0;
+    height: 54px;
+    background: var(--chrome-bg);
+    border-bottom: 1px solid var(--chrome-border);
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 24px;
+    padding: 0 16px;
     z-index: 1000;
     font-family: Arial, Helvetica, sans-serif;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 10px;
+    flex-wrap: nowrap;
+    transition: background 0.25s, border-color 0.25s;
   }
   .app-toolbar-title {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 700; font-size: 1.15em; color: #2c3e50; white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+    font-weight: 700; font-size: 1.02em; color: var(--chrome-text); white-space: nowrap;
   }
-  .app-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .app-toolbar-actions { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; overflow-x: auto; scrollbar-width: thin; }
   .app-toolbar-clock {
-    font-size: 0.85em; color: #7f8c8d; white-space: nowrap; font-variant-numeric: tabular-nums;
+    font-size: 0.78em; color: var(--chrome-muted); white-space: nowrap; font-variant-numeric: tabular-nums;
   }
   .toolbar-btn {
-    padding: 9px 16px;
+    padding: 7px 12px;
     border: none;
     border-radius: 6px;
-    font-size: 13.5px;
+    font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -59,10 +82,19 @@
   .toolbar-btn-preview.active { background: #2471a3; }
   .toolbar-btn-editxml { background: #ecf0f1; color: #2c3e50; }
   .toolbar-btn-editxml.active { background: #f1c40f; color: #2c3e50; }
+  .toolbar-btn-split { background: #ecf0f1; color: #2c3e50; }
+  .toolbar-btn-split.active { background: #8e44ad; color: #fff; }
   .toolbar-btn-browse { background: #3498db; }
   .toolbar-btn-refresh { background: #95a5a6; }
   .toolbar-btn-html { background: #27ae60; }
   .toolbar-btn-pdf { background: #e67e22; }
+  .toolbar-sep { width: 1px; align-self: stretch; margin: 8px 2px; background: var(--chrome-border); flex-shrink: 0; }
+  .toolbar-btn-icon {
+    padding: 7px 10px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s;
+    background: var(--chrome-bg2); color: var(--chrome-text); font-size: 14px; flex-shrink: 0;
+  }
+  .toolbar-btn-icon:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
+  .toolbar-btn-icon.active { background: var(--accent); color: #fff; }
 
   /* Main layout: sidebar + content */
   .main-layout { display: flex; gap: 20px; align-items: flex-start; max-width: 1500px; margin: 0 auto; }
@@ -71,27 +103,28 @@
     width: 280px;
     flex-shrink: 0;
     position: sticky;
-    top: 86px;
-    max-height: calc(100vh - 106px);
+    top: 74px;
+    max-height: calc(100vh - 94px);
     overflow-y: auto;
-    background: #fff;
+    background: var(--sidebar-bg);
+    color: var(--chrome-text);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     padding: 18px;
     font-family: Arial, Helvetica, sans-serif;
   }
   .toc-sidebar.visible { display: block; }
-  .toc-title { font-weight: 700; color: #2c3e50; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
-  .toc-group-title { font-weight: 700; color: #7f8c8d; font-size: 0.85em; text-transform: uppercase; margin: 16px 0 8px; }
+  .toc-title { font-weight: 700; color: var(--chrome-text); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
+  .toc-group-title { font-weight: 700; color: var(--chrome-muted); font-size: 0.85em; text-transform: uppercase; margin: 16px 0 8px; }
   .toc-list, .toc-sublist { list-style: none; margin: 0; padding-left: 0; }
   .toc-sublist { padding-left: 16px; margin-top: 4px; }
   .toc-list li { margin: 4px 0; }
-  .toc-link { display: block; color: #34495e; text-decoration: none; font-size: 0.88em; padding: 4px 8px; border-radius: 4px; line-height: 1.3; }
-  .toc-link:hover { background: #ecf7fd; color: #2980b9; }
+  .toc-link { display: block; color: var(--chrome-text); text-decoration: none; font-size: 0.88em; padding: 4px 8px; border-radius: 4px; line-height: 1.3; }
+  .toc-link:hover { background: var(--chrome-bg2); color: #2980b9; }
   .toc-link.toc-float-link { color: #8e44ad; }
   .output-flex { flex: 1; min-width: 0; }
 
-  /* Raw XML editor — fullscreen-feel modal popup */
+  /* Raw XML editor — fullscreen-feel modal popup (default) OR docked split pane (split mode) */
   .xml-editor-panel {
     display: none;
     position: fixed;
@@ -108,6 +141,51 @@
   .xml-editor-panel.maximized {
     top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; border-radius: 0;
   }
+
+  /* --- Split view: editor docked side-by-side with live preview --- */
+  #workArea.split-active {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0 12px;
+    max-width: none;
+  }
+  #workArea.split-active .xml-editor-panel {
+    position: static;
+    display: flex;
+    width: 48%;
+    height: calc(100vh - 66px);
+    top: auto; left: auto; right: auto; bottom: auto;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    z-index: 1;
+  }
+  #workArea.split-active .xml-editor-panel.maximized {
+    width: 48%; height: calc(100vh - 66px); border-radius: 10px;
+  }
+  #workArea.split-active .main-layout {
+    display: flex;
+    width: 52%;
+    max-width: none;
+    margin: 0;
+    height: calc(100vh - 66px);
+    overflow-y: auto;
+  }
+  #workArea.split-active .main-layout.hidden { display: flex; }
+  #workArea.split-active .toc-sidebar { top: 0; max-height: calc(100vh - 66px); }
+  #workArea.split-active .xml-modal-maximize { display: none; }
+
+  /* --- JATS snippet palette inside the editor --- */
+  .xml-snippet-bar {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px;
+    background: #232323; border-bottom: 1px solid #3a3a3a;
+  }
+  .xml-snippet-bar.collapsed { display: none; }
+  .xml-snippet-btn {
+    padding: 5px 10px; border: 1px solid #444; border-radius: 5px; background: #2c2c2c; color: #9cdcfe;
+    font-family: "Courier New", monospace; font-size: 0.78em; cursor: pointer; transition: all 0.15s;
+  }
+  .xml-snippet-btn:hover { background: #3498db; color: #fff; border-color: #3498db; }
   .xml-modal-titlebar {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 18px; background: #111; color: #ecf0f1;
@@ -185,6 +263,30 @@
   .xml-editor-panel.font-large .xml-highlight-overlay,
   .xml-editor-panel.font-large #xmlEditorTextarea { font-size: 18px; line-height: 1.7; }
   
+  /* --- Toast notifications --- */
+  .toast-stack { position: fixed; bottom: 20px; right: 20px; z-index: 5000; display: flex; flex-direction: column; gap: 8px; font-family: Arial, Helvetica, sans-serif; }
+  .toast { background: #2c3e50; color: #fff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); font-size: 13.5px; display: flex; align-items: center; gap: 10px; border-left: 4px solid #27ae60; animation: toastIn 0.25s ease; max-width: 340px; }
+  .toast.warn { border-left-color: #f39c12; }
+  .toast.err { border-left-color: #e74c3c; }
+  @keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* --- Generic modal (shortcuts / version history) --- */
+  .app-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 4000; font-family: Arial, Helvetica, sans-serif; }
+  .app-modal-overlay.show { display: flex; }
+  .app-modal-box { background: var(--chrome-bg); color: var(--chrome-text); border-radius: 10px; padding: 22px 26px; width: 440px; max-width: 90vw; max-height: 78vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .app-modal-box h3 { margin: 0 0 14px; font-size: 1.15em; display: flex; align-items: center; gap: 8px; }
+  .app-modal-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13.5px; border-bottom: 1px solid var(--chrome-border); }
+  .app-modal-kbd { display: inline-block; padding: 2px 7px; background: var(--chrome-bg2); border: 1px solid var(--chrome-border); border-radius: 4px; font-size: 11.5px; font-family: monospace; }
+  .app-modal-close-btn { margin-top: 16px; float: right; padding: 7px 16px; border: none; border-radius: 6px; background: #95a5a6; color: #fff; font-weight: 600; cursor: pointer; }
+  .app-modal-close-btn:hover { background: #7f8c8d; }
+  .version-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; background: var(--chrome-bg2); font-size: 12.5px; cursor: pointer; }
+  .version-item:hover { outline: 1px solid var(--accent); }
+  .version-item span.v-time { flex: 1; }
+  .version-item button { border: none; background: transparent; color: #e74c3c; cursor: pointer; font-weight: 700; padding: 2px 6px; }
+  .version-empty { color: var(--chrome-muted); font-size: 13px; padding: 10px 0; }
+  .diff-added { background: rgba(39,174,96,0.15); color: #27ae60; padding: 1px 4px; }
+  .diff-removed { background: rgba(231,76,60,0.15); color: #e74c3c; padding: 1px 4px; text-decoration: line-through; }
+
   .export-bar { max-width: 900px; margin: 0 auto 20px; display: none; justify-content: flex-end; gap: 10px; }
   .export-bar.visible { display: flex; }
   .export-btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
@@ -572,7 +674,8 @@
       padding: 0;
       margin: 0;
     }
-    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons, .app-toolbar, .toc-sidebar { 
+    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons, .app-toolbar, .toc-sidebar,
+    .toast-stack, .app-modal-overlay, .xml-editor-panel, .xml-snippet-bar {
       display: none !important; 
     }
     .article-type {
@@ -1033,10 +1136,16 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
     <div class="app-toolbar-actions">
       <button id="tabPreviewBtn" class="toolbar-btn toolbar-btn-preview active">👁️ Preview</button>
       <button id="tabXmlBtn" class="toolbar-btn toolbar-btn-editxml">📝 Edit XML</button>
+      <button id="splitBtn" class="toolbar-btn toolbar-btn-split" title="Edit and preview side by side">⬌ Split</button>
       <button id="browseBtn" class="toolbar-btn toolbar-btn-browse">📁 Browse</button>
       <button id="refreshBtn" class="toolbar-btn toolbar-btn-refresh">🔄 Refresh</button>
       <button class="toolbar-btn toolbar-btn-html" onclick="exportHTML()">📤 Export HTML</button>
       <button class="toolbar-btn toolbar-btn-pdf" onclick="exportPDF()">🖨️ Print / Save as PDF</button>
+      <div class="toolbar-sep"></div>
+      <button id="snippetToggleBtn" class="toolbar-btn-icon" title="Toggle JATS snippet palette">🧩</button>
+      <button id="historyBtn" class="toolbar-btn-icon" title="Version history">🕓</button>
+      <button id="shortcutsBtn" class="toolbar-btn-icon" title="Keyboard shortcuts">⌨️</button>
+      <button id="themeToggleBtn" class="toolbar-btn-icon" title="Toggle dark/light theme">🌙</button>
     </div>
   </div>
 
@@ -1075,7 +1184,8 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
     <div id="errorsList" class="errors-list"></div>
   </div>
 
-  <!-- Raw XML Editor Modal -->
+  <div id="workArea">
+  <!-- Raw XML Editor Modal / Split pane -->
   <div id="xmlEditorPanel" class="xml-editor-panel">
     <div class="xml-modal-titlebar">
       <span>📝 Raw XML Editor</span>
@@ -1089,6 +1199,20 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
         <button id="closeXmlModalBtn" type="button" class="xml-modal-close">✕ Close</button>
       </span>
     </div>
+    <div id="xmlSnippetBar" class="xml-snippet-bar collapsed">
+      <button class="xml-snippet-btn" data-snippet="contrib">&lt;contrib&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="aff">&lt;aff&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="abstract">&lt;abstract&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="sec">&lt;sec&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="fig">&lt;fig&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="table">&lt;table-wrap&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="ref">&lt;ref&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="ref-list">&lt;ref-list&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="permissions">&lt;permissions&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="funding">&lt;funding-group&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="fn">&lt;fn&gt;</button>
+      <button class="xml-snippet-btn" data-snippet="disp-formula">&lt;disp-formula&gt;</button>
+    </div>
     <div class="xml-editor-toolbar">
       <input type="text" id="xmlFindInput" placeholder="Find..." class="xml-tool-input">
       <input type="text" id="xmlReplaceInput" placeholder="Replace with..." class="xml-tool-input">
@@ -1097,6 +1221,8 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
       <button id="xmlReplaceAllBtn" type="button">Replace All</button>
       <span id="xmlFindStatus" class="xml-find-status"></span>
       <span class="xml-toolbar-spacer"></span>
+      <span id="autoSaveStatus" class="xml-find-status"></span>
+      <button id="saveVersionBtn" type="button">📌 Snapshot</button>
       <button id="updatePreviewBtn" type="button" class="xml-primary-btn">🔄 Update Preview</button>
       <button id="downloadXmlBtn" type="button" class="xml-primary-btn">⬇️ Download XML</button>
     </div>
@@ -1116,6 +1242,44 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
   <div id="previewPanel" class="main-layout">
     <div id="tocSidebar" class="toc-sidebar"></div>
     <div id="output" class="output-flex"></div>
+  </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toastStack" class="toast-stack"></div>
+
+  <!-- Keyboard shortcuts modal -->
+  <div id="shortcutsModal" class="app-modal-overlay">
+    <div class="app-modal-box">
+      <h3>⌨️ Keyboard Shortcuts</h3>
+      <div class="app-modal-row"><span>Toggle Split View</span><span class="app-modal-kbd">Ctrl+Shift+S</span></div>
+      <div class="app-modal-row"><span>Save Snapshot</span><span class="app-modal-kbd">Ctrl+S</span></div>
+      <div class="app-modal-row"><span>Find in XML</span><span class="app-modal-kbd">Ctrl+F</span> (while editor focused)</div>
+      <div class="app-modal-row"><span>Escape editor / modal</span><span class="app-modal-kbd">Esc</span></div>
+      <div class="app-modal-row"><span>Toggle theme</span><span class="app-modal-kbd">Ctrl+Shift+D</span></div>
+      <button class="app-modal-close-btn" onclick="closeAppModal('shortcutsModal')">Close</button>
+    </div>
+  </div>
+
+  <!-- Version history modal -->
+  <div id="historyModal" class="app-modal-overlay">
+    <div class="app-modal-box">
+      <h3>🕓 Version History</h3>
+      <div id="historyList"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="app-modal-close-btn" style="float:none;background:#8e44ad;" onclick="showDiffVsLast()">Show diff vs. last snapshot</button>
+        <button class="app-modal-close-btn" style="float:none;" onclick="closeAppModal('historyModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diff view modal -->
+  <div id="diffModal" class="app-modal-overlay">
+    <div class="app-modal-box" style="width:640px;">
+      <h3>🔀 Diff vs. Last Snapshot</h3>
+      <div id="diffContent" style="font-family:'Courier New',monospace;font-size:12.5px;line-height:1.6;max-height:50vh;overflow:auto;"></div>
+      <button class="app-modal-close-btn" onclick="closeAppModal('diffModal')">Close</button>
+    </div>
   </div>
 
 <script src="./Selva JATS XML Viewer_files/tex-mml-chtml.min.js.download"></script>
@@ -1185,12 +1349,17 @@ refreshBtn.addEventListener('click', () => {
   } else if (currentFile) {
     processFile(currentFile);
   } else {
-    alert('No file loaded. Please browse for a file first.');
+    toast('No file loaded. Please browse for a file first.', 'warn');
   }
 });
 
 // --- Tab switching ---
+const workArea = document.getElementById('workArea');
+const splitBtn = document.getElementById('splitBtn');
+
 function showTab(tab) {
+  workArea.classList.remove('split-active');
+  splitBtn.classList.remove('active');
   const showXml = tab === 'xml';
   xmlEditorPanel.classList.toggle('visible', showXml);
   previewPanel.classList.toggle('hidden', showXml);
@@ -1207,6 +1376,30 @@ function showTab(tab) {
 tabPreviewBtn.addEventListener('click', () => showTab('preview'));
 tabXmlBtn.addEventListener('click', () => showTab('xml'));
 closeXmlModalBtn.addEventListener('click', () => showTab('preview'));
+
+// --- Split view: editor + live preview side by side ---
+function toggleSplit() {
+  const active = workArea.classList.toggle('split-active');
+  splitBtn.classList.toggle('active', active);
+  if (active) {
+    xmlEditorPanel.classList.remove('maximized');
+    xmlEditorPanel.classList.add('visible');
+    previewPanel.classList.remove('hidden');
+    document.querySelectorAll('.preview-extra').forEach(el => el.classList.remove('hidden'));
+    tabXmlBtn.classList.add('active');
+    tabPreviewBtn.classList.add('active');
+    xmlEditorTextarea.value = currentXMLText || '';
+    updateLineNumbers();
+    updateHighlight();
+    setEditorStatus(true);
+    toast('Split view on \u2014 edits update the preview as you type');
+  } else {
+    tabXmlBtn.classList.remove('active');
+    tabPreviewBtn.classList.remove('active');
+    showTab('preview');
+  }
+}
+splitBtn.addEventListener('click', toggleSplit);
 
 maximizeXmlBtn.addEventListener('click', () => {
   const nowMax = xmlEditorPanel.classList.toggle('maximized');
@@ -1234,7 +1427,10 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && xmlEditorPanel.classList.contains('visible')) showTab('preview');
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.app-modal-overlay.show').forEach(m => m.classList.remove('show'));
+    if (xmlEditorPanel.classList.contains('visible') && !workArea.classList.contains('split-active')) showTab('preview');
+  }
 });
 
 function setEditorStatus(ok, message) {
@@ -1299,6 +1495,209 @@ xmlEditorTextarea.addEventListener('input', () => {
   xmlEditorDebounceTimer = setTimeout(() => {
     applyEditorText(xmlEditorTextarea.value);
   }, 700);
+  autoSaveDraft();
+});
+
+/* ======================================================================
+   TOAST NOTIFICATIONS
+   ====================================================================== */
+const toastStack = document.getElementById('toastStack');
+function toast(message, type) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  const icon = type === 'err' ? '\u26d4' : type === 'warn' ? '\u26a0\ufe0f' : '\u2705';
+  el.innerHTML = '<span>' + icon + '</span><span>' + message + '</span>';
+  toastStack.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s, transform 0.3s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(30px)';
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
+}
+
+/* ======================================================================
+   THEME TOGGLE (chrome-only \u2014 the article preview stays print-style)
+   ====================================================================== */
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  themeToggleBtn.textContent = theme === 'dark' ? '\u2600\ufe0f' : '\ud83c\udf19';
+  try { localStorage.setItem('selva_theme', theme); } catch (e) { /* storage may be unavailable */ }
+}
+(function initTheme() {
+  let saved = 'light';
+  try { saved = localStorage.getItem('selva_theme') || 'light'; } catch (e) { /* storage may be unavailable */ }
+  applyTheme(saved);
+})();
+themeToggleBtn.addEventListener('click', () => {
+  const current = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  applyTheme(current);
+});
+
+/* ======================================================================
+   JATS SNIPPET PALETTE
+   ====================================================================== */
+const xmlSnippetBar = document.getElementById('xmlSnippetBar');
+const snippetToggleBtn = document.getElementById('snippetToggleBtn');
+snippetToggleBtn.addEventListener('click', () => {
+  xmlSnippetBar.classList.toggle('collapsed');
+  snippetToggleBtn.classList.toggle('active', !xmlSnippetBar.classList.contains('collapsed'));
+});
+
+const SNIPPETS = {
+  'contrib': '<contrib contrib-type="author">\n  <name><surname>Surname</surname><given-names>Given</given-names></name>\n  <xref ref-type="aff" rid="aff1">1</xref>\n</contrib>',
+  'aff': '<aff id="aff1"><label>1</label>Department, Institution, City, Country</aff>',
+  'abstract': '<abstract>\n  <p>Abstract text goes here.</p>\n</abstract>',
+  'sec': '<sec id="sec1">\n  <title>Section Title</title>\n  <p>Section content.</p>\n</sec>',
+  'fig': '<fig id="fig1">\n  <label>Figure 1</label>\n  <caption><p>Figure caption.</p></caption>\n  <graphic xlink:href="fig1.tif"/>\n</fig>',
+  'table': '<table-wrap id="tab1">\n  <label>Table 1</label>\n  <caption><p>Table caption.</p></caption>\n  <table>\n    <thead><tr><th>Header</th></tr></thead>\n    <tbody><tr><td>Data</td></tr></tbody>\n  </table>\n</table-wrap>',
+  'ref': '<ref id="ref1">\n  <element-citation publication-type="journal">\n    <person-group person-group-type="author"><name><surname>Surname</surname><given-names>G</given-names></name></person-group>\n    <article-title>Title</article-title>\n    <source>Journal Name</source>\n    <year>2026</year>\n  </element-citation>\n</ref>',
+  'ref-list': '<ref-list>\n  <title>References</title>\n\n</ref-list>',
+  'permissions': '<permissions>\n  <copyright-statement>\u00a9 2026 The Author(s)</copyright-statement>\n  <license license-type="open-access"><license-p>License text.</license-p></license>\n</permissions>',
+  'funding': '<funding-group>\n  <award-group>\n    <funding-source>Funder Name</funding-source>\n    <award-id>Grant ID</award-id>\n  </award-group>\n</funding-group>',
+  'fn': '<fn-group>\n  <fn id="fn1"><p>Footnote text.</p></fn>\n</fn-group>',
+  'disp-formula': '<disp-formula id="eq1">\n  <mml:math><mml:mi>x</mml:mi></mml:math>\n</disp-formula>'
+};
+
+document.querySelectorAll('.xml-snippet-btn').forEach(btn => {
+  btn.addEventListener('click', () => insertSnippet(btn.dataset.snippet));
+});
+
+function insertSnippet(key) {
+  const snippet = SNIPPETS[key];
+  if (!snippet) return;
+  const ta = xmlEditorTextarea;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  ta.setRangeText(snippet, start, end, 'end');
+  ta.focus();
+  updateLineNumbers();
+  updateHighlight();
+  setEditorStatus(true, 'Editing\u2026 (click Update Preview, or wait to auto-update)');
+  autoSaveDraft();
+  toast('Inserted <' + key + '> snippet');
+}
+
+/* ======================================================================
+   AUTO-SAVE DRAFT + VERSION SNAPSHOTS + DIFF
+   ====================================================================== */
+const autoSaveStatus = document.getElementById('autoSaveStatus');
+let autoSaveTimer = null;
+function autoSaveDraft() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('selva_xml_draft', xmlEditorTextarea.value);
+      const t = new Date().toLocaleTimeString();
+      autoSaveStatus.textContent = '\ud83d\udcbe Draft saved ' + t;
+    } catch (e) { /* storage may be unavailable; ignore silently */ }
+  }, 1000);
+}
+
+const saveVersionBtn = document.getElementById('saveVersionBtn');
+saveVersionBtn.addEventListener('click', saveVersion);
+
+function getVersions() {
+  try { return JSON.parse(localStorage.getItem('selva_versions') || '[]'); }
+  catch (e) { return []; }
+}
+function saveVersion() {
+  const versions = getVersions();
+  versions.unshift({ ts: Date.now(), content: xmlEditorTextarea.value });
+  if (versions.length > 20) versions.pop();
+  try { localStorage.setItem('selva_versions', JSON.stringify(versions)); } catch (e) { /* storage may be unavailable */ }
+  toast('Snapshot saved (' + versions.length + ' total)');
+}
+
+const historyBtn = document.getElementById('historyBtn');
+const historyModal = document.getElementById('historyModal');
+const historyList = document.getElementById('historyList');
+historyBtn.addEventListener('click', () => { loadHistory(); openAppModal('historyModal'); });
+
+function loadHistory() {
+  const versions = getVersions();
+  if (versions.length === 0) {
+    historyList.innerHTML = '<div class="version-empty">No snapshots yet. Use \ud83d\udccc Snapshot in the editor toolbar to save one.</div>';
+    return;
+  }
+  historyList.innerHTML = versions.map((v, i) =>
+    '<div class="version-item" onclick="restoreVersion(' + i + ')">' +
+      '<span class="v-time">' + new Date(v.ts).toLocaleString() + '</span>' +
+      '<button onclick="event.stopPropagation();deleteVersion(' + i + ')" title="Delete">\u2715</button>' +
+    '</div>'
+  ).join('');
+}
+function restoreVersion(i) {
+  const versions = getVersions();
+  if (versions[i]) {
+    xmlEditorTextarea.value = versions[i].content;
+    updateLineNumbers();
+    updateHighlight();
+    applyEditorText(xmlEditorTextarea.value);
+    autoSaveDraft();
+    closeAppModal('historyModal');
+    toast('Version restored');
+  }
+}
+function deleteVersion(i) {
+  const versions = getVersions();
+  versions.splice(i, 1);
+  try { localStorage.setItem('selva_versions', JSON.stringify(versions)); } catch (e) { /* storage may be unavailable */ }
+  loadHistory();
+}
+
+function showDiffVsLast() {
+  const versions = getVersions();
+  if (versions.length === 0) {
+    toast('Save a snapshot first to compare against it', 'warn');
+    return;
+  }
+  const current = xmlEditorTextarea.value.split('\n');
+  const previous = versions[0].content.split('\n');
+  const max = Math.max(current.length, previous.length);
+  let html = '';
+  for (let i = 0; i < max; i++) {
+    const c = current[i] !== undefined ? current[i] : '';
+    const p = previous[i] !== undefined ? previous[i] : '';
+    if (c === p) {
+      html += '<div>' + (i + 1) + ' | ' + escapeHtml(c) + '</div>';
+    } else {
+      if (p) html += '<div class="diff-removed">' + (i + 1) + ' - ' + escapeHtml(p) + '</div>';
+      if (c) html += '<div class="diff-added">' + (i + 1) + ' + ' + escapeHtml(c) + '</div>';
+    }
+  }
+  document.getElementById('diffContent').innerHTML = html || '<div class="version-empty">No differences.</div>';
+  closeAppModal('historyModal');
+  openAppModal('diffModal');
+}
+
+/* ======================================================================
+   GENERIC MODAL HELPERS + SHORTCUTS MODAL
+   ====================================================================== */
+function openAppModal(id) { document.getElementById(id).classList.add('show'); }
+function closeAppModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.app-modal-overlay').forEach(m => {
+  m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('show'); });
+});
+const shortcutsBtn = document.getElementById('shortcutsBtn');
+shortcutsBtn.addEventListener('click', () => openAppModal('shortcutsModal'));
+
+// Restore any previously auto-saved draft into the editor buffer (does not
+// overwrite the sample/loaded article until the user opens Edit XML / Split).
+(function restoreDraftOnLoad() {
+  try {
+    const saved = localStorage.getItem('selva_xml_draft');
+    if (saved) xmlEditorTextarea.value = saved;
+  } catch (e) { /* ignore */ }
+})();
+
+document.addEventListener('keydown', (e) => {
+  const ctrlLike = e.ctrlKey || e.metaKey;
+  if (ctrlLike && e.shiftKey && (e.key === 'S' || e.key === 's')) { e.preventDefault(); toggleSplit(); }
+  else if (ctrlLike && e.shiftKey && (e.key === 'D' || e.key === 'd')) { e.preventDefault(); themeToggleBtn.click(); }
+  else if (ctrlLike && !e.shiftKey && (e.key === 's' || e.key === 'S') &&
+           document.activeElement === xmlEditorTextarea) { e.preventDefault(); saveVersion(); }
 });
 
 updatePreviewBtn.addEventListener('click', () => {
@@ -1400,7 +1799,7 @@ dropZone.addEventListener('drop', (e) => {
     currentFile = file;
     processFile(file);
   } else {
-    alert('Please drop a valid XML file');
+    toast('Please drop a valid XML file', 'err');
   }
 });
 
