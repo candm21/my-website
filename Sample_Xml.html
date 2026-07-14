@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JATS XML ↔ HTML Split Viewer</title>
+
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+  <style>
+    :root {
+      --bg: #ffffff; --bg-alt: #f8f9fa; --bg-code: #1e1e2e;
+      --text: #1a1a1a; --text-muted: #555; --text-code: #e2e8f0;
+      --primary: #2563eb; --primary-hover: #1d4ed8;
+      --border: #e2e8f0; --card: #ffffff;
+      --shadow: 0 4px 12px rgba(0,0,0,0.08);
+      --radius: 10px;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-serif: 'Merriweather', Georgia, serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --xml-tag: #f472b6; --xml-attr: #fbbf24; --xml-value: #86efac;
+      --xml-text: #e2e8f0; --xml-comment: #64748b; --xml-bracket: #94a3b8;
+      --xml-line-num: #475569;
+      --ref-journal: #3b82f6; --ref-book: #10b981; --ref-web: #f59e0b; --ref-other: #8b5cf6;
+    }
+    [data-theme="dark"] {
+      --bg: #0f172a; --bg-alt: #1e293b; --bg-code: #0b1020;
+      --text: #e2e8f0; --text-muted: #94a3b8;
+      --primary: #3b82f6; --primary-hover: #60a5fa;
+      --border: #334155; --card: #1e293b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-serif); background: var(--bg); color: var(--text);
+      line-height: 1.7; transition: background var(--transition), color var(--transition);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.75rem 1.25rem; background: var(--bg-alt); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; gap: 1rem; flex-wrap: wrap;
+    }
+    .toolbar h1 { font-family: var(--font-sans); font-size: 1.1rem; font-weight: 700; }
+    .toolbar-controls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .view-toggle { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .view-toggle button {
+      background: transparent; border: none; padding: 0.4rem 0.8rem;
+      font-family: var(--font-sans); font-size: 0.85rem; cursor: pointer;
+      color: var(--text); transition: var(--transition);
+    }
+    .view-toggle button.active { background: var(--primary); color: white; }
+    .view-toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+    .btn {
+      background: var(--bg); border: 1px solid var(--border); padding: 0.4rem 0.8rem;
+      border-radius: 8px; cursor: pointer; font-family: var(--font-sans); font-size: 0.85rem;
+      color: var(--text); transition: var(--transition);
+    }
+    .btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .split-container {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden;
+      transition: grid-template-columns 0.3s ease;
+    }
+    .split-container[data-view="xml"]  { grid-template-columns: 1fr 0fr; }
+    .split-container[data-view="html"] { grid-template-columns: 0fr 1fr; }
+    .split-container[data-view="split"]{ grid-template-columns: 1fr 1fr; }
+
+    .panel { display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 1rem; background: var(--bg-alt); border-bottom: 1px solid var(--border);
+      font-family: var(--font-sans); font-size: 0.85rem; font-weight: 600; flex-shrink: 0;
+    }
+    .panel-header .tag-count { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; }
+
+    .xml-panel { background: var(--bg-code); border-right: 1px solid var(--border); }
+    .xml-scroll { flex: 1; overflow: auto; padding: 0; font-family: var(--font-mono); font-size: 0.82rem; }
+    .xml-block { border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; }
+    .xml-block:hover { background: rgba(37, 99, 235, 0.08); }
+    .xml-block.highlight { background: rgba(37, 99, 235, 0.2); }
+    .xml-block-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.4rem 0.8rem; background: rgba(255,255,255,0.03);
+      cursor: pointer; font-size: 0.75rem; color: var(--xml-attr);
+      font-family: var(--font-sans); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .xml-block-header:hover { background: rgba(255,255,255,0.06); }
+    .xml-block-header .label { font-weight: 600; }
+    .xml-block-header .copy-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.15);
+      color: var(--text-code); padding: 0.15rem 0.5rem; border-radius: 4px;
+      font-size: 0.7rem; cursor: pointer; transition: var(--transition);
+    }
+    .xml-block-header .copy-btn:hover { background: var(--primary); border-color: var(--primary); }
+    .xml-code { padding: 0.8rem 1rem; white-space: pre; overflow-x: auto; color: var(--xml-text); line-height: 1.6; }
+    .xml-code .line-num { display: inline-block; width: 2.5em; color: var(--xml-line-num); user-select: none; text-align: right; padding-right: 1em; }
+    .xml-tag { color: var(--xml-tag); }
+    .xml-attr { color: var(--xml-attr); }
+    .xml-value { color: var(--xml-value); }
+    .xml-bracket { color: var(--xml-bracket); }
+    .xml-comment { color: var(--xml-comment); font-style: italic; }
+
+    .html-panel { background: var(--bg); }
+    .html-scroll { flex: 1; overflow: auto; padding: 2rem; max-width: 100%; }
+    .html-block { transition: background 0.2s, box-shadow 0.2s; border-radius: var(--radius); padding: 0.5rem; margin: -0.5rem; cursor: pointer; }
+    .html-block:hover { background: rgba(37, 99, 235, 0.05); }
+    .html-block.highlight { background: rgba(37, 99, 235, 0.1); box-shadow: inset 0 0 0 2px var(--primary); }
+
+    .article-container { max-width: 900px; margin: 0 auto; background: var(--bg); padding: 2rem; box-shadow: 0 0 40px rgba(0,0,0,0.1); border-radius: var(--radius); }
+    .journal-header { border-bottom: 3px solid var(--primary); padding-bottom: 1rem; margin-bottom: 2rem; }
+    .journal-meta { font-family: var(--font-sans); font-size: 0.85rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 0.5rem; }
+    .journal-title { font-size: 1.1rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .doi-badge { background: var(--bg-alt); padding: 0.2rem 0.6rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.8rem; border: 1px solid var(--border); }
+    .article-title { font-size: 2rem; font-weight: 700; line-height: 1.3; margin: 1.5rem 0 1rem; color: var(--text); }
+    .article-subtitle { font-size: 1.3rem; color: var(--text-muted); font-weight: 400; margin-bottom: 1.5rem; font-style: italic; }
+    .authors { margin: 1.5rem 0; font-family: var(--font-sans); }
+    .author { display: inline-block; margin-right: 1.5rem; font-weight: 600; font-size: 1.05rem; }
+    .author-degrees { font-size: 0.85rem; color: var(--text-muted); font-weight: 400; }
+    .author-sup { color: var(--primary); font-size: 0.75rem; vertical-align: super; margin-left: 0.2rem; }
+    .affiliation, .corresp { font-size: 0.9rem; color: var(--text-muted); margin: 0.5rem 0; font-family: var(--font-sans); line-height: 1.6; }
+    .pub-info { font-size: 0.85rem; color: var(--text-muted); margin: 1.5rem 0; font-family: var(--font-sans); padding: 1rem; background: var(--bg-alt); border-radius: var(--radius); border-left: 4px solid var(--primary); }
+    
+    .abstract { background: linear-gradient(135deg, var(--bg-alt) 0%, var(--bg) 100%); padding: 1.5rem; border-radius: var(--radius); border-left: 4px solid var(--primary); margin: 2rem 0; box-shadow: var(--shadow); }
+    .abstract strong { display: block; margin-bottom: 0.5rem; color: var(--primary); font-size: 1.1rem; }
+    .abstract p { margin: 0; line-height: 1.8; }
+    
+    .kwd-group { margin: 1.5rem 0; font-family: var(--font-sans); font-size: 0.9rem; padding: 1rem; background: var(--bg-alt); border-radius: var(--radius); }
+    .kwd-group strong { margin-right: 0.5rem; color: var(--text-muted); }
+    .kwd { display: inline-block; background: var(--bg); border: 1px solid var(--border); padding: 0.3rem 0.8rem; border-radius: 20px; margin-right: 0.5rem; margin-bottom: 0.5rem; transition: var(--transition); }
+    .kwd:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .sec { margin: 2.5rem 0; }
+    .sec h2 { font-size: 1.6rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; color: var(--text); }
+    .sec h3 { font-size: 1.3rem; margin: 1.5rem 0 0.8rem; color: var(--text-muted); }
+    .sec h4 { font-size: 1.1rem; margin: 1.2rem 0 0.6rem; color: var(--text-muted); font-weight: 600; }
+    .para { margin: 1rem 0; text-align: justify; line-height: 1.8; }
+    .xref { color: var(--primary); text-decoration: none; font-weight: 600; }
+    .xref:hover { text-decoration: underline; }
+
+    /* Equations */
+    .equation-block { margin: 1.5rem 0; padding: 1rem; background: var(--bg-alt); border-radius: var(--radius); border: 1px solid var(--border); text-align: center; }
+    .inline-eq { font-family: var(--font-serif); font-style: italic; }
+
+    .table-wrap { margin: 2rem 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; border: 1px solid var(--border); }
+    .table-wrap .caption { padding: 1rem 1.2rem; font-weight: 600; font-family: var(--font-sans); font-size: 0.95rem; background: var(--bg-alt); border-bottom: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: 0.9rem; }
+    th, td { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); text-align: left; }
+    th { background: var(--bg-alt); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; }
+    tr:hover td { background: rgba(37, 99, 235, 0.04); }
+    .table-foot { padding: 1rem 1.2rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border); background: var(--bg-alt); }
+
+    .fig { margin: 2rem 0; text-align: center; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.5rem; border: 1px solid var(--border); }
+    .fig img { max-width: 100%; height: auto; border-radius: 8px; cursor: zoom-in; transition: transform 0.3s; }
+    .fig img:hover { transform: scale(1.02); }
+    .fig figcaption { margin-top: 1rem; font-family: var(--font-sans); font-size: 0.95rem; font-weight: 600; color: var(--text-muted); }
+
+    /* Back Matter Styling */
+    .back-section { margin-top: 3rem; padding-top: 2rem; border-top: 3px solid var(--primary); }
+    .back-section h2 { font-size: 1.6rem; margin-bottom: 1.5rem; color: var(--text); }
+    
+    .ack-section { margin: 2rem 0; padding: 1.5rem; background: var(--bg-alt); border-radius: var(--radius); border-left: 4px solid var(--primary); }
+    .ack-section p { margin: 0; line-height: 1.8; }
+
+    .fn-group { margin-top: 2rem; }
+    .fn-item { margin: 1.5rem 0; padding: 1rem; background: var(--bg-alt); border-radius: var(--radius); border-left: 4px solid var(--border); transition: var(--transition); }
+    .fn-item:hover { border-left-color: var(--primary); }
+    .fn-label { font-weight: 700; color: var(--primary); font-family: var(--font-sans); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; display: block; }
+    .fn-item p { margin: 0; font-size: 0.95rem; line-height: 1.7; }
+    .orcid-icon { display: inline-block; width: 16px; height: 16px; background: #a6ce39; border-radius: 50%; color: white; text-align: center; line-height: 16px; font-size: 10px; font-weight: bold; margin-right: 0.5rem; vertical-align: middle; }
+
+    .appendix-section { margin: 2rem 0; padding: 1.5rem; background: var(--bg-alt); border-radius: var(--radius); border: 1px dashed var(--border); }
+    .appendix-section h3 { font-size: 1.2rem; margin-bottom: 0.8rem; color: var(--text); }
+
+    /* References */
+    .ref-list { list-style: none; counter-reset: ref; padding: 0; margin-top: 1rem; }
+    .ref-list li { counter-increment: ref; margin: 1.5rem 0; padding: 1rem 1.2rem; padding-left: 3.5rem; position: relative; font-family: var(--font-sans); font-size: 0.95rem; line-height: 1.6; background: var(--bg-alt); border-radius: var(--radius); border-left: 4px solid var(--border); transition: var(--transition); }
+    .ref-list li:hover { border-left-color: var(--primary); transform: translateX(4px); }
+    .ref-list li::before { content: "[" counter(ref) "]"; position: absolute; left: 1rem; font-weight: 700; color: var(--primary); font-size: 0.9rem; }
+    
+    .ref-type-badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-left: 0.8rem; vertical-align: middle; }
+    .ref-type-journal { background: rgba(59, 130, 246, 0.15); color: var(--ref-journal); border: 1px solid var(--ref-journal); }
+    .ref-type-book { background: rgba(16, 185, 129, 0.15); color: var(--ref-book); border: 1px solid var(--ref-book); }
+    .ref-type-web { background: rgba(245, 158, 11, 0.15); color: var(--ref-web); border: 1px solid var(--ref-web); }
+    .ref-type-other { background: rgba(139, 92, 246, 0.15); color: var(--ref-other); border: 1px solid var(--ref-other); }
+    
+    .ref-title { font-weight: 600; color: var(--text); display: block; margin-bottom: 0.3rem; }
+    .ref-meta { color: var(--text-muted); font-size: 0.9rem; display: block; }
+    .ref-link { color: var(--primary); word-break: break-all; text-decoration: none; }
+    .ref-link:hover { text-decoration: underline; }
+
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .lightbox.active { display: flex; }
+    .lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 0.6rem 1.2rem; border-radius: 8px; font-family: var(--font-sans); font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000; }
+    .toast.show { opacity: 1; }
+
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    @media (max-width: 768px) {
+      .split-container[data-view="split"] { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .xml-panel { border-right: none; border-bottom: 1px solid var(--border); }
+      .html-scroll { padding: 1rem; }
+      .article-container { padding: 1rem; }
+      .article-title { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <h1>📄 JATS XML ↔ HTML Viewer</h1>
+    <div class="toolbar-controls">
+      <div class="view-toggle" role="tablist">
+        <button data-view="split" class="active">⬛ Split</button>
+        <button data-view="xml">📝 XML</button>
+        <button data-view="html">👁 Rendered</button>
+      </div>
+      <button class="btn" id="theme-btn">🌙 Dark</button>
+      <button class="btn" id="copy-all-btn">📋 Copy All XML</button>
+    </div>
+  </div>
+
+  <div class="split-container" data-view="split">
+    <div class="panel xml-panel">
+      <div class="panel-header">
+        <span>📝 JATS XML Source</span>
+        <span class="tag-count" id="xml-count">0 blocks</span>
+      </div>
+      <div class="xml-scroll" id="xml-scroll"></div>
+    </div>
+
+    <div class="panel html-panel">
+      <div class="panel-header">
+        <span>👁 Rendered HTML</span>
+        <span class="tag-count">Click any element to see its XML</span>
+      </div>
+      <div class="html-scroll" id="html-scroll">
+        <div class="article-container">
+          
+          <!-- Front Matter -->
+          <div class="html-block" data-block="front">
+            <div class="journal-header">
+              <div class="journal-meta">
+                <span class="journal-title">Journal of Medical Decision Making</span>
+                <span>•</span>
+                <span>ISSN: 0160-449X (ppub), 1538-9758 (epub)</span>
+              </div>
+              <div class="journal-meta">
+                <span class="doi-badge">DOI: 10.1177/0160449XXXXXXXXX</span>
+                <span>•</span>
+                <span>Vol. XX, No. X, pp. 00–00</span>
+              </div>
+            </div>
+            <h1 class="article-title">Understanding Economic Transformations: Worker-Recuperated Enterprises in Argentina</h1>
+            <h2 class="article-subtitle">A Comprehensive Analysis of Self-Management During Neoliberal Crisis</h2>
+            <div class="authors">
+              <span class="author">Haase, J. <span class="author-degrees">RN, MScN</span><sup class="author-sup">†</sup></span>
+            </div>
+            <div class="affiliation" id="aff1"><sup>†</sup>Doctoral Student, Linköpings University, Sweden</div>
+            <div class="corresp" id="corresp1">
+              <strong>Corresponding Author:</strong> This research was funded by Futurum—the Academy of Healthcare, Jönköping County Council, Sweden. <a href="mailto:rthorpe@brookings.edu">rthorpe@brookings.edu</a>
+            </div>
+            <div class="corresp"><strong>Note:</strong> Rebecca U. Thorpe is a Research Fellow in Governance Studies at the Brookings Institution and a PhD candidate at the University of Maryland.</div>
+            <div class="pub-info">
+              <strong>Published:</strong> May 2017 &nbsp;|&nbsp; <strong>Received:</strong> 8 Jun 2016 &nbsp;|&nbsp; <strong>Accepted:</strong> 13 Mar 2017<br>
+              <strong>©</strong> The Author(s) 2017. Society for Medical Decision Making.
+            </div>
+            <div class="abstract">
+              <strong>Abstract</strong>
+              <p>This study examines worker-recuperated enterprises (ERTs) in Argentina, appraising the social and economic transformations that these innovations prefigure, especially during hard economic times. Through comprehensive analysis of self-management practices and workers' cooperatives, we explore how these organizational forms respond to neoliberal crisis and reshape the political economy of Argentina.</p>
+            </div>
+            <div class="kwd-group">
+              <strong>Keywords:</strong>
+              <span class="kwd">self‐management</span>
+              <span class="kwd">workers' cooperatives</span>
+              <span class="kwd">worker‐recuperated enterprises</span>
+              <span class="kwd">neoliberal crisis</span>
+              <span class="kwd">political economy of Argentina</span>
+            </div>
+          </div>
+
+          <!-- Body Matter -->
+          <div class="html-block" data-block="body">
+            <div class="sec">
+              <h2>Dependent Variables</h2>
+              <p class="para">To test my hypotheses, I created several dependent variables that capture the multifaceted nature of economic reliance. For instance, the probability of committee assignment is modeled as <span class="inline-eq">\( P(A|B) = \frac{P(B|A)P(A)}{P(B)} \)</span>, where \(A\) represents committee membership and \(B\) represents district economic reliance.</p>
+              
+              <div class="sec">
+                <h3>Methodological Approach</h3>
+                <p class="para">Our analytical framework incorporates both quantitative and qualitative measures. The core estimation relies on the following specification:</p>
+                <div class="equation-block">
+                  $$ \beta_j = \frac{\sum_{i=1}^{n} x_{ij} y_i}{\sum_{i=1}^{n} x_{ij}^2} \quad \text{for } j=1,\dots,p $$
+                </div>
+                <div class="sec">
+                  <h4>Defense committee membership</h4>
+                  <p class="para">Technical and Tactical Intelligence.<sup><a href="#note1" class="xref">1</a></sup> This variable captures whether a member serves on key defense-related committees.</p>
+                </div>
+                <div class="sec">
+                  <h4>Prime contracts allocations</h4>
+                  <p class="para">Aggregating prime contract data is relatively easy.<sup><a href="#note28" class="xref">2</a></sup> We compile comprehensive data on defense contracts awarded to facilities within congressional districts.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="html-block" data-block="table">
+            <figure class="table-wrap">
+              <div class="caption">Table 1. Estimated Influence of Economic Reliance on Congressional Defense Committee Membership (1999‐2005; <em>n</em> = 435)</div>
+              <table>
+                <thead>
+                  <tr>
+                    <th align="left">Economic Reliance</th>
+                    <th align="center">106th</th>
+                    <th align="center">107th</th>
+                    <th align="center">108th</th>
+                    <th align="center">109th</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Population density, 1st decile</td><td>.23 (.03)***</td><td>.21 (.03)***</td><td>.28 (.03)***</td><td>.24 (.03)***</td></tr>
+                  <tr><td>Population density 9th decile</td><td>.09 (.03)**</td><td>.10 (.03)**</td><td>.14 (.04)***</td><td>.14 (.04)***</td></tr>
+                  <tr><td>Difference</td><td>.14 (.04)***</td><td>.11 (.04)**</td><td>.14 (.04)**</td><td>.09 (.04)*</td></tr>
+                  <tr><td>Percentage change</td><td>60.59***</td><td>51.12**</td><td>48.88**</td><td>39.44*†</td></tr>
+                </tbody>
+              </table>
+              <div class="table-foot">
+                <p><strong>Note:</strong> Table entries are calculated by the author from the logit analyses in <a href="#appC" class="xref">Appendix C</a> using CLARIFY. Entries are predicted probabilities. Standard errors in parentheses.</p>
+                <p><sup>†</sup><em>p</em> &lt; .05, one‐tailed. *<em>p</em> &lt; .05; **<em>p</em> &lt; .01; ***<em>p</em> &lt; .001, two‐tailed.</p>
+              </div>
+            </figure>
+          </div>
+
+          <!-- Figure -->
+          <div class="html-block" data-block="figure">
+            <figure class="fig">
+              <img src="figure1.png" alt="Figure 1 placeholder" onclick="openLightbox(this.src)">
+              <figcaption>Figure 1. Refinement of Five Concepts and Their Components to be Analyzed in Step 3</figcaption>
+            </figure>
+          </div>
+
+          <!-- Back Matter: Acknowledgments & Footnotes -->
+          <div class="html-block" data-block="back-fn">
+            <div class="back-section">
+              <div class="ack-section">
+                <h3 style="margin-top:0; color: var(--primary);">Acknowledgments</h3>
+                <p>The authors would like to express their sincere gratitude to Prof Salah Ghabri (Department of Medical Evaluation, French National Authority for Health, HAS) for his invaluable contributions to this study. Prof Ghabri provided critical insights into the study design, data interpretation, and manuscript revision, which greatly enhanced the quality of the work.</p>
+              </div>
+
+              <div class="fn-group">
+                <div class="fn-item">
+                  <span class="fn-label">ORCID iD</span>
+                  <p><span class="orcid-icon">iD</span> Mingye Zhao <a href="https://orcid.org/0000-0002-7709-9374" class="ref-link" target="_blank">https://orcid.org/0000-0002-7709-9374</a></p>
+                </div>
+                <div class="fn-item">
+                  <span class="fn-label">Author Contributions</span>
+                  <p>MZ and TS contributed equally to this work. MZ, TS, and WT had full access to all study data and are responsible for the accuracy of the data analysis. MZ, TS, and WT take responsibility for the integrity of the data. Concept and design: MZ, TS, and WT; acquisition of data: MZ, TS, HS; analysis and interpretation of data: MZ, TS, HS; drafting of manuscript: MZ, TS, HS; critical revision of the manuscript for important intellectual content: MZ, HS, HL, WT; statistical analysis: MZ, TS, HS, HL; obtaining funding: WT; administrative and technical support: WT; supervision: WT.</p>
+                </div>
+                <div class="fn-item">
+                  <span class="fn-label">Funding</span>
+                  <p>The authors disclosed receipt of the following financial support for the research, authorship, and/or publication of this article: This research was supported by the General Program of National Natural Science Foundation of China (grant 72174207) and the Postgraduate Research and Practice Innovation Program of Jiangsu Province (grant 3322500029).</p>
+                </div>
+                <div class="fn-item">
+                  <span class="fn-label">Declaration of Conflicting Interests</span>
+                  <p>The authors declared no potential conflicts of interest with respect to the research, authorship, and/or publication of this article.</p>
+                </div>
+                <div class="fn-item">
+                  <span class="fn-label">Data Availability Statement</span>
+                  <p>The full data set is available upon request from the corresponding author.</p>
+                </div>
+                <div class="fn-item">
+                  <span class="fn-label">Supplemental Material</span>
+                  <p>Supplemental material for this article is available online.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Back Matter: Appendix -->
+          <div class="html-block" data-block="appendix">
+            <div class="appendix-section" id="appC">
+              <h3>Appendix C: Logit Analyses Details</h3>
+              <p class="para">Further details on the CLARIFY simulations used to generate the predicted probabilities in Table 1. The simulations were run with 1,000 draws from the estimated multivariate normal distribution of the coefficients.</p>
+            </div>
+          </div>
+
+          <!-- Back Matter: References -->
+          <div class="html-block" data-block="references">
+            <div class="back-section">
+              <h2>References</h2>
+              <ol class="ref-list">
+                <li>
+                  <span class="ref-title">Children with cancer</span>
+                  <span class="ref-type-badge ref-type-journal">Journal</span>
+                  <span class="ref-meta">Haase, J. (2007). <em>Journal of Pediatric Nursing</em>, 22, 233–244.</span>
+                </li>
+                <li>
+                  <span class="ref-title">A strategy for developing multiple interrelated</span>
+                  <span class="ref-type-badge ref-type-book">Book</span>
+                  <span class="ref-meta">Haase, J. (2000). In K. Knafl (Ed.), <em>Foundations, techniques, and applications</em> (2nd ed., pp. 209–229). Philadelphia: Saunders.</span>
+                </li>
+                <li>
+                  <span class="ref-title">The ethical demand</span>
+                  <span class="ref-type-badge ref-type-book">Book</span>
+                  <span class="ref-meta">Haase, J. (1997). (K. Knafl, Trans.). <em>The ethical demand</em>. Notre Dame, IN: University of Notre Dame Press. (Original work published 1956).</span>
+                </li>
+                <li>
+                  <span class="ref-title">Conventions on the rights of the child</span>
+                  <span class="ref-type-badge ref-type-book">Book</span>
+                  <span class="ref-meta">United Nations. (1989). <em>Conventions on the rights of the child</em>. New York: United Nations.</span>
+                </li>
+                <li>
+                  <span class="ref-title">Firm handling the information exchange study</span>
+                  <span class="ref-type-badge ref-type-other">Other</span>
+                  <span class="ref-meta">Haase, J. (2008). Unpublished manuscript.</span>
+                </li>
+                <li>
+                  <span class="ref-title">Children's Ombudsman</span>
+                  <span class="ref-type-badge ref-type-web">Web</span>
+                  <span class="ref-meta">(2008). Retrieved on December, 4, 2008, from <a href="http://www.bo.se/Adfinity.aspx?pageid=85" class="ref-link" target="_blank">http://www.bo.se/Adfinity.aspx?pageid=85</a></span>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img src="" alt="Zoomed" id="lightbox-img">
+  </div>
+  <div class="toast" id="toast">Copied!</div>
+
+  <script>
+    const xmlBlocks = {
+      dtd: `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD Journal Publishing DTD v2.3 20070202//EN" "journalpublishing.dtd">
+<article article-type="research-article" xmlns:xlink="http://www.w3.org/1999/xlink">`,
+
+      front: `<front>
+  <journal-meta>
+    <journal-id journal-id-type="publisher-id">...</journal-id>
+    <journal-title>Journal of Medical Decision Making</journal-title>
+    <issn pub-type="ppub">0160-449X</issn>
+    <issn pub-type="epub">1538-9758</issn>
+  </journal-meta>
+  <article-meta>
+    <article-id pub-id-type="doi">10.1177/0160449XXXXXXXXX</article-id>
+    <title-group>
+      <article-title>Understanding Economic Transformations: Worker-Recuperated Enterprises in Argentina</article-title>
+      <subtitle>A Comprehensive Analysis of Self-Management During Neoliberal Crisis</subtitle>
+    </title-group>
+    <contrib-group>
+      <contrib contrib-type="author">
+        <name><surname>Haase</surname><given-names>J.</given-names></name>
+        <degrees>RN, MScN</degrees>
+        <xref ref-type="corresp" rid="corresp1-0894318409338681"/>
+      </contrib>
+    </contrib-group>
+    <aff id="aff1-0894318409338681">Doctoral Student, Linköpings University, Sweden</aff>
+    <author-notes>
+      <corresp id="corresp1-0894318409338681">
+        This research was funded by Futurum... e‐mail: <email>rthorpe@brookings.edu</email>
+      </corresp>
+      <fn fn-type="other">
+        <p>Rebecca U. Thorpe is a Research Fellow in Governance Studies at the Brookings Institution...</p>
+      </fn>
+    </author-notes>
+    <pub-date pub-type="epub-ppub"><month>5</month><year>2017</year></pub-date>
+    <permissions>
+      <copyright-statement>© The Author(s) 2017</copyright-statement>
+      <copyright-holder content-type="society">Society for Medical Decision Making</copyright-holder>
+    </permissions>
+    <abstract>
+      <p>ERTs, appraising the social and economic transformations that these innovations prefigure, especially during hard economic times.</p>
+    </abstract>
+    <kwd-group>
+      <kwd>self‐management</kwd>
+      <kwd>workers' cooperatives</kwd>
+      <kwd>worker‐recuperated enterprises</kwd>
+      <kwd>neoliberal crisis</kwd>
+      <kwd>political economy of Argentina</kwd>
+    </kwd-group>
+  </article-meta>
+</front>`,
+
+      body: `<body>
+  <sec id="section1-1532673X09337107">
+    <title>Dependent Variables</title>
+    <p>To test my hypotheses, I created several dependent variables... probability is modeled as 
+      <inline-formula><tex-math><![CDATA[P(A|B) = \\frac{P(B|A)P(A)}{P(B)}]]></tex-math></inline-formula>
+    </p>
+    <sec id="section2-1532673X09337107">
+      <title>Methodological Approach</title>
+      <p>Our analytical framework incorporates both quantitative and qualitative measures. The core estimation relies on the following specification:</p>
+      <disp-formula id="eq1">
+        <tex-math><![CDATA[\\beta_j = \\frac{\\sum_{i=1}^{n} x_{ij} y_i}{\\sum_{i=1}^{n} x_{ij}^2} \\quad \\text{for } j=1,\\dots,p]]></tex-math>
+      </disp-formula>
+      <sec id="section3-1532673X09337107">
+        <title>Defense committee membership</title>
+        <p>Technical and Tactical Intelligence.<sup><xref ref-type="other" rid="note1-1532673X09337107">1</xref></sup></p>
+      </sec>
+      <sec id="section4-1532673X09337107">
+        <title>Prime contracts allocations</title>
+        <p>Aggregating prime contract data is relatively easy.<sup><xref ref-type="other" rid="note2-1532673X09337107">2</xref></sup></p>
+      </sec>
+    </sec>
+  </sec>
+</body>`,
+
+      table: `<table-wrap id="table1-1532673X09337107" position="anchor">
+  <label>Table 1.</label>
+  <caption><p>Estimated Influence of Economic Reliance on Congressional Defense Committee Membership (1999‐2005; <italic>n</italic> = 435)</p></caption>
+  <table>
+    <thead>
+      <tr>
+        <th align="left">Economic Reliance</th>
+        <th align="center">106th</th>
+        <th align="center">107th</th>
+        <th align="center">108th</th>
+        <th align="center">109th</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Population density, 1st decile</td><td>.23 (.03)***</td><td>.21 (.03)***</td><td>.28 (.03)***</td><td>.24 (.03)***</td></tr>
+      <tr><td>Population density 9th decile</td><td>.09 (.03)**</td><td>.10 (.03)**</td><td>.14 (.04)***</td><td>.14 (.04)***</td></tr>
+      <tr><td>Difference</td><td>.14 (.04)***</td><td>.11 (.04)**</td><td>.14 (.04)**</td><td>.09 (.04)*</td></tr>
+      <tr><td>Percentage change</td><td>60.59***</td><td>51.12**</td><td>48.88**</td><td>39.44*†</td></tr>
+    </tbody>
+  </table>
+  <table-wrap-foot>
+    <fn id="table-fn1-1532673X09337107">
+      <p>Note: Table entries are calculated by the author from the logit analyses in <xref ref-type="app" rid="appC-1532673X09337107">Appendix C</xref> using CLARIFY.</p>
+    </fn>
+  </table-wrap-foot>
+</table-wrap>`,
+
+      figure: `<fig id="fig1-0894318409338681" position="anchor">
+  <label>Figure 1.</label>
+  <caption><p>Refinement of Five Concepts and Their Components to be Analyzed in Step 3</p></caption>
+  <graphic xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="10.1177_0894318409338681-fig1.eps"/>
+</fig>`,
+
+      'back-fn': `<back>
+  <ack>
+    <p>The authors would like to express their sincere gratitude to Prof Salah Ghabri (Department of Medical Evaluation, French National Authority for Health, HAS) for his invaluable contributions to this study. Prof Ghabri provided critical insights into the study design, data interpretation, and manuscript revision, which greatly enhanced the quality of the work.</p>
+  </ack>
+  <fn-group>
+    <fn fn-type="other">
+      <label>ORCID iD</label>
+      <p>Mingye Zhao <inline-graphic xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="10.1177_0272989X261463230-img1.tif"/> <ext-link ext-link-type="uri" xlink:href="https://orcid.org/0000-0002-7709-9374">https://orcid.org/0000-0002-7709-9374</ext-link></p>
+    </fn>
+    <fn fn-type="con">
+      <label>Author Contributions</label>
+      <p>MZ and TS contributed equally to this work. MZ, TS, and WT had full access to all study data...</p>
+    </fn>
+    <fn fn-type="financial-disclosure">
+      <label>Funding</label>
+      <p>The authors disclosed receipt of the following financial support for the research, authorship, and/or publication of this article: This research was supported by the General Program of National Natural Science Foundation of China (grant 72174207)...</p>
+    </fn>
+    <fn fn-type="conflict">
+      <label>Declaration of Conflicting Interests</label>
+      <p>The authors declared no potential conflicts of interest with respect to the research, authorship, and/or publication of this article.</p>
+    </fn>
+    <fn fn-type="other">
+      <label>Data Availability Statement</label>
+      <p>The full data set is available upon request from the corresponding author.</p>
+    </fn>
+    <fn fn-type="supplementary-material">
+      <label>Supplemental Material</label>
+      <p>Supplemental material for this article is available online.</p>
+    </fn>
+  </fn-group>
+</back>`,
+
+      appendix: `<app id="appC-1532673X09337107">
+  <title>Appendix C: Logit Analyses Details</title>
+  <p>Further details on the CLARIFY simulations used to generate the predicted probabilities in Table 1. The simulations were run with 1,000 draws from the estimated multivariate normal distribution of the coefficients.</p>
+</app>`,
+
+      references: `<ref-list>
+  <title>References</title>
+  <ref id="bibr1-0894318409338681">
+    <nlm-citation citation-type="journal">
+      <person-group person-group-type="author"><name><surname>Haase</surname><given-names>J.</given-names></name></person-group>
+      <article-title>Children with cancer</article-title>
+      <source>Journal of Pediatric Nursing</source>
+      <year>2007</year><volume>22</volume><fpage>233</fpage><lpage>244</lpage>
+    </nlm-citation>
+  </ref>
+  <ref id="bibr9-0894318409338681">
+    <nlm-citation citation-type="book">
+      <person-group person-group-type="author"><name><surname>Haase</surname><given-names>J.</given-names></name></person-group>
+      <person-group person-group-type="editor"><name><surname>Knafl</surname><given-names>K.</given-names></name></person-group>
+      <article-title>A strategy for developing multiple interrelated</article-title>
+      <source>Foundations, techniques, and applications</source>
+      <year>2000</year><edition>2nd ed</edition>
+      <publisher-loc>Philadelphia</publisher-loc><publisher-name>Saunders</publisher-name>
+      <fpage>209</fpage><lpage>229</lpage>
+    </nlm-citation>
+  </ref>
+  <ref id="bibr12-0894318409338681">
+    <nlm-citation citation-type="book">
+      <person-group person-group-type="author"><name><surname>Haase</surname><given-names>J.</given-names></name></person-group>
+      <person-group person-group-type="translator"><name><surname>Knafl</surname><given-names>K.</given-names></name></person-group>
+      <source>The ethical demand</source>
+      <year>1997</year>
+      <publisher-loc>Notre Dame, IN</publisher-loc><publisher-name>University of Notre Dame Press</publisher-name>
+      <comment>Originally work published 1956</comment>
+    </nlm-citation>
+  </ref>
+  <ref id="bibr23-0894318409338681">
+    <nlm-citation citation-type="book">
+      <collab>United Nations</collab>
+      <source>Conventions on the rights of the child</source>
+      <year>1989</year>
+      <publisher-loc>New York</publisher-loc><publisher-name>United Nations</publisher-name>
+    </nlm-citation>
+  </ref>
+  <ref id="bibr15-0894318409338681">
+    <nlm-citation citation-type="other">
+      <person-group person-group-type="author"><name><surname>Haase</surname><given-names>J.</given-names></name></person-group>
+      <source>Firm handling the information exchange study</source>
+      <year>2008</year>
+      <comment>Unpublished manuscript</comment>
+    </nlm-citation>
+  </ref>
+  <ref id="bibr5-0894318409338681">
+    <nlm-citation citation-type="web">
+      <source>Children's Ombudsman</source>
+      <year>2008</year>
+      <access-date>Retrieved on December, 4, 2008</access-date>
+      <comment>from <ext-link ext-link-type="uri" xlink:href="http://www.bo.se/Adfinity.aspx?pageid=85">http://www.bo.se/Adfinity.aspx?pageid=85</ext-link></comment>
+    </nlm-citation>
+  </ref>
+</ref-list>
+</article>`
+    };
+
+    function escapeHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function highlightXml(xml) {
+      let s = escapeHtml(xml);
+      s = s.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>');
+      s = s.replace(/(&lt;!\[CDATA\[[\s\S]*?\]\]&gt;)/g, '<span class="xml-comment">$1</span>');
+      s = s.replace(/(&lt;\/?)([\w:-]+)((?:\s+[\w:-]+\s*=\s*&quot;[^&]*?&quot;)*)\s*(\/?&gt;)/g,
+        (m, open, tag, attrs, close) => {
+          let attrHtml = attrs.replace(/([\w:-]+)(\s*=\s*)(&quot;[^&]*?&quot;)/g,
+            '<span class="xml-attr">$1</span>$2<span class="xml-value">$3</span>');
+          return `<span class="xml-bracket">${open}</span><span class="xml-tag">${tag}</span>${attrHtml}<span class="xml-bracket">${close}</span>`;
+        });
+      return s;
+    }
+    function addLineNumbers(html) {
+      return html.split('\n').map((line, i) => `<span class="line-num">${i + 1}</span>${line}`).join('\n');
+    }
+
+    const xmlScroll = document.getElementById('xml-scroll');
+    const labels = {
+      dtd: '📜 DTD & Root', front: '📋 Front Matter', body: '📝 Body & Equations',
+      table: '📊 Table Wrap', figure: '🖼 Figure', 'back-fn': '📌 Ack & Footnotes',
+      appendix: '📎 Appendix', references: '📚 References'
+    };
+
+    Object.keys(xmlBlocks).forEach(key => {
+      const block = document.createElement('div');
+      block.className = 'xml-block'; block.dataset.block = key;
+      const header = document.createElement('div');
+      header.className = 'xml-block-header';
+      header.innerHTML = `<span class="label">${labels[key]}</span><button class="copy-btn" data-copy="${key}">📋 Copy</button>`;
+      const code = document.createElement('pre');
+      code.className = 'xml-code'; code.innerHTML = addLineNumbers(highlightXml(xmlBlocks[key]));
+      block.appendChild(header); block.appendChild(code); xmlScroll.appendChild(block);
+      block.addEventListener('mouseenter', () => syncHighlight(key, true));
+      block.addEventListener('mouseleave', () => syncHighlight(key, false));
+      block.addEventListener('click', (e) => { if (!e.target.classList.contains('copy-btn')) scrollToHtmlBlock(key); });
+    });
+
+    document.getElementById('xml-count').textContent = `${Object.keys(xmlBlocks).length} blocks`;
+
+    function syncHighlight(key, on) {
+      document.querySelector(`.xml-block[data-block="${key}"]`)?.classList.toggle('highlight', on);
+      document.querySelector(`.html-block[data-block="${key}"]`)?.classList.toggle('highlight', on);
+    }
+    function scrollToHtmlBlock(key) {
+      const el = document.querySelector(`.html-block[data-block="${key}"]`);
+      if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); syncHighlight(key, true); setTimeout(() => syncHighlight(key, false), 1500); }
+    }
+    document.querySelectorAll('.html-block').forEach(block => {
+      const key = block.dataset.block;
+      block.addEventListener('mouseenter', () => syncHighlight(key, true));
+      block.addEventListener('mouseleave', () => syncHighlight(key, false));
+      block.addEventListener('click', () => {
+        const xmlEl = document.querySelector(`.xml-block[data-block="${key}"]`);
+        if (xmlEl) { xmlEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); syncHighlight(key, true); setTimeout(() => syncHighlight(key, false), 1500); }
+      });
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1800);
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('copy-btn')) {
+        navigator.clipboard.writeText(xmlBlocks[e.target.dataset.copy]).then(() => showToast('✓ XML copied!'));
+      }
+    });
+    document.getElementById('copy-all-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(Object.values(xmlBlocks).join('\n\n')).then(() => showToast('✓ All XML copied!'));
+    });
+
+    const splitContainer = document.querySelector('.split-container');
+    document.querySelectorAll('.view-toggle button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); splitContainer.dataset.view = btn.dataset.view;
+      });
+    });
+    document.getElementById('theme-btn').addEventListener('click', () => {
+      const html = document.documentElement; const isDark = html.dataset.theme === 'dark';
+      html.dataset.theme = isDark ? 'light' : 'dark';
+      document.getElementById('theme-btn').textContent = isDark ? '🌙 Dark' : '☀️ Light';
+    });
+
+    function openLightbox(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('active'); }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+    
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+    });
+  </script>
+</body>
+</html>
