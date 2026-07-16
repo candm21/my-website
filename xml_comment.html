@@ -1,38 +1,112 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)https://candm21.github.io/my-website/xml_comment.html -->
 <html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Selva JATS XML Viewer</title>
 <link rel="icon" type="image/png" href="https://candm21.github.io/my-website/logo.PNG">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/fonts/jetbrains-mono@latest/latin-400-normal.css">
 <style>
-  :root {
-    --chrome-bg: #ffffff;
-    --chrome-bg2: #f5f6f7;
-    --chrome-border: #e0e0e0;
-    --chrome-text: #2c3e50;
-    --chrome-muted: #7f8c8d;
-    --page-bg: #f5f5f5;
-    --sidebar-bg: #ffffff;
-    --accent: #3498db;
+  /* ============== APP SHELL DESIGN SYSTEM (Selva Pro look) ============== */
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#334155; --border:#475569;
+    --text:#e2e8f0; --muted:#94a3b8; --accent:#3b82f6; --accent2:#8b5cf6;
+    --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
   }
-  [data-theme="dark"] {
-    --chrome-bg: #1b2431;
-    --chrome-bg2: #232f3f;
-    --chrome-border: #34445a;
-    --chrome-text: #e8edf2;
-    --chrome-muted: #9fb0c3;
-    --page-bg: #0f151d;
-    --sidebar-bg: #1b2431;
+  html[data-shell-theme="light"]{
+    --bg:#f8fafc; --panel:#ffffff; --panel2:#f1f5f9; --border:#e2e8f0;
+    --text:#0f172a; --muted:#64748b; --accent:#2563eb; --accent2:#7c3aed;
   }
-  * { box-sizing: border-box; }
-  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 74px 20px 20px; line-height: 1.8; background: var(--page-bg); color: #2c3e50; transition: background 0.25s; }
+  .shell-scrollbar::-webkit-scrollbar{width:8px;height:8px}
+  .shell-scrollbar::-webkit-scrollbar-track{background:transparent}
+  .shell-scrollbar::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-  /* Note: .container and the article preview content intentionally keep fixed light/print
-     colors regardless of theme, to preserve the print-style reading view. Only the app
-     chrome (toolbar, sidebars, editor, modals) responds to the theme toggle. */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);transition:all .15s;white-space:nowrap;font-family:'Inter',Arial,sans-serif}
+  .btn:hover{background:var(--accent);border-color:var(--accent);color:#fff;transform:translateY(-1px)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#2563eb}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.ghost:hover{background:var(--panel2);color:var(--text);transform:none}
+  .btn.sm{padding:5px 10px;font-size:12.5px}
+  .btn.icon{padding:6px 8px}
+  .btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+  /* Rebuilt top toolbar */
+  .app-toolbar{
+    position:fixed; top:0; left:0; right:0; z-index:1000;
+    background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);
+    border-bottom:1px solid var(--border);
+    display:flex; flex-direction:column; padding:0; height:auto;
+    font-family:'Inter',Arial,sans-serif;
+    box-shadow:0 2px 12px rgba(0,0,0,.25);
+  }
+  html[data-shell-theme="light"] .app-toolbar{background:linear-gradient(135deg,#ffffff 0%,#f1f5f9 100%)}
+  .app-toolbar-row1{display:flex;align-items:center;gap:12px;padding:8px 16px}
+  .app-toolbar-title{font-weight:700;font-size:16px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .app-toolbar-clock{font-size:.8em;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .app-toolbar-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:auto}
+  .app-toolbar-row2{background:var(--panel);border-top:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+  .app-toolbar-row2 .sep{width:1px;height:20px;background:var(--border);margin:0 6px}
+  .app-toolbar-row2 .spacer{flex:1}
+
+  .toolbar-btn{padding:7px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;color:#fff;transition:all .15s;white-space:nowrap;font-family:'Inter',Arial,sans-serif;display:inline-flex;align-items:center;gap:6px}
+  .toolbar-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.25)}
+  .toolbar-btn-preview{background:var(--accent)}
+  .toolbar-btn-preview.active{background:#1d4ed8}
+  .toolbar-btn-editxml{background:var(--panel2);color:var(--text)}
+  .toolbar-btn-editxml.active{background:var(--accent2);color:#fff}
+  .toolbar-btn-browse{background:var(--accent)}
+  .toolbar-btn-refresh{background:var(--panel2);color:var(--text)}
+  .toolbar-btn-html{background:var(--ok)}
+  .toolbar-btn-pdf{background:var(--warn)}
+
+  /* App sidebars (outline / inspector) */
+  .app-sidebar{
+    position:fixed; top:var(--shell-offset,106px); bottom:0; width:280px; z-index:900;
+    background:var(--panel); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; transform:translateX(-100%); transition:transform .2s ease;
+    font-family:'Inter',Arial,sans-serif;
+  }
+  .app-sidebar.right{border-right:none;border-left:1px solid var(--border);right:0;left:auto;transform:translateX(100%)}
+  .app-sidebar.left{left:0}
+  .app-sidebar.open{transform:translateX(0)}
+  .app-sidebar-header{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
+  .app-sidebar-content{flex:1;overflow-y:auto;padding:8px;color:var(--text)}
+  .app-sidebar-content details{margin-bottom:6px}
+  .app-sidebar-content summary{padding:8px 6px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:8px}
+  .tree-item{padding:5px 8px;border-radius:4px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;color:var(--text)}
+  .tree-item:hover{background:var(--panel2)}
+  .stat-card{background:var(--panel2);border-radius:8px;padding:8px 10px}
+  .stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .stat-card .value{font-size:18px;font-weight:700;color:var(--text)}
+  .badge-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700}
+  .badge-ok{background:rgba(16,185,129,.15);color:var(--ok)}
+  .badge-err{background:rgba(239,68,68,.15);color:var(--err)}
+  .kbd{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text)}
+
+  /* Modals reused for Templates / Shortcuts / Export */
+  .shell-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center}
+  .shell-modal.show{display:flex}
+  .shell-modal-content{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:24px;width:420px;max-width:92vw;max-height:80vh;overflow-y:auto;font-family:'Inter',Arial,sans-serif;color:var(--text);box-shadow:0 10px 50px rgba(0,0,0,.5)}
+  .shell-modal-title{margin:0 0 16px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+
+  .zoom-controls{display:flex;align-items:center;gap:6px;background:var(--panel2);border-radius:6px;padding:2px 6px;color:var(--text);font-family:'Inter',Arial,sans-serif}
+  .zoom-controls button{background:none;border:none;color:var(--text);cursor:pointer;padding:4px 6px;font-size:12px}
+  .zoom-controls button:hover{color:var(--accent)}
+  .zoom-controls span{font-size:12px;min-width:38px;text-align:center;color:var(--muted)}
+
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;font-family:'Inter',Arial,sans-serif;display:flex;align-items:center;gap:8px;z-index:4000;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:all .3s}
+  .toast.err{border-color:var(--err);color:var(--err)}
+  .toast.warn{border-color:var(--warn);color:var(--warn)}
+  .toast i{color:var(--ok)}
+  .toast.err i, .toast.warn i{color:inherit}
+
+  body { font-family: Georgia, "Times New Roman", serif; margin: 0; padding: 86px 20px 20px; line-height: 1.8; background: #f5f5f5; color: #2c3e50; }
+  
   .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-
+  
   .drop-zone { border: 3px dashed #3498db; border-radius: 12px; padding: 60px 20px; text-align: center; margin-bottom: 30px; background: #ecf7fd; cursor: pointer; transition: all 0.3s; max-width: 900px; margin: 0 auto 30px; }
   .drop-zone.dragover { background: #d4edff; border-color: #2980b9; transform: scale(1.02); }
   .drop-zone-icon { font-size: 48px; margin-bottom: 15px; }
@@ -40,61 +114,7 @@
   .drop-zone-hint { font-size: 14px; color: #7f8c8d; }
   .file-input { display: none; }
   
-  /* Permanent top toolbar */
-  .app-toolbar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 54px;
-    background: var(--chrome-bg);
-    border-bottom: 1px solid var(--chrome-border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    z-index: 1000;
-    font-family: Arial, Helvetica, sans-serif;
-    gap: 10px;
-    flex-wrap: nowrap;
-    transition: background 0.25s, border-color 0.25s;
-  }
-  .app-toolbar-title {
-    display: flex; align-items: center; gap: 6px;
-    font-weight: 700; font-size: 1.02em; color: var(--chrome-text); white-space: nowrap;
-  }
-  .app-toolbar-actions { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; overflow-x: auto; scrollbar-width: thin; }
-  .app-toolbar-clock {
-    font-size: 0.78em; color: var(--chrome-muted); white-space: nowrap; font-variant-numeric: tabular-nums;
-  }
-  .toolbar-btn {
-    padding: 7px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: #fff;
-    white-space: nowrap;
-  }
-  .toolbar-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
-  .toolbar-btn-preview { background: #3498db; }
-  .toolbar-btn-preview.active { background: #2471a3; }
-  .toolbar-btn-editxml { background: #ecf0f1; color: #2c3e50; }
-  .toolbar-btn-editxml.active { background: #f1c40f; color: #2c3e50; }
-  .toolbar-btn-split { background: #ecf0f1; color: #2c3e50; }
-  .toolbar-btn-split.active { background: #8e44ad; color: #fff; }
-  .toolbar-btn-browse { background: #3498db; }
-  .toolbar-btn-refresh { background: #95a5a6; }
-  .toolbar-btn-html { background: #27ae60; }
-  .toolbar-btn-pdf { background: #e67e22; }
-  .toolbar-sep { width: 1px; align-self: stretch; margin: 8px 2px; background: var(--chrome-border); flex-shrink: 0; }
-  .toolbar-btn-icon {
-    padding: 7px 10px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s;
-    background: var(--chrome-bg2); color: var(--chrome-text); font-size: 14px; flex-shrink: 0;
-  }
-  .toolbar-btn-icon:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
-  .toolbar-btn-icon.active { background: var(--accent); color: #fff; }
+  /* (legacy light toolbar rules removed — replaced by dark shell system above) */
 
   /* Main layout: sidebar + content */
   .main-layout { display: flex; gap: 20px; align-items: flex-start; max-width: 1500px; margin: 0 auto; }
@@ -103,28 +123,28 @@
     width: 280px;
     flex-shrink: 0;
     position: sticky;
-    top: 74px;
-    max-height: calc(100vh - 94px);
+    top: 86px;
+    max-height: calc(100vh - 106px);
     overflow-y: auto;
-    background: var(--sidebar-bg);
-    color: var(--chrome-text);
+    background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     padding: 18px;
     font-family: Arial, Helvetica, sans-serif;
   }
   .toc-sidebar.visible { display: block; }
-  .toc-title { font-weight: 700; color: var(--chrome-text); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
-  .toc-group-title { font-weight: 700; color: var(--chrome-muted); font-size: 0.85em; text-transform: uppercase; margin: 16px 0 8px; }
+  .toc-title { font-weight: 700; color: #2c3e50; font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #3498db; }
+  .toc-group-title { font-weight: 700; color: #7f8c8d; font-size: 0.85em; text-transform: uppercase; margin: 16px 0 8px; }
   .toc-list, .toc-sublist { list-style: none; margin: 0; padding-left: 0; }
   .toc-sublist { padding-left: 16px; margin-top: 4px; }
   .toc-list li { margin: 4px 0; }
-  .toc-link { display: block; color: var(--chrome-text); text-decoration: none; font-size: 0.88em; padding: 4px 8px; border-radius: 4px; line-height: 1.3; }
-  .toc-link:hover { background: var(--chrome-bg2); color: #2980b9; }
+  .toc-link { display: block; color: #34495e; text-decoration: none; font-size: 0.88em; padding: 4px 8px; border-radius: 4px; line-height: 1.3; cursor: pointer; }
+  .toc-link:hover { background: #ecf7fd; color: #2980b9; }
   .toc-link.toc-float-link { color: #8e44ad; }
+  .toc-group-title.toc-backmatter { color: #8e44ad; }
   .output-flex { flex: 1; min-width: 0; }
 
-  /* Raw XML editor — fullscreen-feel modal popup (default) OR docked split pane (split mode) */
+  /* Raw XML editor — fullscreen-feel modal popup */
   .xml-editor-panel {
     display: none;
     position: fixed;
@@ -141,51 +161,6 @@
   .xml-editor-panel.maximized {
     top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; border-radius: 0;
   }
-
-  /* --- Split view: editor docked side-by-side with live preview --- */
-  #workArea.split-active {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 0 12px;
-    max-width: none;
-  }
-  #workArea.split-active .xml-editor-panel {
-    position: static;
-    display: flex;
-    width: 48%;
-    height: calc(100vh - 66px);
-    top: auto; left: auto; right: auto; bottom: auto;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-    z-index: 1;
-  }
-  #workArea.split-active .xml-editor-panel.maximized {
-    width: 48%; height: calc(100vh - 66px); border-radius: 10px;
-  }
-  #workArea.split-active .main-layout {
-    display: flex;
-    width: 52%;
-    max-width: none;
-    margin: 0;
-    height: calc(100vh - 66px);
-    overflow-y: auto;
-  }
-  #workArea.split-active .main-layout.hidden { display: flex; }
-  #workArea.split-active .toc-sidebar { top: 0; max-height: calc(100vh - 66px); }
-  #workArea.split-active .xml-modal-maximize { display: none; }
-
-  /* --- JATS snippet palette inside the editor --- */
-  .xml-snippet-bar {
-    display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px;
-    background: #232323; border-bottom: 1px solid #3a3a3a;
-  }
-  .xml-snippet-bar.collapsed { display: none; }
-  .xml-snippet-btn {
-    padding: 5px 10px; border: 1px solid #444; border-radius: 5px; background: #2c2c2c; color: #9cdcfe;
-    font-family: "Courier New", monospace; font-size: 0.78em; cursor: pointer; transition: all 0.15s;
-  }
-  .xml-snippet-btn:hover { background: #3498db; color: #fff; border-color: #3498db; }
   .xml-modal-titlebar {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 18px; background: #111; color: #ecf0f1;
@@ -238,8 +213,18 @@
   .xml-editor-status.error { color: #e74c3c; }
 
   .xml-editor-body { display: flex; flex: 1; min-height: 0; }
+  :root{
+    --xed-bg:#1e1e1e; --xed-fg:#d4d4d4; --xed-gutter-bg:#1e1e1e; --xed-gutter-fg:#6e6e6e;
+    --xed-tagbracket:#808080; --xed-tagname:#ff79c6; --xed-attrname:#8be9fd; --xed-attrvalue:#f1fa8c;
+    --xed-comment:#6272a4; --xed-entity:#bd93f9; --xed-cdata:#50fa7b; --xed-caret:#f1f1f1;
+  }
+  html[data-shell-theme="light"]{
+    --xed-bg:#ffffff; --xed-fg:#0f172a; --xed-gutter-bg:#f8fafc; --xed-gutter-fg:#94a3b8;
+    --xed-tagbracket:#94a3b8; --xed-tagname:#d6336c; --xed-attrname:#0ea5e9; --xed-attrvalue:#b45309;
+    --xed-comment:#94a3b8; --xed-entity:#7c3aed; --xed-cdata:#16a34a; --xed-caret:#0f172a;
+  }
   .xml-line-numbers {
-    flex-shrink: 0; padding: 16px 10px 16px 16px; background: #1e1e1e; color: #6e6e6e;
+    flex-shrink: 0; padding: 16px 10px 16px 16px; background: var(--xed-gutter-bg); color: var(--xed-gutter-fg);
     font-family: "Courier New", monospace; font-size: 14px; line-height: 1.6; text-align: right;
     user-select: none; overflow: hidden; white-space: pre;
   }
@@ -251,42 +236,26 @@
     white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; tab-size: 2;
   }
   .xml-highlight-overlay {
-    color: #d4d4d4; background: #1e1e1e; overflow: auto; pointer-events: none; z-index: 1;
+    color: var(--xed-fg); background: var(--xed-bg); overflow: auto; pointer-events: none; z-index: 1;
   }
-  .xml-highlight-overlay .xml-tag { color: #569cd6; }
-  .xml-highlight-overlay .xml-entity { color: #ce9178; }
+  .xml-highlight-overlay .xml-tagbracket { color: var(--xed-tagname); }
+  .xml-highlight-overlay .xml-tagname { color: var(--xed-tagname); font-weight: 600; }
+  .xml-highlight-overlay .xml-attrname { color: var(--xed-attrname); }
+  .xml-highlight-overlay .xml-attrvalue { color: var(--xed-attrvalue); }
+  .xml-highlight-overlay .xml-comment { color: var(--xed-comment); font-style: italic; }
+  .xml-highlight-overlay .xml-cdata { color: var(--xed-cdata); }
+  .xml-highlight-overlay .xml-entity { color: var(--xed-entity); }
   #xmlEditorTextarea {
-    background: transparent; color: transparent; caret-color: #f1f1f1;
+    background: transparent; color: transparent; caret-color: var(--xed-caret);
     border: none; outline: none; resize: none; overflow: auto; z-index: 2;
   }
+  .xml-modal-titlebar, .xml-editor-toolbar, .xml-editor-header { background: var(--xed-gutter-bg); }
+  html[data-shell-theme="light"] .xml-modal-titlebar { color: #0f172a; }
+  html[data-shell-theme="light"] .xml-tool-input { background: #fff; color: #0f172a; border-color: #cbd5e1; }
   .xml-editor-panel.font-large .xml-line-numbers { font-size: 18px; line-height: 1.7; }
   .xml-editor-panel.font-large .xml-highlight-overlay,
   .xml-editor-panel.font-large #xmlEditorTextarea { font-size: 18px; line-height: 1.7; }
   
-  /* --- Toast notifications --- */
-  .toast-stack { position: fixed; bottom: 20px; right: 20px; z-index: 5000; display: flex; flex-direction: column; gap: 8px; font-family: Arial, Helvetica, sans-serif; }
-  .toast { background: #2c3e50; color: #fff; padding: 12px 18px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); font-size: 13.5px; display: flex; align-items: center; gap: 10px; border-left: 4px solid #27ae60; animation: toastIn 0.25s ease; max-width: 340px; }
-  .toast.warn { border-left-color: #f39c12; }
-  .toast.err { border-left-color: #e74c3c; }
-  @keyframes toastIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-  /* --- Generic modal (shortcuts / version history) --- */
-  .app-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 4000; font-family: Arial, Helvetica, sans-serif; }
-  .app-modal-overlay.show { display: flex; }
-  .app-modal-box { background: var(--chrome-bg); color: var(--chrome-text); border-radius: 10px; padding: 22px 26px; width: 440px; max-width: 90vw; max-height: 78vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
-  .app-modal-box h3 { margin: 0 0 14px; font-size: 1.15em; display: flex; align-items: center; gap: 8px; }
-  .app-modal-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13.5px; border-bottom: 1px solid var(--chrome-border); }
-  .app-modal-kbd { display: inline-block; padding: 2px 7px; background: var(--chrome-bg2); border: 1px solid var(--chrome-border); border-radius: 4px; font-size: 11.5px; font-family: monospace; }
-  .app-modal-close-btn { margin-top: 16px; float: right; padding: 7px 16px; border: none; border-radius: 6px; background: #95a5a6; color: #fff; font-weight: 600; cursor: pointer; }
-  .app-modal-close-btn:hover { background: #7f8c8d; }
-  .version-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; background: var(--chrome-bg2); font-size: 12.5px; cursor: pointer; }
-  .version-item:hover { outline: 1px solid var(--accent); }
-  .version-item span.v-time { flex: 1; }
-  .version-item button { border: none; background: transparent; color: #e74c3c; cursor: pointer; font-weight: 700; padding: 2px 6px; }
-  .version-empty { color: var(--chrome-muted); font-size: 13px; padding: 10px 0; }
-  .diff-added { background: rgba(39,174,96,0.15); color: #27ae60; padding: 1px 4px; }
-  .diff-removed { background: rgba(231,76,60,0.15); color: #e74c3c; padding: 1px 4px; text-decoration: line-through; }
-
   .export-bar { max-width: 900px; margin: 0 auto 20px; display: none; justify-content: flex-end; gap: 10px; }
   .export-bar.visible { display: flex; }
   .export-btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
@@ -436,6 +405,31 @@
   /* XRef styling */
   .xref { color: #e74c3c; font-weight: 600; text-decoration: underline; cursor: pointer; }
   .xref:hover { color: #c0392b; background: #fff5f5; }
+
+  /* ---- Tag Lookup mode ---- */
+  #tagLookupBtn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  .tag-lookup-active [data-jidx] { cursor: help; }
+  .tag-lookup-active [data-jidx]:hover { outline: 1.5px dashed var(--accent2); outline-offset: 1px; }
+  .jats-tag-highlight { outline: 2px solid var(--accent2) !important; outline-offset: 1px; background: rgba(139,92,246,.08); }
+  .jats-tag-popover {
+    position: fixed; z-index: 6000; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; width: 380px; max-width: 90vw;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35); font-family: 'Inter', Arial, sans-serif; color: var(--text);
+  }
+  .jats-tag-popover .tag-name {
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent2);
+    font-size: 13.5px; margin: 0 26px 8px 0; display: block;
+  }
+  .jats-tag-popover pre {
+    background: var(--panel2); border-radius: 6px; padding: 8px 10px; font-size: 11.5px;
+    max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    margin: 0 0 10px; font-family: 'JetBrains Mono', monospace; color: var(--text); border: 1px solid var(--border);
+  }
+  .jats-tag-popover .close-x {
+    position: absolute; top: 8px; right: 10px; cursor: pointer; color: var(--muted); font-size: 13px;
+    background: none; border: none; padding: 2px 4px;
+  }
+  .jats-tag-popover .close-x:hover { color: var(--text); }
   
   /* Inline formula styling */
   .inline-formula { 
@@ -674,8 +668,7 @@
       padding: 0;
       margin: 0;
     }
-    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons, .app-toolbar, .toc-sidebar,
-    .toast-stack, .app-modal-overlay, .xml-editor-panel, .xml-snippet-bar {
+    .drop-zone, .export-bar, .validation-section, .metadata-section, .floating-buttons, .app-toolbar, .toc-sidebar { 
       display: none !important; 
     }
     .article-type {
@@ -738,414 +731,40 @@
     .section-id, .table-id, .fig-id, .citation-tooltip { display: none !important; }
   }
 </style>
-<style type="text/css">.CtxtMenu_InfoClose {  top:.2em; right:.2em;}
-.CtxtMenu_InfoContent {  overflow:auto; text-align:left; font-size:80%;  padding:.4em .6em; border:1px inset; margin:1em 0px;  max-height:20em; max-width:30em; background-color:#EEEEEE;  white-space:normal;}
-.CtxtMenu_Info.CtxtMenu_MousePost {outline:none;}
-.CtxtMenu_Info {  position:fixed; left:50%; width:auto; text-align:center;  border:3px outset; padding:1em 2em; background-color:#DDDDDD;  color:black;  cursor:default; font-family:message-box; font-size:120%;  font-style:normal; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 15px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius:15px;               /* Safari and Chrome */  -moz-border-radius:15px;                  /* Firefox */  -khtml-border-radius:15px;                /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */  filter:progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color="gray", Positive="true"); /* IE */}
-</style><style type="text/css">.CtxtMenu_MenuClose {  position:absolute;  cursor:pointer;  display:inline-block;  border:2px solid #AAA;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  font-family: "Courier New", Courier;  font-size:24px;  color:#F0F0F0}
-.CtxtMenu_MenuClose span {  display:block; background-color:#AAA; border:1.5px solid;  border-radius:18px;  -webkit-border-radius: 18px;             /* Safari and Chrome */  -moz-border-radius: 18px;                /* Firefox */  -khtml-border-radius: 18px;              /* Konqueror */  line-height:0;  padding:8px 0 6px     /* may need to be browser-specific */}
-.CtxtMenu_MenuClose:hover {  color:white!important;  border:2px solid #CCC!important}
-.CtxtMenu_MenuClose:hover span {  background-color:#CCC!important}
-.CtxtMenu_MenuClose:hover:focus {  outline:none}
-</style><style type="text/css">.CtxtMenu_Menu {  position:absolute;  background-color:white;  color:black;  width:auto; padding:5px 0px;  border:1px solid #CCCCCC; margin:0; cursor:default;  font: menu; text-align:left; text-indent:0; text-transform:none;  line-height:normal; letter-spacing:normal; word-spacing:normal;  word-wrap:normal; white-space:nowrap; float:none; z-index:201;  border-radius: 5px;                     /* Opera 10.5 and IE9 */  -webkit-border-radius: 5px;             /* Safari and Chrome */  -moz-border-radius: 5px;                /* Firefox */  -khtml-border-radius: 5px;              /* Konqueror */  box-shadow:0px 10px 20px #808080;         /* Opera 10.5 and IE9 */  -webkit-box-shadow:0px 10px 20px #808080; /* Safari 3 & Chrome */  -moz-box-shadow:0px 10px 20px #808080;    /* Forefox 3.5 */  -khtml-box-shadow:0px 10px 20px #808080;  /* Konqueror */}
-.CtxtMenu_MenuItem {  padding: 1px 2em;  background:transparent;}
-.CtxtMenu_MenuArrow {  position:absolute; right:.5em; padding-top:.25em; color:#666666;  font-family: null; font-size: .75em}
-.CtxtMenu_MenuActive .CtxtMenu_MenuArrow {color:white}
-.CtxtMenu_MenuArrow.CtxtMenu_RTL {left:.5em; right:auto}
-.CtxtMenu_MenuCheck {  position:absolute; left:.7em;  font-family: null}
-.CtxtMenu_MenuCheck.CtxtMenu_RTL { right:.7em; left:auto }
-.CtxtMenu_MenuRadioCheck {  position:absolute; left: .7em;}
-.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL {  right: .7em; left:auto}
-.CtxtMenu_MenuInputBox {  padding-left: 1em; right:.5em; color:#666666;  font-family: null;}
-.CtxtMenu_MenuInputBox.CtxtMenu_RTL {  left: .1em;}
-.CtxtMenu_MenuComboBox {  left:.1em; padding-bottom:.5em;}
-.CtxtMenu_MenuSlider {  left: .1em;}
-.CtxtMenu_SliderValue {  position:absolute; right:.1em; padding-top:.25em; color:#333333;  font-size: .75em}
-.CtxtMenu_SliderBar {  outline: none; background: #d3d3d3}
-.CtxtMenu_MenuLabel {  padding: 1px 2em 3px 1.33em;  font-style:italic}
-.CtxtMenu_MenuRule {  border-top: 1px solid #DDDDDD;  margin: 4px 3px;}
-.CtxtMenu_MenuDisabled {  color:GrayText}
-.CtxtMenu_MenuActive {  background-color: #606872;  color: white;}
-.CtxtMenu_MenuDisabled:focus {  background-color: #E8E8E8}
-.CtxtMenu_MenuLabel:focus {  background-color: #E8E8E8}
-.CtxtMenu_ContextMenu:focus {  outline:none}
-.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus {  outline:none}
-.CtxtMenu_SelectionMenu {  position:relative; float:left;  border-bottom: none; -webkit-box-shadow:none; -webkit-border-radius:0px; }
-.CtxtMenu_SelectionItem {  padding-right: 1em;}
-.CtxtMenu_Selection {  right: 40%; width:50%; }
-.CtxtMenu_SelectionBox {  padding: 0em; max-height:20em; max-width: none;  background-color:#FFFFFF;}
-.CtxtMenu_SelectionDivider {  clear: both; border-top: 2px solid #000000;}
-.CtxtMenu_Menu .CtxtMenu_MenuClose {  top:-10px; left:-10px}
-</style><style id="MJX-CHTML-styles">
-mjx-container[jax="CHTML"] {
-  line-height: 0;
-}
-
-mjx-container [space="1"] {
-  margin-left: .111em;
-}
-
-mjx-container [space="2"] {
-  margin-left: .167em;
-}
-
-mjx-container [space="3"] {
-  margin-left: .222em;
-}
-
-mjx-container [space="4"] {
-  margin-left: .278em;
-}
-
-mjx-container [space="5"] {
-  margin-left: .333em;
-}
-
-mjx-container [rspace="1"] {
-  margin-right: .111em;
-}
-
-mjx-container [rspace="2"] {
-  margin-right: .167em;
-}
-
-mjx-container [rspace="3"] {
-  margin-right: .222em;
-}
-
-mjx-container [rspace="4"] {
-  margin-right: .278em;
-}
-
-mjx-container [rspace="5"] {
-  margin-right: .333em;
-}
-
-mjx-container [size="s"] {
-  font-size: 70.7%;
-}
-
-mjx-container [size="ss"] {
-  font-size: 50%;
-}
-
-mjx-container [size="Tn"] {
-  font-size: 60%;
-}
-
-mjx-container [size="sm"] {
-  font-size: 85%;
-}
-
-mjx-container [size="lg"] {
-  font-size: 120%;
-}
-
-mjx-container [size="Lg"] {
-  font-size: 144%;
-}
-
-mjx-container [size="LG"] {
-  font-size: 173%;
-}
-
-mjx-container [size="hg"] {
-  font-size: 207%;
-}
-
-mjx-container [size="HG"] {
-  font-size: 249%;
-}
-
-mjx-container [width="full"] {
-  width: 100%;
-}
-
-mjx-box {
-  display: inline-block;
-}
-
-mjx-block {
-  display: block;
-}
-
-mjx-itable {
-  display: inline-table;
-}
-
-mjx-row {
-  display: table-row;
-}
-
-mjx-row > * {
-  display: table-cell;
-}
-
-mjx-mtext {
-  display: inline-block;
-}
-
-mjx-mstyle {
-  display: inline-block;
-}
-
-mjx-merror {
-  display: inline-block;
-  color: red;
-  background-color: yellow;
-}
-
-mjx-mphantom {
-  visibility: hidden;
-}
-
-_::-webkit-full-page-media, _:future, :root mjx-container {
-  will-change: opacity;
-}
-
-mjx-assistive-mml {
-  position: absolute !important;
-  top: 0px;
-  left: 0px;
-  clip: rect(1px, 1px, 1px, 1px);
-  padding: 1px 0px 0px 0px !important;
-  border: 0px !important;
-  display: block !important;
-  width: auto !important;
-  overflow: hidden !important;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-mjx-assistive-mml[display="block"] {
-  width: 100% !important;
-}
-
-mjx-c::before {
-  display: block;
-  width: 0;
-}
-
-.MJX-TEX {
-  font-family: MJXZERO, MJXTEX;
-}
-
-.TEX-B {
-  font-family: MJXZERO, MJXTEX-B;
-}
-
-.TEX-I {
-  font-family: MJXZERO, MJXTEX-I;
-}
-
-.TEX-MI {
-  font-family: MJXZERO, MJXTEX-MI;
-}
-
-.TEX-BI {
-  font-family: MJXZERO, MJXTEX-BI;
-}
-
-.TEX-S1 {
-  font-family: MJXZERO, MJXTEX-S1;
-}
-
-.TEX-S2 {
-  font-family: MJXZERO, MJXTEX-S2;
-}
-
-.TEX-S3 {
-  font-family: MJXZERO, MJXTEX-S3;
-}
-
-.TEX-S4 {
-  font-family: MJXZERO, MJXTEX-S4;
-}
-
-.TEX-A {
-  font-family: MJXZERO, MJXTEX-A;
-}
-
-.TEX-C {
-  font-family: MJXZERO, MJXTEX-C;
-}
-
-.TEX-CB {
-  font-family: MJXZERO, MJXTEX-CB;
-}
-
-.TEX-FR {
-  font-family: MJXZERO, MJXTEX-FR;
-}
-
-.TEX-FRB {
-  font-family: MJXZERO, MJXTEX-FRB;
-}
-
-.TEX-SS {
-  font-family: MJXZERO, MJXTEX-SS;
-}
-
-.TEX-SSB {
-  font-family: MJXZERO, MJXTEX-SSB;
-}
-
-.TEX-SSI {
-  font-family: MJXZERO, MJXTEX-SSI;
-}
-
-.TEX-SC {
-  font-family: MJXZERO, MJXTEX-SC;
-}
-
-.TEX-T {
-  font-family: MJXZERO, MJXTEX-T;
-}
-
-.TEX-V {
-  font-family: MJXZERO, MJXTEX-V;
-}
-
-.TEX-VB {
-  font-family: MJXZERO, MJXTEX-VB;
-}
-
-mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
-  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
-}
-
-@font-face /* 0 */ {
-  font-family: MJXZERO;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
-}
-
-@font-face /* 1 */ {
-  font-family: MJXTEX;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
-}
-
-@font-face /* 2 */ {
-  font-family: MJXTEX-B;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
-}
-
-@font-face /* 3 */ {
-  font-family: MJXTEX-I;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
-}
-
-@font-face /* 4 */ {
-  font-family: MJXTEX-MI;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
-}
-
-@font-face /* 5 */ {
-  font-family: MJXTEX-BI;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
-}
-
-@font-face /* 6 */ {
-  font-family: MJXTEX-S1;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
-}
-
-@font-face /* 7 */ {
-  font-family: MJXTEX-S2;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
-}
-
-@font-face /* 8 */ {
-  font-family: MJXTEX-S3;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
-}
-
-@font-face /* 9 */ {
-  font-family: MJXTEX-S4;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
-}
-
-@font-face /* 10 */ {
-  font-family: MJXTEX-A;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
-}
-
-@font-face /* 11 */ {
-  font-family: MJXTEX-C;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
-}
-
-@font-face /* 12 */ {
-  font-family: MJXTEX-CB;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
-}
-
-@font-face /* 13 */ {
-  font-family: MJXTEX-FR;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
-}
-
-@font-face /* 14 */ {
-  font-family: MJXTEX-FRB;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
-}
-
-@font-face /* 15 */ {
-  font-family: MJXTEX-SS;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
-}
-
-@font-face /* 16 */ {
-  font-family: MJXTEX-SSB;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
-}
-
-@font-face /* 17 */ {
-  font-family: MJXTEX-SSI;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
-}
-
-@font-face /* 18 */ {
-  font-family: MJXTEX-SC;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
-}
-
-@font-face /* 19 */ {
-  font-family: MJXTEX-T;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
-}
-
-@font-face /* 20 */ {
-  font-family: MJXTEX-V;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
-}
-
-@font-face /* 21 */ {
-  font-family: MJXTEX-VB;
-  src: url("https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
-}
-</style></head>
+</head>
 <body>
   <!-- Permanent top toolbar -->
-  <div class="app-toolbar">
-    <div class="app-toolbar-title"><span>📄</span> Selva JATS XML Viewer</div>
-    <div id="appClock" class="app-toolbar-clock"></div>
-    <div class="app-toolbar-actions">
-      <button id="tabPreviewBtn" class="toolbar-btn toolbar-btn-preview active">👁️ Preview</button>
-      <button id="tabXmlBtn" class="toolbar-btn toolbar-btn-editxml">📝 Edit XML</button>
-      <button id="splitBtn" class="toolbar-btn toolbar-btn-split" title="Edit and preview side by side">⬌ Split</button>
-      <button id="browseBtn" class="toolbar-btn toolbar-btn-browse">📁 Browse</button>
-      <button id="refreshBtn" class="toolbar-btn toolbar-btn-refresh">🔄 Refresh</button>
-      <button class="toolbar-btn toolbar-btn-html" onclick="exportHTML()">📤 Export HTML</button>
-      <button class="toolbar-btn toolbar-btn-pdf" onclick="exportPDF()">🖨️ Print / Save as PDF</button>
-      <div class="toolbar-sep"></div>
-      <button id="snippetToggleBtn" class="toolbar-btn-icon" title="Toggle JATS snippet palette">🧩</button>
-      <button id="historyBtn" class="toolbar-btn-icon" title="Version history">🕓</button>
-      <button id="shortcutsBtn" class="toolbar-btn-icon" title="Keyboard shortcuts">⌨️</button>
-      <button id="themeToggleBtn" class="toolbar-btn-icon" title="Toggle dark/light theme">🌙</button>
+  <div class="app-toolbar" id="appToolbar">
+    <div class="app-toolbar-row1">
+      <div class="app-toolbar-title"><span>📝</span> Selva JATS XML Viewer</div>
+      <div id="appClock" class="app-toolbar-clock"></div>
+      <div class="app-toolbar-actions">
+        <button id="tabPreviewBtn" class="toolbar-btn toolbar-btn-preview active"><span>👁️</span> Preview</button>
+        <button id="tabXmlBtn" class="toolbar-btn toolbar-btn-editxml"><span>📝</span> Edit XML</button>
+        <button class="btn sm ghost icon" id="shortcutsBtn" title="Keyboard shortcuts"><span>⌨️</span></button>
+        <button class="btn sm ghost icon" id="themeToggleBtn" title="Toggle shell theme"><span id="shellThemeIcon">🌙</span></button>
+      </div>
+    </div>
+    <div class="app-toolbar-row2">
+      <button id="tocToggleBtn" class="btn sm" title="Show/hide table of contents"><span>📑</span> TOC</button>
+      <button id="tagLookupBtn" class="btn sm" title="Click any preview content to see which JATS tag produced it"><span>🏷️</span> Tag Lookup</button>
+      <button id="browseBtn" class="btn sm"><span>📁</span> Browse</button>
+      <button id="refreshBtn" class="btn sm" title="Reload to the home/start screen"><span>🏠</span> Refresh</button>
+      <button id="templatesBtn" class="btn sm"><span>🗂️</span> Templates</button>
+      <div class="sep"></div>
+      <button id="undoBtn" class="btn sm icon" title="Undo (Ctrl+Z)"><span>↩️</span></button>
+      <button id="redoBtn" class="btn sm icon" title="Redo (Ctrl+Y)"><span>↪️</span></button>
+      <div class="sep"></div>
+      <button id="quickFindBtn" class="btn sm" title="Find / Replace"><span>🔍</span> Find</button>
+      <button id="goToLineBtn" class="btn sm" title="Go to line (Ctrl+G)"><span>➡️</span> Go to</button>
+      <div class="sep"></div>
+      <button id="revalidateBtn" class="btn sm" title="Re-run validation"><span>✅</span> Validate</button>
+      <div class="sep"></div>
+      <button id="inspectorBtn" class="btn sm"><span>📋</span> Inspector</button>
+      <button id="fullscreenBtn" class="btn sm" title="Full screen (F9)"><span id="fullscreenIcon">⛶</span> Full Screen</button>
+      <div class="spacer"></div>
+      <button id="exportMenuBtn" class="btn sm"><span>📤</span> Export <span style="font-size:10px">▾</span></button>
+      <button id="printPdfBtn" class="btn sm"><span>🖨️</span> Print / PDF</button>
     </div>
   </div>
 
@@ -1184,8 +803,7 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
     <div id="errorsList" class="errors-list"></div>
   </div>
 
-  <div id="workArea">
-  <!-- Raw XML Editor Modal / Split pane -->
+  <!-- Raw XML Editor Modal -->
   <div id="xmlEditorPanel" class="xml-editor-panel">
     <div class="xml-modal-titlebar">
       <span>📝 Raw XML Editor</span>
@@ -1199,20 +817,6 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
         <button id="closeXmlModalBtn" type="button" class="xml-modal-close">✕ Close</button>
       </span>
     </div>
-    <div id="xmlSnippetBar" class="xml-snippet-bar collapsed">
-      <button class="xml-snippet-btn" data-snippet="contrib">&lt;contrib&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="aff">&lt;aff&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="abstract">&lt;abstract&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="sec">&lt;sec&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="fig">&lt;fig&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="table">&lt;table-wrap&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="ref">&lt;ref&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="ref-list">&lt;ref-list&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="permissions">&lt;permissions&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="funding">&lt;funding-group&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="fn">&lt;fn&gt;</button>
-      <button class="xml-snippet-btn" data-snippet="disp-formula">&lt;disp-formula&gt;</button>
-    </div>
     <div class="xml-editor-toolbar">
       <input type="text" id="xmlFindInput" placeholder="Find..." class="xml-tool-input">
       <input type="text" id="xmlReplaceInput" placeholder="Replace with..." class="xml-tool-input">
@@ -1221,8 +825,6 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
       <button id="xmlReplaceAllBtn" type="button">Replace All</button>
       <span id="xmlFindStatus" class="xml-find-status"></span>
       <span class="xml-toolbar-spacer"></span>
-      <span id="autoSaveStatus" class="xml-find-status"></span>
-      <button id="saveVersionBtn" type="button">📌 Snapshot</button>
       <button id="updatePreviewBtn" type="button" class="xml-primary-btn">🔄 Update Preview</button>
       <button id="downloadXmlBtn" type="button" class="xml-primary-btn">⬇️ Download XML</button>
     </div>
@@ -1243,46 +845,78 @@ mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
     <div id="tocSidebar" class="toc-sidebar"></div>
     <div id="output" class="output-flex"></div>
   </div>
+
+  <!-- Inspector sidebar (stats / validation / version history) -->
+  <div class="app-sidebar right" id="inspectorSidebar">
+    <div class="app-sidebar-header">
+      <span><span>📋</span> Inspector</span>
+      <button class="btn sm ghost icon" id="closeInspectorBtn"><span>✕</span></button>
+    </div>
+    <div class="app-sidebar-content shell-scrollbar">
+      <details open>
+        <summary><span style="color:var(--accent)">📊</span> Statistics</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0">
+          <div class="stat-card"><div class="label">Lines</div><div class="value" id="insLines">0</div></div>
+          <div class="stat-card"><div class="label">Words</div><div class="value" id="insWords">0</div></div>
+          <div class="stat-card"><div class="label">Tags</div><div class="value" id="insTags">0</div></div>
+          <div class="stat-card"><div class="label">Read Time</div><div class="value" id="insRead">0m</div></div>
+        </div>
+      </details>
+      <details open>
+        <summary><span style="color:var(--warn)">⚠️</span> Validation <span class="badge-pill badge-ok" id="insValBadge">OK</span></summary>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px" id="insValSummary">No errors found.</div>
+      </details>
+      <details>
+        <summary><span style="color:var(--accent2)">🕘</span> Version History</summary>
+        <div id="insHistoryList" style="margin-top:8px"></div>
+        <button class="btn sm" style="margin-top:8px;width:100%" id="saveSnapshotBtn"><span>📸</span> Save Snapshot</button>
+      </details>
+    </div>
   </div>
 
-  <!-- Toast notifications -->
-  <div id="toastStack" class="toast-stack"></div>
+  <!-- Export menu popover -->
+  <div class="shell-modal" id="exportModal">
+    <div class="shell-modal-content">
+      <h3 class="shell-modal-title"><span style="color:var(--accent)">📤</span> Export Document</h3>
+      <div style="display:grid;gap:8px">
+        <button class="btn" style="justify-content:flex-start" id="exportXmlOpt"><span>🗂️</span> Download XML</button>
+        <button class="btn" style="justify-content:flex-start" id="exportHtmlOpt"><span>🌐</span> HTML (standalone)</button>
+        <button class="btn" style="justify-content:flex-start" id="exportPdfOpt"><span>📕</span> PDF (print to PDF)</button>
+        <button class="btn" style="justify-content:flex-start" id="exportJsonOpt"><span>📃</span> Metadata (JSON)</button>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn ghost" id="closeExportModalBtn">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Templates modal -->
+  <div class="shell-modal" id="templatesModal">
+    <div class="shell-modal-content">
+      <h3 class="shell-modal-title"><span style="color:var(--accent)">🗂️</span> JATS Templates</h3>
+      <div style="display:grid;gap:8px">
+        <button class="btn" style="justify-content:flex-start" data-template="research"><span>🧪</span> Research Article (equations, tables, xrefs)</button>
+        <button class="btn" style="justify-content:flex-start" data-template="review"><span>📖</span> Review Article</button>
+        <button class="btn" style="justify-content:flex-start" data-template="letter"><span>✉️</span> Letter / Editorial</button>
+      </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn ghost" id="closeTemplatesModalBtn">Close</button></div>
+    </div>
+  </div>
 
   <!-- Keyboard shortcuts modal -->
-  <div id="shortcutsModal" class="app-modal-overlay">
-    <div class="app-modal-box">
-      <h3>⌨️ Keyboard Shortcuts</h3>
-      <div class="app-modal-row"><span>Toggle Split View</span><span class="app-modal-kbd">Ctrl+Shift+S</span></div>
-      <div class="app-modal-row"><span>Save Snapshot</span><span class="app-modal-kbd">Ctrl+S</span></div>
-      <div class="app-modal-row"><span>Find in XML</span><span class="app-modal-kbd">Ctrl+F</span> (while editor focused)</div>
-      <div class="app-modal-row"><span>Escape editor / modal</span><span class="app-modal-kbd">Esc</span></div>
-      <div class="app-modal-row"><span>Toggle theme</span><span class="app-modal-kbd">Ctrl+Shift+D</span></div>
-      <button class="app-modal-close-btn" onclick="closeAppModal('shortcutsModal')">Close</button>
-    </div>
-  </div>
-
-  <!-- Version history modal -->
-  <div id="historyModal" class="app-modal-overlay">
-    <div class="app-modal-box">
-      <h3>🕓 Version History</h3>
-      <div id="historyList"></div>
-      <div style="margin-top:10px;display:flex;gap:8px;">
-        <button class="app-modal-close-btn" style="float:none;background:#8e44ad;" onclick="showDiffVsLast()">Show diff vs. last snapshot</button>
-        <button class="app-modal-close-btn" style="float:none;" onclick="closeAppModal('historyModal')">Close</button>
+  <div class="shell-modal" id="shortcutsModal">
+    <div class="shell-modal-content">
+      <h3 class="shell-modal-title"><span style="color:var(--accent)">⌨️</span> Keyboard Shortcuts</h3>
+      <div style="display:grid;gap:8px;font-size:13px">
+        <div style="display:flex;justify-content:space-between"><span>Toggle Edit XML</span><span><span class="kbd">Ctrl</span>+<span class="kbd">E</span></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Full Screen</span><span><span class="kbd">F9</span></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Go to Line</span><span><span class="kbd">Ctrl</span>+<span class="kbd">G</span></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Toggle Inspector</span><span><span class="kbd">Ctrl</span>+<span class="kbd">I</span></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Download XML</span><span><span class="kbd">Ctrl</span>+<span class="kbd">S</span></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Close modal / Preview</span><span><span class="kbd">Esc</span></span></div>
       </div>
+      <div style="margin-top:16px;text-align:right"><button class="btn ghost" id="closeShortcutsModalBtn">Close</button></div>
     </div>
   </div>
 
-  <!-- Diff view modal -->
-  <div id="diffModal" class="app-modal-overlay">
-    <div class="app-modal-box" style="width:640px;">
-      <h3>🔀 Diff vs. Last Snapshot</h3>
-      <div id="diffContent" style="font-family:'Courier New',monospace;font-size:12.5px;line-height:1.6;max-height:50vh;overflow:auto;"></div>
-      <button class="app-modal-close-btn" onclick="closeAppModal('diffModal')">Close</button>
-    </div>
-  </div>
-
-<script src="./Selva JATS XML Viewer_files/tex-mml-chtml.min.js.download"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
 <script>
 const dropZone = document.getElementById('dropZone');
@@ -1340,26 +974,28 @@ let totalRefs = 0;
 // Track unstyled elements
 let unstyledElements = new Set();
 
+// ---- Tag Lookup: registry mapping rendered nodes back to their source XML element ----
+let elementRegistry = [];
+let tagLookupMode = false;
+function jReg(el) {
+  const idx = elementRegistry.length;
+  elementRegistry.push(el);
+  return idx;
+}
+function jAttr(el) {
+  return el ? ` data-jidx="${jReg(el)}"` : '';
+}
+
 // Event listeners for floating buttons
 browseBtn.addEventListener('click', () => fileInput.click());
 refreshBtn.addEventListener('click', () => {
-  if (currentXMLText) {
-    validateXML(currentXMLText);
-    processXMLText(currentXMLText);
-  } else if (currentFile) {
-    processFile(currentFile);
-  } else {
-    toast('No file loaded. Please browse for a file first.', 'warn');
-  }
+  // Refresh now behaves like a "Home" button: reload back to the initial,
+  // empty drop-zone state rather than re-validating the current document.
+  window.location.reload();
 });
 
 // --- Tab switching ---
-const workArea = document.getElementById('workArea');
-const splitBtn = document.getElementById('splitBtn');
-
 function showTab(tab) {
-  workArea.classList.remove('split-active');
-  splitBtn.classList.remove('active');
   const showXml = tab === 'xml';
   xmlEditorPanel.classList.toggle('visible', showXml);
   previewPanel.classList.toggle('hidden', showXml);
@@ -1376,30 +1012,6 @@ function showTab(tab) {
 tabPreviewBtn.addEventListener('click', () => showTab('preview'));
 tabXmlBtn.addEventListener('click', () => showTab('xml'));
 closeXmlModalBtn.addEventListener('click', () => showTab('preview'));
-
-// --- Split view: editor + live preview side by side ---
-function toggleSplit() {
-  const active = workArea.classList.toggle('split-active');
-  splitBtn.classList.toggle('active', active);
-  if (active) {
-    xmlEditorPanel.classList.remove('maximized');
-    xmlEditorPanel.classList.add('visible');
-    previewPanel.classList.remove('hidden');
-    document.querySelectorAll('.preview-extra').forEach(el => el.classList.remove('hidden'));
-    tabXmlBtn.classList.add('active');
-    tabPreviewBtn.classList.add('active');
-    xmlEditorTextarea.value = currentXMLText || '';
-    updateLineNumbers();
-    updateHighlight();
-    setEditorStatus(true);
-    toast('Split view on \u2014 edits update the preview as you type');
-  } else {
-    tabXmlBtn.classList.remove('active');
-    tabPreviewBtn.classList.remove('active');
-    showTab('preview');
-  }
-}
-splitBtn.addEventListener('click', toggleSplit);
 
 maximizeXmlBtn.addEventListener('click', () => {
   const nowMax = xmlEditorPanel.classList.toggle('maximized');
@@ -1427,10 +1039,7 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.app-modal-overlay.show').forEach(m => m.classList.remove('show'));
-    if (xmlEditorPanel.classList.contains('visible') && !workArea.classList.contains('split-active')) showTab('preview');
-  }
+  if (e.key === 'Escape' && xmlEditorPanel.classList.contains('visible')) showTab('preview');
 });
 
 function setEditorStatus(ok, message) {
@@ -1446,16 +1055,30 @@ function updateLineNumbers() {
   xmlLineNumbers.textContent = nums;
 }
 
-// --- Syntax highlighting: tags <xx></xx> and entities &xxx; ---
+// --- Syntax highlighting: tags, attributes, comments, CDATA, entities ---
+function highlightXmlTag(tagText) {
+  // tagText looks like "&lt;/?name attr="val" ...(/)&gt;"
+  const m = tagText.match(/^(&lt;\/?)([a-zA-Z_][\w:.-]*)([\s\S]*?)(\/?)(&gt;)$/);
+  if (!m) return `<span class="xml-tagname">${tagText}</span>`;
+  const [, open, name, attrsPart, selfClose, close] = m;
+  const attrsHtml = attrsPart.replace(
+    /([a-zA-Z_:][\w:.-]*)(\s*=\s*)("[^"]*"|'[^']*')/g,
+    (whole, attrName, eq, attrVal) =>
+      `<span class="xml-attrname">${attrName}</span>${eq}<span class="xml-attrvalue">${attrVal}</span>`
+  );
+  return `<span class="xml-tagbracket">${open}</span><span class="xml-tagname">${name}</span>${attrsHtml}<span class="xml-tagbracket">${selfClose}${close}</span>`;
+}
 function highlightXml(text) {
   const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   return escaped.replace(
-    /(&lt;\/?[a-zA-Z][^&]*?&gt;)|(&amp;#x?[0-9a-fA-F]+;|&amp;[a-zA-Z][a-zA-Z0-9]*;)/g,
-    (match, tag, entity) => {
-      if (tag) return `<span class="xml-tag">${tag}</span>`;
+    /(&lt;!--[\s\S]*?--&gt;)|(&lt;!\[CDATA\[[\s\S]*?\]\]&gt;)|(&lt;\/?[a-zA-Z_][^&]*?&gt;)|(&amp;#x?[0-9a-fA-F]+;|&amp;[a-zA-Z][a-zA-Z0-9]*;)/g,
+    (match, comment, cdata, tag, entity) => {
+      if (comment) return `<span class="xml-comment">${comment}</span>`;
+      if (cdata) return `<span class="xml-cdata">${cdata}</span>`;
+      if (tag) return highlightXmlTag(tag);
       if (entity) return `<span class="xml-entity">${entity}</span>`;
       return match;
     }
@@ -1495,209 +1118,6 @@ xmlEditorTextarea.addEventListener('input', () => {
   xmlEditorDebounceTimer = setTimeout(() => {
     applyEditorText(xmlEditorTextarea.value);
   }, 700);
-  autoSaveDraft();
-});
-
-/* ======================================================================
-   TOAST NOTIFICATIONS
-   ====================================================================== */
-const toastStack = document.getElementById('toastStack');
-function toast(message, type) {
-  const el = document.createElement('div');
-  el.className = 'toast' + (type ? ' ' + type : '');
-  const icon = type === 'err' ? '\u26d4' : type === 'warn' ? '\u26a0\ufe0f' : '\u2705';
-  el.innerHTML = '<span>' + icon + '</span><span>' + message + '</span>';
-  toastStack.appendChild(el);
-  setTimeout(() => {
-    el.style.transition = 'opacity 0.3s, transform 0.3s';
-    el.style.opacity = '0';
-    el.style.transform = 'translateX(30px)';
-    setTimeout(() => el.remove(), 300);
-  }, 3200);
-}
-
-/* ======================================================================
-   THEME TOGGLE (chrome-only \u2014 the article preview stays print-style)
-   ====================================================================== */
-const themeToggleBtn = document.getElementById('themeToggleBtn');
-function applyTheme(theme) {
-  document.body.setAttribute('data-theme', theme);
-  themeToggleBtn.textContent = theme === 'dark' ? '\u2600\ufe0f' : '\ud83c\udf19';
-  try { localStorage.setItem('selva_theme', theme); } catch (e) { /* storage may be unavailable */ }
-}
-(function initTheme() {
-  let saved = 'light';
-  try { saved = localStorage.getItem('selva_theme') || 'light'; } catch (e) { /* storage may be unavailable */ }
-  applyTheme(saved);
-})();
-themeToggleBtn.addEventListener('click', () => {
-  const current = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  applyTheme(current);
-});
-
-/* ======================================================================
-   JATS SNIPPET PALETTE
-   ====================================================================== */
-const xmlSnippetBar = document.getElementById('xmlSnippetBar');
-const snippetToggleBtn = document.getElementById('snippetToggleBtn');
-snippetToggleBtn.addEventListener('click', () => {
-  xmlSnippetBar.classList.toggle('collapsed');
-  snippetToggleBtn.classList.toggle('active', !xmlSnippetBar.classList.contains('collapsed'));
-});
-
-const SNIPPETS = {
-  'contrib': '<contrib contrib-type="author">\n  <name><surname>Surname</surname><given-names>Given</given-names></name>\n  <xref ref-type="aff" rid="aff1">1</xref>\n</contrib>',
-  'aff': '<aff id="aff1"><label>1</label>Department, Institution, City, Country</aff>',
-  'abstract': '<abstract>\n  <p>Abstract text goes here.</p>\n</abstract>',
-  'sec': '<sec id="sec1">\n  <title>Section Title</title>\n  <p>Section content.</p>\n</sec>',
-  'fig': '<fig id="fig1">\n  <label>Figure 1</label>\n  <caption><p>Figure caption.</p></caption>\n  <graphic xlink:href="fig1.tif"/>\n</fig>',
-  'table': '<table-wrap id="tab1">\n  <label>Table 1</label>\n  <caption><p>Table caption.</p></caption>\n  <table>\n    <thead><tr><th>Header</th></tr></thead>\n    <tbody><tr><td>Data</td></tr></tbody>\n  </table>\n</table-wrap>',
-  'ref': '<ref id="ref1">\n  <element-citation publication-type="journal">\n    <person-group person-group-type="author"><name><surname>Surname</surname><given-names>G</given-names></name></person-group>\n    <article-title>Title</article-title>\n    <source>Journal Name</source>\n    <year>2026</year>\n  </element-citation>\n</ref>',
-  'ref-list': '<ref-list>\n  <title>References</title>\n\n</ref-list>',
-  'permissions': '<permissions>\n  <copyright-statement>\u00a9 2026 The Author(s)</copyright-statement>\n  <license license-type="open-access"><license-p>License text.</license-p></license>\n</permissions>',
-  'funding': '<funding-group>\n  <award-group>\n    <funding-source>Funder Name</funding-source>\n    <award-id>Grant ID</award-id>\n  </award-group>\n</funding-group>',
-  'fn': '<fn-group>\n  <fn id="fn1"><p>Footnote text.</p></fn>\n</fn-group>',
-  'disp-formula': '<disp-formula id="eq1">\n  <mml:math><mml:mi>x</mml:mi></mml:math>\n</disp-formula>'
-};
-
-document.querySelectorAll('.xml-snippet-btn').forEach(btn => {
-  btn.addEventListener('click', () => insertSnippet(btn.dataset.snippet));
-});
-
-function insertSnippet(key) {
-  const snippet = SNIPPETS[key];
-  if (!snippet) return;
-  const ta = xmlEditorTextarea;
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  ta.setRangeText(snippet, start, end, 'end');
-  ta.focus();
-  updateLineNumbers();
-  updateHighlight();
-  setEditorStatus(true, 'Editing\u2026 (click Update Preview, or wait to auto-update)');
-  autoSaveDraft();
-  toast('Inserted <' + key + '> snippet');
-}
-
-/* ======================================================================
-   AUTO-SAVE DRAFT + VERSION SNAPSHOTS + DIFF
-   ====================================================================== */
-const autoSaveStatus = document.getElementById('autoSaveStatus');
-let autoSaveTimer = null;
-function autoSaveDraft() {
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem('selva_xml_draft', xmlEditorTextarea.value);
-      const t = new Date().toLocaleTimeString();
-      autoSaveStatus.textContent = '\ud83d\udcbe Draft saved ' + t;
-    } catch (e) { /* storage may be unavailable; ignore silently */ }
-  }, 1000);
-}
-
-const saveVersionBtn = document.getElementById('saveVersionBtn');
-saveVersionBtn.addEventListener('click', saveVersion);
-
-function getVersions() {
-  try { return JSON.parse(localStorage.getItem('selva_versions') || '[]'); }
-  catch (e) { return []; }
-}
-function saveVersion() {
-  const versions = getVersions();
-  versions.unshift({ ts: Date.now(), content: xmlEditorTextarea.value });
-  if (versions.length > 20) versions.pop();
-  try { localStorage.setItem('selva_versions', JSON.stringify(versions)); } catch (e) { /* storage may be unavailable */ }
-  toast('Snapshot saved (' + versions.length + ' total)');
-}
-
-const historyBtn = document.getElementById('historyBtn');
-const historyModal = document.getElementById('historyModal');
-const historyList = document.getElementById('historyList');
-historyBtn.addEventListener('click', () => { loadHistory(); openAppModal('historyModal'); });
-
-function loadHistory() {
-  const versions = getVersions();
-  if (versions.length === 0) {
-    historyList.innerHTML = '<div class="version-empty">No snapshots yet. Use \ud83d\udccc Snapshot in the editor toolbar to save one.</div>';
-    return;
-  }
-  historyList.innerHTML = versions.map((v, i) =>
-    '<div class="version-item" onclick="restoreVersion(' + i + ')">' +
-      '<span class="v-time">' + new Date(v.ts).toLocaleString() + '</span>' +
-      '<button onclick="event.stopPropagation();deleteVersion(' + i + ')" title="Delete">\u2715</button>' +
-    '</div>'
-  ).join('');
-}
-function restoreVersion(i) {
-  const versions = getVersions();
-  if (versions[i]) {
-    xmlEditorTextarea.value = versions[i].content;
-    updateLineNumbers();
-    updateHighlight();
-    applyEditorText(xmlEditorTextarea.value);
-    autoSaveDraft();
-    closeAppModal('historyModal');
-    toast('Version restored');
-  }
-}
-function deleteVersion(i) {
-  const versions = getVersions();
-  versions.splice(i, 1);
-  try { localStorage.setItem('selva_versions', JSON.stringify(versions)); } catch (e) { /* storage may be unavailable */ }
-  loadHistory();
-}
-
-function showDiffVsLast() {
-  const versions = getVersions();
-  if (versions.length === 0) {
-    toast('Save a snapshot first to compare against it', 'warn');
-    return;
-  }
-  const current = xmlEditorTextarea.value.split('\n');
-  const previous = versions[0].content.split('\n');
-  const max = Math.max(current.length, previous.length);
-  let html = '';
-  for (let i = 0; i < max; i++) {
-    const c = current[i] !== undefined ? current[i] : '';
-    const p = previous[i] !== undefined ? previous[i] : '';
-    if (c === p) {
-      html += '<div>' + (i + 1) + ' | ' + escapeHtml(c) + '</div>';
-    } else {
-      if (p) html += '<div class="diff-removed">' + (i + 1) + ' - ' + escapeHtml(p) + '</div>';
-      if (c) html += '<div class="diff-added">' + (i + 1) + ' + ' + escapeHtml(c) + '</div>';
-    }
-  }
-  document.getElementById('diffContent').innerHTML = html || '<div class="version-empty">No differences.</div>';
-  closeAppModal('historyModal');
-  openAppModal('diffModal');
-}
-
-/* ======================================================================
-   GENERIC MODAL HELPERS + SHORTCUTS MODAL
-   ====================================================================== */
-function openAppModal(id) { document.getElementById(id).classList.add('show'); }
-function closeAppModal(id) { document.getElementById(id).classList.remove('show'); }
-document.querySelectorAll('.app-modal-overlay').forEach(m => {
-  m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('show'); });
-});
-const shortcutsBtn = document.getElementById('shortcutsBtn');
-shortcutsBtn.addEventListener('click', () => openAppModal('shortcutsModal'));
-
-// Restore any previously auto-saved draft into the editor buffer (does not
-// overwrite the sample/loaded article until the user opens Edit XML / Split).
-(function restoreDraftOnLoad() {
-  try {
-    const saved = localStorage.getItem('selva_xml_draft');
-    if (saved) xmlEditorTextarea.value = saved;
-  } catch (e) { /* ignore */ }
-})();
-
-document.addEventListener('keydown', (e) => {
-  const ctrlLike = e.ctrlKey || e.metaKey;
-  if (ctrlLike && e.shiftKey && (e.key === 'S' || e.key === 's')) { e.preventDefault(); toggleSplit(); }
-  else if (ctrlLike && e.shiftKey && (e.key === 'D' || e.key === 'd')) { e.preventDefault(); themeToggleBtn.click(); }
-  else if (ctrlLike && !e.shiftKey && (e.key === 's' || e.key === 'S') &&
-           document.activeElement === xmlEditorTextarea) { e.preventDefault(); saveVersion(); }
 });
 
 updatePreviewBtn.addEventListener('click', () => {
@@ -1799,7 +1219,7 @@ dropZone.addEventListener('drop', (e) => {
     currentFile = file;
     processFile(file);
   } else {
-    toast('Please drop a valid XML file', 'err');
+    alert('Please drop a valid XML file');
   }
 });
 
@@ -1937,6 +1357,7 @@ function displayValidationResults(errors, stats) {
   }
   
   validationSection.classList.add('visible');
+  if (typeof updateInspectorStats === 'function') updateInspectorStats(stats, errors);
 }
 
 function processXMLText(text) {
@@ -1948,6 +1369,7 @@ function processXMLText(text) {
     totalDisplayFormulas = 0;
     totalRefs = 0;
     unstyledElements.clear();
+    elementRegistry = [];
     
     const parser = new DOMParser();
     const xml = parser.parseFromString(text, "text/xml");
@@ -1973,19 +1395,19 @@ function processXMLText(text) {
     const title = xml.querySelector("article-title");
     if (title) {
       currentArticleTitle = title.textContent.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
-      html += `<h1 class="article-title">${formatContent(title)}</h1>`;
+      html += `<h1 class="article-title"${jAttr(title)}>${formatContent(title)}</h1>`;
     }
     
     const subtitle = xml.querySelector("subtitle");
     if (subtitle) {
-      html += `<div class="article-subtitle">${formatContent(subtitle)}</div>`;
+      html += `<div class="article-subtitle"${jAttr(subtitle)}>${formatContent(subtitle)}</div>`;
     }
     
     const contribGroup = xml.querySelector("contrib-group");
     if (contribGroup) {
       const authors = contribGroup.querySelectorAll('contrib[contrib-type="author"]');
       if (authors.length > 0) {
-        html += '<div class="authors">';
+        html += `<div class="authors"${jAttr(contribGroup)}>`;
         authors.forEach((author) => {
           const name = author.querySelector('name');
           if (name) {
@@ -1994,9 +1416,9 @@ function processXMLText(text) {
             const xrefs = author.querySelectorAll('xref[ref-type="aff"]');
             let supText = '';
             xrefs.forEach(xref => {
-              supText += `<span class="author-sup">${xref.textContent}</span>`;
+              supText += `<span class="author-sup"${jAttr(xref)}>${xref.textContent}</span>`;
             });
-            html += `<span class="author">${givenNames} ${surname}${supText}</span>`;
+            html += `<span class="author"${jAttr(author)}>${givenNames} ${surname}${supText}</span>`;
           }
         });
         html += '</div>';
@@ -2009,7 +1431,7 @@ function processXMLText(text) {
       affs.forEach(aff => {
         const label = aff.querySelector('label')?.textContent || '';
         const affText = getTextContent(aff, ['label']);
-        html += `<div class="aff-item">`;
+        html += `<div class="aff-item"${jAttr(aff)}>`;
         if (label) html += `<span class="aff-label">${label}</span>`;
         html += `${affText}</div>`;
       });
@@ -2019,7 +1441,7 @@ function processXMLText(text) {
     const corresp = xml.querySelector('author-notes corresp, corresp');
     if (corresp) {
       const correspText = formatContent(corresp);
-      html += `<div class="correspondence"><span class="correspondence-label">*Correspondence:</span> ${correspText}</div>`;
+      html += `<div class="correspondence"${jAttr(corresp)}><span class="correspondence-label">*Correspondence:</span> ${correspText}</div>`;
     }
     
     html += '</div>';
@@ -2031,11 +1453,11 @@ function processXMLText(text) {
     
     const kwdGroup = xml.querySelector('kwd-group');
     if (kwdGroup) {
-      html += '<div class="keywords">';
+      html += `<div class="keywords"${jAttr(kwdGroup)}>`;
       const kwdTitle = kwdGroup.querySelector('title')?.textContent || 'Keywords';
       html += `<span class="keywords-label">${kwdTitle}:</span>`;
       kwdGroup.querySelectorAll('kwd').forEach(kwd => {
-        html += `<span class="keyword">${kwd.textContent}</span>`;
+        html += `<span class="keyword"${jAttr(kwd)}>${kwd.textContent}</span>`;
       });
       html += '</div>';
     }
@@ -2057,13 +1479,32 @@ function processXMLText(text) {
       html += renderBio(bio);
     }
     
+// Acknowledgments (previously not rendered at all)
+const ack = xml.querySelector('ack');
+if (ack) {
+  const ackTitle = ack.querySelector('title')?.textContent || 'Acknowledgments';
+  html += `<div class="ack-section"${jAttr(ack)}><h2>${ackTitle}</h2>`;
+  ack.childNodes.forEach(node => {
+    if (node.nodeType === 1) {
+      const tagName = node.tagName.toLowerCase();
+      if (tagName === 'title') return;
+      if (tagName === 'p') {
+        html += `<p${jAttr(node)}>${formatContent(node)}</p>`;
+      } else {
+        html += `<div${jAttr(node)} class="unstyled-element">${formatContent(node)}</div>`;
+      }
+    }
+  });
+  html += '</div>';
+}
+
 const fnGroup = xml.querySelector('fn-group');
 if (fnGroup) {
   html += '<div class="footnotes"><h2>Back Matter</h2>';
   fnGroup.querySelectorAll('fn').forEach(fn => {
     const label = fn.querySelector('label')?.textContent || '';
     
-    html += `<div class="fn-item">`;
+    html += `<div class="fn-item"${jAttr(fn)}>`;
     if (label) html += `<div class="fn-label">${label}</div>`;
     html += `<div class="fn-content">`;
     
@@ -2076,7 +1517,7 @@ if (fnGroup) {
           return;
         } else if (tagName === 'p') {
           // Handle paragraphs with proper spacing
-          html += `<div class="fn-paragraph">${formatContent(node)}</div>`;
+          html += `<div class="fn-paragraph"${jAttr(node)}>${formatContent(node)}</div>`;
         } else {
           // Handle other elements (lists, tables, etc.)
           html += processElement(node);
@@ -2161,11 +1602,71 @@ function buildSidebar() {
     return listHtml;
   }
 
+  // Footnotes / Biography / Appendix / References — pulled in from the
+  // rendered back matter so they show up in the outline too.
+  function walkBackMatter(container) {
+    let listHtml = '';
+    let bmCounter = 0;
+
+    const footnotes = container.querySelector('.footnotes');
+    if (footnotes) {
+      bmCounter++;
+      if (!footnotes.id) footnotes.id = 'toc-footnotes';
+      const fnItems = footnotes.querySelectorAll('.fn-item');
+      let fnSub = '';
+      fnItems.forEach((fn, i) => {
+        if (!fn.id) fn.id = 'toc-fn-' + (i + 1);
+        const label = fn.querySelector('.fn-label');
+        const fnTitle = label ? label.textContent.trim() : ('Note ' + (i + 1));
+        fnSub += `<li><a href="#${fn.id}" class="toc-link">${escapeForToc(fnTitle)}</a></li>`;
+      });
+      listHtml += `<li><a href="#${footnotes.id}" class="toc-link">📝 Footnotes</a>`;
+      if (fnSub) listHtml += `<ul class="toc-sublist">${fnSub}</ul>`;
+      listHtml += '</li>';
+    }
+
+    const bio = container.querySelector('.bio');
+    if (bio) {
+      if (!bio.id) bio.id = 'toc-bio';
+      const bioTitleEl = bio.querySelector('h3');
+      const bioTitle = bioTitleEl ? bioTitleEl.textContent.trim() : 'Biography';
+      listHtml += `<li><a href="#${bio.id}" class="toc-link">👤 ${escapeForToc(bioTitle)}</a></li>`;
+    }
+
+    const appGroup = container.querySelector('.app-group');
+    if (appGroup) {
+      if (!appGroup.id) appGroup.id = 'toc-appendix';
+      const appGroupTitleEl = appGroup.querySelector(':scope > h2');
+      const appGroupTitle = appGroupTitleEl ? appGroupTitleEl.textContent.trim() : 'Appendix';
+      let appSub = '';
+      appGroup.querySelectorAll(':scope > .app').forEach((app, i) => {
+        if (!app.id) app.id = 'toc-app-' + (i + 1);
+        const appTitleEl = app.querySelector('.app-title');
+        const appTitle = appTitleEl ? appTitleEl.textContent.trim() : ('Appendix ' + (i + 1));
+        appSub += `<li><a href="#${app.id}" class="toc-link">${escapeForToc(appTitle)}</a></li>`;
+      });
+      listHtml += `<li><a href="#${appGroup.id}" class="toc-link">📎 ${escapeForToc(appGroupTitle)}</a>`;
+      if (appSub) listHtml += `<ul class="toc-sublist">${appSub}</ul>`;
+      listHtml += '</li>';
+    }
+
+    const references = container.querySelector('.references');
+    if (references) {
+      if (!references.id) references.id = 'toc-references';
+      const refTitleEl = references.querySelector(':scope > h2');
+      const refTitle = refTitleEl ? refTitleEl.textContent.trim() : 'References';
+      listHtml += `<li><a href="#${references.id}" class="toc-link">📚 ${escapeForToc(refTitle)}</a></li>`;
+    }
+
+    return listHtml;
+  }
+
   const articleContainer = output.querySelector('.container') || output;
   const secHtml = walkSections(articleContainer);
   const floatHtml = walkFloats(articleContainer);
+  const backMatterHtml = walkBackMatter(articleContainer);
 
-  if (!secHtml && !floatHtml) {
+  if (!secHtml && !floatHtml && !backMatterHtml) {
     tocSidebar.classList.remove('visible');
     tocSidebar.innerHTML = '';
     return;
@@ -2178,6 +1679,10 @@ function buildSidebar() {
   if (floatHtml) {
     html += '<div class="toc-group-title">Figures &amp; Tables</div>';
     html += `<ul class="toc-list">${floatHtml}</ul>`;
+  }
+  if (backMatterHtml) {
+    html += '<div class="toc-group-title toc-backmatter">Back Matter</div>';
+    html += `<ul class="toc-list">${backMatterHtml}</ul>`;
   }
 
   tocSidebar.innerHTML = html;
@@ -2200,7 +1705,7 @@ function countElements(xml) {
 }
 
 function renderAbstract(abstract) {
-  let html = '<div class="abstract">';
+  let html = `<div class="abstract"${jAttr(abstract)}>`;
   
   const abstractTitle = abstract.querySelector('title')?.textContent || 'Abstract';
   html += `<h2>${abstractTitle}</h2>`;
@@ -2214,12 +1719,12 @@ function renderAbstract(abstract) {
       const sectionContent = section.querySelector('p');
       const sectionId = section.getAttribute('id');
       
-      html += '<div class="abstract-section">';
+      html += `<div class="abstract-section"${jAttr(section)}>`;
       if (sectionTitle) {
         html += `<div class="abstract-section-title">${sectionTitle}</div>`;
       }
       if (sectionContent) {
-        html += `<div class="abstract-section-content"><p>${formatContent(sectionContent)}</p></div>`;
+        html += `<div class="abstract-section-content"><p${jAttr(sectionContent)}>${formatContent(sectionContent)}</p></div>`;
       }
       if (sectionId) {
         html += `<div class="section-id">${sectionId}</div>`;
@@ -2229,7 +1734,7 @@ function renderAbstract(abstract) {
   } else {
     // Traditional abstract without sections
     abstract.querySelectorAll('p').forEach(p => {
-      html += `<p>${formatContent(p)}</p>`;
+      html += `<p${jAttr(p)}>${formatContent(p)}</p>`;
     });
   }
   
@@ -2238,7 +1743,7 @@ function renderAbstract(abstract) {
 }
 
 function renderAppGroup(appGroup) {
-  let html = '<div class="app-group">';
+  let html = `<div class="app-group"${jAttr(appGroup)}>`;
   
   const appGroupTitle = appGroup.querySelector('title');
   if (appGroupTitle) {
@@ -2250,7 +1755,7 @@ function renderAppGroup(appGroup) {
   const apps = appGroup.querySelectorAll('app');
   apps.forEach(app => {
     const appId = app.getAttribute('id') || '';
-    html += `<div class="app" id="${appId}">`;
+    html += `<div class="app"${jAttr(app)} id="${appId}">`;
     
     const appTitle = app.querySelector('title');
     if (appTitle) {
@@ -2266,7 +1771,7 @@ function renderAppGroup(appGroup) {
 }
 
 function renderBio(bio) {
-  let html = '<div class="bio">';
+  let html = `<div class="bio"${jAttr(bio)}>`;
   
   const bioTitle = bio.querySelector('title');
   if (bioTitle) {
@@ -2281,7 +1786,7 @@ function renderBio(bio) {
 }
 
 function renderReferences(refList) {
-  let html = '<div class="references">';
+  let html = `<div class="references"${jAttr(refList)}>`;
   
   const refTitle = refList.querySelector('title')?.textContent || 'References';
   html += `<h2>${refTitle}</h2>`;
@@ -2300,7 +1805,7 @@ function renderReferences(refList) {
       refText = getTextContent(ref, ['label']);
     }
     
-    html += `<div class="ref-item">`;
+    html += `<div class="ref-item"${jAttr(ref)}>`;
     if (label) html += `<span class="ref-label">${label}</span>`;
     html += `${refText}`;
     
@@ -2412,7 +1917,7 @@ function formatCitationContent(citation) {
     });
     
     if (authorList.length > 0) {
-      html += authorList.join(', ') + '';
+      html += `<span class="citation-authors"${jAttr(personGroup)}>${authorList.join(', ')}</span>`;
     }
   }
   
@@ -2425,46 +1930,46 @@ function formatCitationContent(citation) {
       if (!['person-group', 'name', 'surname', 'given-names'].includes(tagName)) {
         switch(tagName) {
           case 'year':
-            html += `<span class="citation-year">${formatContent(node)}</span>`;
+            html += `<span class="citation-year"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'article-title':
-            html += `<span class="citation-article-title">${formatContent(node)}</span>`;
+            html += `<span class="citation-article-title"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'source':
             // Source tag is now properly styled with italic
-            html += `<span class="citation-source">${formatContent(node)}</span>`;
+            html += `<span class="citation-source"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'volume':
-            html += `<span class="citation-volume">${formatContent(node)}</span>`;
+            html += `<span class="citation-volume"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'issue':
-            html += `<span class="citation-issue">${formatContent(node)}</span>`;
+            html += `<span class="citation-issue"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'fpage':
-            html += `<span class="citation-pages">${formatContent(node)}</span>`;
+            html += `<span class="citation-pages"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'lpage':
-            html += `<span class="citation-pages">${formatContent(node)}</span>`;
+            html += `<span class="citation-pages"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'publisher-name':
-            html += `<span class="citation-publisher">${formatContent(node)}</span>`;
+            html += `<span class="citation-publisher"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'publisher-loc':
-            html += `<span class="citation-publisher-loc">${formatContent(node)}</span>`;
+            html += `<span class="citation-publisher-loc"${jAttr(node)}>${formatContent(node)}</span>`;
             break;
           case 'edition':
-            html += `<span class="citation-edition">${formatContent(node)}</span> ed.`;
+            html += `<span class="citation-edition"${jAttr(node)}>${formatContent(node)}</span> ed.`;
             break;
           case 'ext-link':
             const href = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
-            html += `<span class="citation-ext-link"><a href="${href}" target="_blank">${formatContent(node) || href}</a></span>`;
+            html += `<span class="citation-ext-link"${jAttr(node)}><a href="${href}" target="_blank">${formatContent(node) || href}</a></span>`;
             break;
           case 'uri':
             const uri = node.getAttribute('xlink:href') || node.getAttribute('href') || node.textContent;
-            html += `<span class="citation-uri"><a href="${uri}" target="_blank">${formatContent(node) || uri}</a></span>`;
+            html += `<span class="citation-uri"${jAttr(node)}><a href="${uri}" target="_blank">${formatContent(node) || uri}</a></span>`;
             break;
           default:
-            html += formatContent(node);
+            html += `<span${jAttr(node)}>${formatContent(node)}</span>`;
         }
       }
     } else if (node.nodeType === 3) { // Text node
@@ -2499,7 +2004,7 @@ function processElement(element, level = 1) {
           html += processSection(node, level);
           break;
         case 'p':
-          html += `<p>${formatContent(node)}</p>`;
+          html += `<p${jAttr(node)}>${formatContent(node)}</p>`;
           break;
         case 'list':
           html += renderList(node);
@@ -2516,13 +2021,13 @@ function processElement(element, level = 1) {
         case 'title':
           // Handle title elements with proper heading level
           const headingLevel = Math.min(level, 6);
-          html += `<span style="font-weight: bold; color: #2c3e50;">${formatContent(node)}</span>`;
+          html += `<span${jAttr(node)} style="font-weight: bold; color: #2c3e50;">${formatContent(node)}</span>`;
           break;
         default:
           // For any other elements without specific styling, render as paragraph with warning
           if (node.textContent && node.textContent.trim()) {
             unstyledElements.add(tagName);
-            html += `<div class="unstyled-element">${formatContent(node)}</div>`;
+            html += `<div${jAttr(node)} class="unstyled-element">${formatContent(node)}</div>`;
           }
       }
     }
@@ -2534,7 +2039,7 @@ function processElement(element, level = 1) {
 
 function processSection(sec, level = 1) {
   const secId = sec.getAttribute('id');
-  let html = `<section${secId ? ` id="${secId}"` : ''}>`;
+  let html = `<section${jAttr(sec)}${secId ? ` id="${secId}"` : ''}>`;
   
   // Add section ID indicator
   if (secId) {
@@ -2547,7 +2052,7 @@ function processSection(sec, level = 1) {
   let titleProcessed = false;
   
   if (secTitle) {
-    html += `<h${headingLevel}>${formatContent(secTitle)}</h${headingLevel}>`;
+    html += `<h${headingLevel}${jAttr(secTitle)}>${formatContent(secTitle)}</h${headingLevel}>`;
     titleProcessed = true;
   }
   
@@ -2563,7 +2068,7 @@ function processSection(sec, level = 1) {
       
       switch(tagName) {
         case 'p':
-          html += `<p>${formatContent(node)}</p>`;
+          html += `<p${jAttr(node)}>${formatContent(node)}</p>`;
           break;
         case 'list':
           html += renderList(node);
@@ -2582,12 +2087,12 @@ function processSection(sec, level = 1) {
           break;
         case 'title':
           // This handles nested titles or titles in unexpected locations
-          html += `<h${Math.min(level + 1, 6)}>${formatContent(node)}</h${Math.min(level + 1, 6)}>`;
+          html += `<h${Math.min(level + 1, 6)}${jAttr(node)}>${formatContent(node)}</h${Math.min(level + 1, 6)}>`;
           break;
         default:
           if (node.textContent && node.textContent.trim()) {
             unstyledElements.add(tagName);
-            html += `<div class="unstyled-element">${formatContent(node)}</div>`;
+            html += `<div${jAttr(node)} class="unstyled-element">${formatContent(node)}</div>`;
           }
       }
     }
@@ -2600,10 +2105,10 @@ function processSection(sec, level = 1) {
 function renderList(list) {
   const listType = list.getAttribute('list-type') || 'bullet';
   const tag = (listType === 'order' || listType === 'ordered') ? 'ol' : 'ul';
-  let html = `<${tag}>`;
+  let html = `<${tag}${jAttr(list)}>`;
   
   list.querySelectorAll(':scope > list-item').forEach(item => {
-    html += '<li>';
+    html += `<li${jAttr(item)}>`;
     
     // Process all content in the list item
     item.childNodes.forEach(node => {
@@ -2612,7 +2117,7 @@ function renderList(list) {
         
         switch(tagName) {
           case 'p':
-            html += `<p>${formatContent(node)}</p>`;
+            html += `<p${jAttr(node)}>${formatContent(node)}</p>`;
             break;
           case 'list':
             html += renderList(node);
@@ -2634,7 +2139,7 @@ function renderList(list) {
 
 function renderTableWrap(tableWrap) {
   const tableId = tableWrap.getAttribute('id');
-  let html = `<div class="table-wrap"${tableId ? ` id="${tableId}"` : ''}>`;
+  let html = `<div class="table-wrap"${jAttr(tableWrap)}${tableId ? ` id="${tableId}"` : ''}>`;
   
   // Add table ID indicator
   if (tableId) {
@@ -2670,7 +2175,7 @@ function renderTableWrap(tableWrap) {
           let attrs = '';
           if (colspan) attrs += ` colspan="${colspan}"`;
           if (rowspan) attrs += ` rowspan="${rowspan}"`;
-          html += `<${tag}${attrs}>${formatContent(cell)}</${tag}>`;
+          html += `<${tag}${attrs}${jAttr(cell)}>${formatContent(cell)}</${tag}>`;
         });
         html += '</tr>';
       });
@@ -2688,7 +2193,7 @@ function renderTableWrap(tableWrap) {
           let attrs = '';
           if (colspan) attrs += ` colspan="${colspan}"`;
           if (rowspan) attrs += ` rowspan="${rowspan}"`;
-          html += `<${tag}${attrs}>${formatContent(cell)}</${tag}>`;
+          html += `<${tag}${attrs}${jAttr(cell)}>${formatContent(cell)}</${tag}>`;
         });
         html += '</tr>';
       });
@@ -2701,7 +2206,7 @@ function renderTableWrap(tableWrap) {
         html += '<tr>';
         tr.querySelectorAll('th, td').forEach(cell => {
           const tag = cell.tagName.toLowerCase();
-          html += `<${tag}>${formatContent(cell)}</${tag}>`;
+          html += `<${tag}${jAttr(cell)}>${formatContent(cell)}</${tag}>`;
         });
         html += '</tr>';
       });
@@ -2735,7 +2240,7 @@ function renderTableWrap(tableWrap) {
 
 function renderFigure(fig) {
   const figId = fig.getAttribute('id');
-  let html = `<div class="fig-wrap"${figId ? ` id="${figId}"` : ''}>`;
+  let html = `<div class="fig-wrap"${jAttr(fig)}${figId ? ` id="${figId}"` : ''}>`;
   
   // Add figure ID indicator
   if (figId) {
@@ -2757,7 +2262,7 @@ function renderFigure(fig) {
       const href = graphic.getAttribute('xlink:href') || graphic.getAttribute('href') || '';
       const tagName = graphic.tagName.toLowerCase();
       
-      html += `<div class="graphic-item">`;
+      html += `<div class="graphic-item"${jAttr(graphic)}>`;
       html += `<div class="graphic-info">`;
       if (graphic.getAttribute('id')) {
         html += `<strong><span class="graphic-id">ID: ${graphic.getAttribute('id')}</span></strong>`;
@@ -2777,7 +2282,7 @@ function renderFigure(fig) {
   }
   
   if (caption) {
-    html += '<div class="fig-caption">';
+    html += `<div class="fig-caption"${jAttr(caption)}>`;
     const captionTitle = caption.querySelector('title');
     const captionP = caption.querySelector('p');
     if (captionTitle) html += `<strong>${formatContent(captionTitle)}</strong> `;
@@ -2800,30 +2305,30 @@ function formatContent(element) {
       switch(tag) {
         case 'bold':
         case 'b':
-          html += `<strong>${formatContent(node)}</strong>`;
+          html += `<strong${jAttr(node)}>${formatContent(node)}</strong>`;
           break;
         case 'italic':
         case 'i':
-          html += `<em>${formatContent(node)}</em>`;
+          html += `<em${jAttr(node)}>${formatContent(node)}</em>`;
           break;
         case 'underline':
         case 'u':
-          html += `<u>${formatContent(node)}</u>`;
+          html += `<u${jAttr(node)}>${formatContent(node)}</u>`;
           break;
         case 'sup':
-          html += `<sup>${formatContent(node)}</sup>`;
+          html += `<sup${jAttr(node)}>${formatContent(node)}</sup>`;
           break;
         case 'sub':
-          html += `<sub>${formatContent(node)}</sub>`;
+          html += `<sub${jAttr(node)}>${formatContent(node)}</sub>`;
           break;
         case 'source':
-          html += `<em>${formatContent(node)}</em>`;
+          html += `<em${jAttr(node)}>${formatContent(node)}</em>`;
           break;
         case 'year':
-          html += `<span>${formatContent(node)}</span>`;
+          html += `<span${jAttr(node)}>${formatContent(node)}</span>`;
           break;
         case 'publisher-name':
-          html += `<span>${formatContent(node)}</span>`;
+          html += `<span${jAttr(node)}>${formatContent(node)}</span>`;
           break;
         case 'person-group':
           // Skip person-group as it's handled separately in citation functions
@@ -2840,15 +2345,15 @@ function formatContent(element) {
         case 'xref':
           const refType = node.getAttribute('ref-type');
           const rid = node.getAttribute('rid');
-          html += `<span class="xref" data-ref-type="${refType}" data-rid="${rid}">${formatContent(node)}</span>`;
+          html += `<span class="xref"${jAttr(node)} data-ref-type="${refType}" data-rid="${rid}">${formatContent(node)}</span>`;
           break;
         case 'ext-link':
         case 'uri':
           const href = node.getAttribute('xlink:href') || node.getAttribute('href') || '';
-          html += `<a href="${href}" target="_blank">${formatContent(node) || href}</a>`;
+          html += `<a${jAttr(node)} href="${href}" target="_blank">${formatContent(node) || href}</a>`;
           break;
         case 'email':
-          html += `<a href="mailto:${node.textContent}">${node.textContent}</a>`;
+          html += `<a${jAttr(node)} href="mailto:${node.textContent}">${node.textContent}</a>`;
           break;
         case 'inline-formula':
           html += renderInlineFormula(node);
@@ -2859,7 +2364,7 @@ function formatContent(element) {
         case 'label':
           break;
         default:
-          html += formatContent(node);
+          html += `<span${jAttr(node)}>${formatContent(node)}</span>`;
       }
     }
   });
@@ -2917,7 +2422,7 @@ function renderInlineFormula(formulaNode) {
   latex = latex.replace(/\\rpar\s*/g, ')');
   latex = latex.replace(/\\comma\s*/g, ',');
   
-  return `<span class="inline-formula">\\(${latex}\\)</span>`;
+  return `<span class="inline-formula"${jAttr(formulaNode)}>\\(${latex}\\)</span>`;
 }
 
 function renderDispFormula(formulaNode) {
@@ -2925,7 +2430,7 @@ function renderDispFormula(formulaNode) {
   const texMath = formulaNode.querySelector('tex-math');
   const mml = formulaNode.querySelector('mml\\:math, math');
   
-  let formulaHTML = '<div class="disp-formula">';
+  let formulaHTML = `<div class="disp-formula"${jAttr(formulaNode)}>`;
   
   if (label) {
     formulaHTML += `<div style="text-align: right; font-weight: bold; color: #3498db; margin-bottom: 10px;">${label}</div>`;
@@ -3409,6 +2914,449 @@ function exportPDF() {
   
   printWindow.document.close();
 }
+
+/* ==========================================================================
+   SELVA PRO TOOLBAR — added tools & dark shell theme (ported from Selva
+   JATS XML Viewer Pro). Everything below works alongside the existing
+   engine above; it does not modify how XML is parsed or rendered.
+   ========================================================================== */
+(function () {
+  function toast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type === 'err' ? 'err' : type === 'warn' ? 'warn' : '');
+    t.innerHTML = '<span>' + (type === 'err' ? '❌' : type === 'warn' ? '⚠️' : '✅') + '</span> ' + msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; setTimeout(() => t.remove(), 300); }, 2500);
+  }
+  window.selvaToast = toast;
+
+  // ---- Fit body/panels to the (now two-row) toolbar height ----
+  function syncShellOffset() {
+    const h = document.getElementById('appToolbar').offsetHeight;
+    document.documentElement.style.setProperty('--shell-offset', h + 'px');
+    document.body.style.paddingTop = (h + 20) + 'px';
+    const toc = document.getElementById('tocSidebar');
+    if (toc) {
+      toc.style.top = (h + 20) + 'px';
+      toc.style.maxHeight = 'calc(100vh - ' + (h + 40) + 'px)';
+    }
+    const ins = document.getElementById('inspectorSidebar');
+    if (ins) ins.style.top = h + 'px';
+  }
+  window.addEventListener('resize', syncShellOffset);
+
+  // ---- Shell dark/light toggle (independent from print/article styling) ----
+  const themeBtn = document.getElementById('themeToggleBtn');
+  const themeIcon = document.getElementById('shellThemeIcon');
+  themeBtn.addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-shell-theme') === 'light';
+    document.documentElement.setAttribute('data-shell-theme', isLight ? 'dark' : 'light');
+    themeIcon.textContent = isLight ? '🌙' : '☀️';
+    localStorage.setItem('selva_shell_theme', isLight ? 'dark' : 'light');
+  });
+  (function initTheme() {
+    const saved = localStorage.getItem('selva_shell_theme');
+    if (saved === 'light') {
+      document.documentElement.setAttribute('data-shell-theme', 'light');
+      themeIcon.textContent = '☀️';
+    }
+  })();
+
+  // ---- Modal helpers ----
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+  document.querySelectorAll('.shell-modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }));
+  document.getElementById('closeExportModalBtn').addEventListener('click', () => closeModal('exportModal'));
+  document.getElementById('closeTemplatesModalBtn').addEventListener('click', () => closeModal('templatesModal'));
+  document.getElementById('closeShortcutsModalBtn').addEventListener('click', () => closeModal('shortcutsModal'));
+  document.getElementById('shortcutsBtn').addEventListener('click', () => openModal('shortcutsModal'));
+
+  // ---- Inspector sidebar ----
+  const inspectorSidebar = document.getElementById('inspectorSidebar');
+  document.getElementById('inspectorBtn').addEventListener('click', () => inspectorSidebar.classList.toggle('open'));
+  document.getElementById('closeInspectorBtn').addEventListener('click', () => inspectorSidebar.classList.remove('open'));
+
+  window.updateInspectorStats = function (stats, errors) {
+    const text = (currentXMLText || '');
+    const words = text.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(w => w.length).length;
+    const readMin = Math.max(1, Math.ceil(words / 200));
+    document.getElementById('insLines').textContent = (stats.totalLines || 0).toLocaleString();
+    document.getElementById('insWords').textContent = words.toLocaleString();
+    document.getElementById('insTags').textContent = (stats.totalTags || 0).toLocaleString();
+    document.getElementById('insRead').textContent = readMin + 'm';
+    const badge = document.getElementById('insValBadge');
+    const summary = document.getElementById('insValSummary');
+    const errCount = (stats.totalErrors || 0) + (stats.commentErrors || 0);
+    if (errCount === 0) {
+      badge.className = 'badge-pill badge-ok';
+      badge.textContent = 'OK';
+      summary.textContent = 'No errors found.';
+    } else {
+      badge.className = 'badge-pill badge-err';
+      badge.textContent = errCount;
+      summary.textContent = errCount + ' issue(s) found \u2014 see Validation Results below the toolbar for details.';
+    }
+  };
+
+  // ---- Version history (snapshots stored in localStorage) ----
+  function loadHistory() {
+    const versions = JSON.parse(localStorage.getItem('selva_versions') || '[]');
+    const list = document.getElementById('insHistoryList');
+    if (versions.length === 0) { list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">No snapshots yet</div>'; return; }
+    list.innerHTML = versions.map((v, i) =>
+      '<div class="tree-item" data-restore="' + i + '"><span class="ico">🕐</span><span style="flex:1;font-size:12px">' +
+      new Date(v.ts).toLocaleString() + '</span><button class="btn sm ghost icon" data-delete="' + i + '"><span>🗑️</span></button></div>'
+    ).join('');
+    list.querySelectorAll('[data-restore]').forEach(el => el.addEventListener('click', (e) => {
+      if (e.target.closest('[data-delete]')) return;
+      restoreVersion(parseInt(el.dataset.restore, 10));
+    }));
+    list.querySelectorAll('[data-delete]').forEach(el => el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteVersion(parseInt(el.dataset.delete, 10));
+    }));
+  }
+  function restoreVersion(i) {
+    const versions = JSON.parse(localStorage.getItem('selva_versions') || '[]');
+    if (versions[i]) {
+      xmlEditorTextarea.value = versions[i].content;
+      updateLineNumbers(); updateHighlight();
+      applyEditorText(versions[i].content);
+      toast('Version restored');
+    }
+  }
+  function deleteVersion(i) {
+    const versions = JSON.parse(localStorage.getItem('selva_versions') || '[]');
+    versions.splice(i, 1);
+    localStorage.setItem('selva_versions', JSON.stringify(versions));
+    loadHistory();
+  }
+  document.getElementById('saveSnapshotBtn').addEventListener('click', () => {
+    const versions = JSON.parse(localStorage.getItem('selva_versions') || '[]');
+    versions.unshift({ ts: Date.now(), content: xmlEditorTextarea.value || currentXMLText || '' });
+    if (versions.length > 20) versions.pop();
+    localStorage.setItem('selva_versions', JSON.stringify(versions));
+    loadHistory();
+    toast('Snapshot saved');
+  });
+  loadHistory();
+
+  // ---- Undo / Redo (custom stack over the plain textarea) ----
+  let undoStack = [], redoStack = [], suppressPush = false;
+  function pushUndo(val) {
+    if (suppressPush) return;
+    undoStack.push(val);
+    if (undoStack.length > 100) undoStack.shift();
+    redoStack = [];
+  }
+  xmlEditorTextarea.addEventListener('beforeinput', () => pushUndo(xmlEditorTextarea.value));
+  document.getElementById('undoBtn').addEventListener('click', () => {
+    if (!undoStack.length) { toast('Nothing to undo', 'warn'); return; }
+    redoStack.push(xmlEditorTextarea.value);
+    const prev = undoStack.pop();
+    suppressPush = true;
+    xmlEditorTextarea.value = prev;
+    updateLineNumbers(); updateHighlight();
+    suppressPush = false;
+  });
+  document.getElementById('redoBtn').addEventListener('click', () => {
+    if (!redoStack.length) { toast('Nothing to redo', 'warn'); return; }
+    undoStack.push(xmlEditorTextarea.value);
+    const next = redoStack.pop();
+    suppressPush = true;
+    xmlEditorTextarea.value = next;
+    updateLineNumbers(); updateHighlight();
+    suppressPush = false;
+  });
+
+  // ---- Format / Minify XML ----
+  function ensureEditorOpen() { if (!xmlEditorPanel.classList.contains('visible')) showTab('xml'); }
+  function formatXMLNode(node, indent) {
+    const pad = '  '.repeat(indent);
+    if (node.nodeType === 3) return node.textContent.trim();
+    if (node.nodeType === 8) return pad + '<!--' + node.nodeValue + '-->\n';
+    let attrs = '';
+    if (node.attributes) {
+      for (let i = 0; i < node.attributes.length; i++) {
+        const a = node.attributes[i];
+        attrs += ' ' + a.name + '="' + a.value + '"';
+      }
+    }
+    const children = [...node.childNodes].filter(c => c.nodeType === 1 || (c.nodeType === 3 && c.textContent.trim()));
+    if (children.length === 0) return pad + '<' + node.nodeName + attrs + '/>\n';
+    const inner = children.map(c => formatXMLNode(c, indent + 1)).join('');
+    const hasTextOnly = children.length === 1 && children[0].nodeType === 3;
+    if (hasTextOnly) return pad + '<' + node.nodeName + attrs + '>' + children[0].textContent.trim() + '</' + node.nodeName + '>\n';
+    return pad + '<' + node.nodeName + attrs + '>\n' + inner + pad + '</' + node.nodeName + '>\n';
+  }
+  function formatXML() {
+    ensureEditorOpen();
+    try {
+      const xml = xmlEditorTextarea.value;
+      const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+      if (parsed.querySelector('parsererror')) { toast('Cannot format: XML is not well-formed', 'err'); return; }
+      pushUndo(xmlEditorTextarea.value);
+      const formatted = formatXMLNode(parsed.documentElement, 0);
+      const prolog = xml.trim().startsWith('<?xml') ? '<?xml version="1.0" encoding="UTF-8"?>\n' : '';
+      xmlEditorTextarea.value = prolog + formatted;
+      updateLineNumbers(); updateHighlight();
+      setEditorStatus(true, 'Formatted \u2014 click Update Preview to apply');
+      toast('XML formatted');
+    } catch (e) {
+      toast('Format failed: ' + e.message, 'err');
+    }
+  }
+  function minifyXML() {
+    ensureEditorOpen();
+    const xml = xmlEditorTextarea.value;
+    const parsed = new DOMParser().parseFromString(xml, 'application/xml');
+    if (parsed.querySelector('parsererror')) { toast('Cannot minify: XML is not well-formed', 'err'); return; }
+    pushUndo(xmlEditorTextarea.value);
+    const out = xml.replace(/>\s+</g, '><').trim();
+    xmlEditorTextarea.value = out;
+    updateLineNumbers(); updateHighlight();
+    setEditorStatus(true, 'Minified \u2014 click Update Preview to apply');
+    toast('XML minified');
+  }
+  // (Format / Minify buttons removed — helper functions kept unused in case they're wired up later)
+
+  // ---- Go to line ----
+  function goToLine() {
+    ensureEditorOpen();
+    const n = prompt('Go to line:');
+    if (!n || isNaN(n)) return;
+    const lines = xmlEditorTextarea.value.split('\n');
+    const lineIdx = Math.max(0, Math.min(lines.length - 1, parseInt(n, 10) - 1));
+    let pos = 0;
+    for (let i = 0; i < lineIdx; i++) pos += lines[i].length + 1;
+    xmlEditorTextarea.focus();
+    xmlEditorTextarea.setSelectionRange(pos, pos + (lines[lineIdx] ? lines[lineIdx].length : 0));
+    const lineHeight = 13 * 1.6;
+    xmlEditorTextarea.scrollTop = Math.max(0, (lineIdx - 5) * lineHeight);
+  }
+  document.getElementById('goToLineBtn').addEventListener('click', goToLine);
+
+  // ---- Quick find (opens the editor + focuses find field) ----
+  document.getElementById('quickFindBtn').addEventListener('click', () => {
+    ensureEditorOpen();
+    xmlFindInput.focus();
+  });
+
+  // ---- Revalidate ----
+  document.getElementById('revalidateBtn').addEventListener('click', () => {
+    const text = xmlEditorPanel.classList.contains('visible') ? xmlEditorTextarea.value : currentXMLText;
+    if (!text) { toast('Nothing to validate yet', 'warn'); return; }
+    validateXML(text);
+    toast('Validation refreshed');
+  });
+
+  // ---- Export menu ----
+  document.getElementById('exportMenuBtn').addEventListener('click', () => openModal('exportModal'));
+  document.getElementById('printPdfBtn').addEventListener('click', () => exportPDF());
+  document.getElementById('exportXmlOpt').addEventListener('click', () => { closeModal('exportModal'); downloadXmlBtn.click(); });
+  document.getElementById('exportHtmlOpt').addEventListener('click', () => { closeModal('exportModal'); exportHTML(); });
+  document.getElementById('exportPdfOpt').addEventListener('click', () => { closeModal('exportModal'); exportPDF(); });
+  document.getElementById('exportJsonOpt').addEventListener('click', () => {
+    closeModal('exportModal');
+    try {
+      const xml = currentXMLText || xmlEditorTextarea.value;
+      const doc = new DOMParser().parseFromString(xml, 'application/xml');
+      const q = (sel) => { try { return doc.querySelector(sel)?.textContent?.trim() || ''; } catch (e) { return ''; } };
+      const data = {
+        journalTitle: q('journal-title'),
+        issn: q('issn'),
+        publisher: q('publisher-name'),
+        articleTitle: q('article-title'),
+        doi: q('article-id[pub-id-type="doi"]'),
+        articleType: doc.documentElement ? doc.documentElement.getAttribute('article-type') : '',
+        authors: [...doc.querySelectorAll('contrib')].map(c => (c.querySelector('given-names')?.textContent || '') + ' ' + (c.querySelector('surname')?.textContent || '')).join(', '),
+        keywords: [...doc.querySelectorAll('kwd')].map(k => k.textContent).join(', '),
+        sections: doc.querySelectorAll('sec').length,
+        figures: doc.querySelectorAll('fig').length,
+        tables: doc.querySelectorAll('table-wrap').length,
+        references: doc.querySelectorAll('ref').length
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = (currentJournalId || 'article') + '-metadata.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Metadata JSON exported');
+    } catch (e) { toast('Export failed: ' + e.message, 'err'); }
+  });
+
+  // ---- Templates ----
+  document.getElementById('templatesBtn').addEventListener('click', () => openModal('templatesModal'));
+  const TEMPLATES = {
+    letter: '<?xml version="1.0" encoding="UTF-8"?>\n<article article-type="letter">\n  <front><article-meta><title-group><article-title>Letter to the Editor</article-title></title-group></article-meta></front>\n  <body><p>Dear Editor,</p><p>Letter content...</p></body>\n</article>',
+    review: '<?xml version="1.0" encoding="UTF-8"?>\n<article article-type="review-article">\n  <front><article-meta><title-group><article-title>A Review of Recent Advances</article-title></title-group></article-meta></front>\n  <body>\n    <sec><title>Introduction</title><p>Overview of the field...</p></sec>\n    <sec><title>Discussion</title><p>Synthesis of findings...</p></sec>\n  </body>\n</article>',
+    research: '<?xml version="1.0" encoding="UTF-8"?>\n<article article-type="research-article">\n  <front>\n    <article-meta>\n      <title-group><article-title>Research Article Title</article-title></title-group>\n      <contrib-group><contrib contrib-type="author"><name><surname>Surname</surname><given-names>Given</given-names></name></contrib></contrib-group>\n      <abstract><p>Abstract text...</p></abstract>\n    </article-meta>\n  </front>\n  <body>\n    <sec id="sec1"><title>Introduction</title><p>Introduction text...</p></sec>\n    <sec id="sec2"><title>Methods</title><p>Methods text...</p></sec>\n    <sec id="sec3"><title>Results</title><p>Results text...</p></sec>\n    <sec id="sec4"><title>Discussion</title><p>Discussion text...</p></sec>\n  </body>\n</article>'
+  };
+  document.querySelectorAll('#templatesModal [data-template]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.template;
+      closeModal('templatesModal');
+      ensureEditorOpen();
+      pushUndo(xmlEditorTextarea.value);
+      xmlEditorTextarea.value = TEMPLATES[key];
+      updateLineNumbers(); updateHighlight();
+      applyEditorText(TEMPLATES[key]);
+      toast('Template loaded');
+    });
+  });
+
+  // ---- Keyboard shortcuts ----
+  document.addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); downloadXmlBtn.click(); }
+    else if (mod && e.key.toLowerCase() === 'g') { e.preventDefault(); goToLine(); }
+    else if (mod && e.key.toLowerCase() === 'i') { e.preventDefault(); inspectorSidebar.classList.toggle('open'); }
+    else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); showTab(xmlEditorPanel.classList.contains('visible') ? 'preview' : 'xml'); }
+  });
+
+  // ---- Table of contents show/hide toggle ----
+  let tocManuallyHidden = false;
+  const tocToggleBtn = document.getElementById('tocToggleBtn');
+  tocToggleBtn.addEventListener('click', () => {
+    tocManuallyHidden = tocSidebar.classList.contains('visible');
+    tocSidebar.classList.toggle('visible');
+    tocToggleBtn.classList.toggle('primary', !tocSidebar.classList.contains('visible') ? false : true);
+    syncShellOffset();
+    toast(tocSidebar.classList.contains('visible') ? 'Table of contents shown' : 'Table of contents hidden');
+  });
+  // Let buildSidebar() respect the user's manual hide even after re-render
+  const _origBuildSidebar = window.buildSidebar;
+  if (typeof buildSidebar === 'function') {
+    window.buildSidebar = function () {
+      _origBuildSidebar();
+      if (tocManuallyHidden) tocSidebar.classList.remove('visible');
+      syncShellOffset();
+    };
+  }
+
+  // ---- Tag Lookup mode: click any preview element to see its source JATS tag/snippet ----
+  const tagLookupBtn = document.getElementById('tagLookupBtn');
+
+  function closeTagPopover() {
+    const p = document.getElementById('jatsTagPopover');
+    if (p) p.remove();
+    document.querySelectorAll('.jats-tag-highlight').forEach(el => el.classList.remove('jats-tag-highlight'));
+  }
+
+  function showTagPopover(sourceEl, targetRenderedEl, x, y) {
+    closeTagPopover();
+    const tagName = sourceEl.tagName ? sourceEl.tagName.toLowerCase() : '?';
+    let snippet;
+    try {
+      snippet = new XMLSerializer().serializeToString(sourceEl);
+    } catch (e) {
+      snippet = sourceEl.textContent || '';
+    }
+    if (snippet.length > 4000) snippet = snippet.slice(0, 4000) + '\n... (truncated)';
+    const esc = window.escapeHtml ? window.escapeHtml(snippet) : snippet.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const pop = document.createElement('div');
+    pop.id = 'jatsTagPopover';
+    pop.className = 'jats-tag-popover';
+    pop.innerHTML =
+      '<button class="close-x" type="button">&#10005;</button>' +
+      '<span class="tag-name">&lt;' + tagName + '&gt;</span>' +
+      '<pre>' + esc + '</pre>' +
+      '<button class="btn sm primary" type="button" id="jatsCopySnippetBtn" style="width:100%;justify-content:center">📋 Copy this tag/snippet</button>';
+    document.body.appendChild(pop);
+
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const rect = pop.getBoundingClientRect();
+    let left = Math.min(x + 12, vw - rect.width - 12);
+    let top = Math.min(y + 12, vh - rect.height - 12);
+    pop.style.left = Math.max(8, left) + 'px';
+    pop.style.top = Math.max(8, top) + 'px';
+
+    pop.querySelector('.close-x').addEventListener('click', closeTagPopover);
+    pop.querySelector('#jatsCopySnippetBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(snippet).then(() => toast('✓ Tag snippet copied', 'ok')).catch(() => toast('Copy failed', 'err'));
+    });
+    if (targetRenderedEl) targetRenderedEl.classList.add('jats-tag-highlight');
+  }
+
+  tagLookupBtn.addEventListener('click', () => {
+    tagLookupMode = !tagLookupMode;
+    tagLookupBtn.classList.toggle('active', tagLookupMode);
+    output.classList.toggle('tag-lookup-active', tagLookupMode);
+    if (!tagLookupMode) closeTagPopover();
+    toast(tagLookupMode ? '🏷️ Tag Lookup ON — click any preview content to see its tag' : 'Tag Lookup off');
+  });
+
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('jatsTagPopover');
+    if (pop && !pop.contains(e.target) && e.target !== tagLookupBtn && !tagLookupBtn.contains(e.target)) {
+      closeTagPopover();
+    }
+    if (!tagLookupMode) return;
+    const hit = e.target.closest('[data-jidx]');
+    if (!hit || !output.contains(hit)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const idx = parseInt(hit.getAttribute('data-jidx'), 10);
+    const el = (elementRegistry || [])[idx];
+    if (!el) return;
+    showTagPopover(el, hit, e.clientX, e.clientY);
+  }, true);
+
+  // ---- F9 / toolbar full screen toggle ----
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const fullscreenIcon = document.getElementById('fullscreenIcon');
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => toast('Full screen not available', 'warn'));
+    } else {
+      document.exitFullscreen();
+    }
+  }
+  fullscreenBtn.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', () => {
+    const isFs = !!document.fullscreenElement;
+    fullscreenIcon.textContent = isFs ? '🡼' : '⛶';
+    fullscreenBtn.classList.toggle('primary', isFs);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'F9') { e.preventDefault(); toggleFullscreen(); }
+  });
+
+  // ---- Table of contents: clamp long titles to 3 lines, click to expand ----
+  function clampTocLink(link, clamp) {
+    if (clamp) {
+      link.style.display = '-webkit-box';
+      link.style.webkitBoxOrient = 'vertical';
+      link.style.webkitLineClamp = '3';
+      link.style.overflow = 'hidden';
+      link.classList.remove('toc-expanded');
+    } else {
+      link.style.display = 'block';
+      link.style.webkitBoxOrient = '';
+      link.style.webkitLineClamp = '';
+      link.style.overflow = 'visible';
+      link.classList.add('toc-expanded');
+    }
+  }
+  function enhanceTocClamping() {
+    document.querySelectorAll('#tocSidebar .toc-link').forEach(link => {
+      if (link.dataset.clampBound) return;
+      link.dataset.clampBound = '1';
+      clampTocLink(link, true);
+      link.addEventListener('click', function (e) {
+        // Toggle the 3-line clamp; the anchor still navigates normally.
+        clampTocLink(this, this.classList.contains('toc-expanded'));
+      });
+    });
+  }
+  const tocObserver = new MutationObserver(enhanceTocClamping);
+  tocObserver.observe(tocSidebar, { childList: true, subtree: true });
+  enhanceTocClamping();
+
+  syncShellOffset();
+  setTimeout(syncShellOffset, 300);
+})();
 </script>
 
 </body></html>
