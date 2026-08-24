@@ -300,17 +300,29 @@ function linkAndReport(bodyContent, entries, dupIds) {
       : (e.surnames && e.surnames.length ? e.surnames : [e.surname]);
 
     let matchSurname = null, matchMethod = null, found = null;
-    for (const surname of surnames) {
-      const patterns = buildPatterns(surname, year);
-      for (const p of patterns) {
-        const re = new RegExp(p.re.source, p.re.flags.includes("g") ? p.re.flags : p.re.flags + "g");
-        let mm;
-        while ((mm = re.exec(cleanBody)) !== null) {
-          if (isInvalidEtAlMatch(mm[0], e.authorCount)) continue;
-          found = mm;
-          matchSurname = surname;
-          matchMethod = p.loose ? "loose" : "tight";
-          break;
+
+    // Two passes, not one: check every author's TIGHT (exact, adjacent)
+    // pattern first, and only fall back to LOOSE patterns if nobody got a
+    // tight hit. Previously this checked ALL of author #1's patterns
+    // (tight *and* loose) before ever looking at author #2/#3 - so a weak
+    // loose coincidence on the first-listed author (e.g. "Provan") always
+    // won, even when a later author (e.g. "Veazie") had an exact tight
+    // match sitting right there in the text. That's why the "doubtful
+    // author" badge kept naming the first author no matter what.
+    for (const looseOnly of [false, true]) {
+      for (const surname of surnames) {
+        const patterns = buildPatterns(surname, year).filter((p) => p.loose === looseOnly);
+        for (const p of patterns) {
+          const re = new RegExp(p.re.source, p.re.flags.includes("g") ? p.re.flags : p.re.flags + "g");
+          let mm;
+          while ((mm = re.exec(cleanBody)) !== null) {
+            if (isInvalidEtAlMatch(mm[0], e.authorCount)) continue;
+            found = mm;
+            matchSurname = surname;
+            matchMethod = p.loose ? "loose" : "tight";
+            break;
+          }
+          if (found) break;
         }
         if (found) break;
       }
@@ -441,11 +453,11 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans)
     .trim();
 
   const contextCell = (contexts) => contexts.length
-    ? contexts.map((c) => `<span class="ctx-copy" data-copy="${escapeHtml(cleanForCopy(c.plain))}" title="Click to copy">${c.html}</span>`).join("<br>")
+    ? contexts.map((c) => `<div class="ctx-line"><span class="ctx-copy" data-copy="${escapeHtml(cleanForCopy(c.plain))}" title="Click to copy">${c.html}</span></div>`).join("")
     : "-";
 
   const linkedRows = linkedEntries.map((e) => `
-        <tr class="linked-row">
+        <tr class="linked-row" data-method="${e.matchMethod}">
             <td>${escapeHtml(e.id)}${dupBadge(e.isDuplicate)}</td>
             <td><strong>${escapeHtml(e.displayName)}</strong>${methodBadge(e.matchMethod)}${crossRefBadge(crossRefFor(e))}</td>
             <td>${contextCell(e.contexts)}</td>
@@ -484,12 +496,18 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans)
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Reference Cross-Link Report</title>
 <style>
-body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:30px;background:#f8fafc;color:#1a202c;}
-.container{max-width:1300px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:16px;background:#f8fafc;color:#1a202c;}
+.container{max-width:1640px;margin:0 auto;background:#fff;padding:30px 44px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);}
 h1{color:#0f172a;border-bottom:3px solid #3498db;padding-bottom:15px;}
 .stats{display:flex;gap:15px;margin:25px 0;flex-wrap:wrap;}
 .stat{flex:1;min-width:150px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:18px;text-align:center;}
 .stat .num{font-size:28px;font-weight:700;}
+.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 20px;padding:12px 16px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;}
+.filter-label{font-size:13px;font-weight:600;color:#475569;margin-right:2px;}
+.filter-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;transition:all .15s ease;}
+.filter-btn:hover{border-color:#94a3b8;background:#f8fafc;}
+.filter-btn.active{background:#0f172a;border-color:#0f172a;color:#fff;}
+.filter-count{opacity:.65;font-size:12px;margin-left:2px;}
 table{width:100%;border-collapse:collapse;margin:15px 0 35px;}
 th{background:#0f172a;color:#fff;padding:12px;text-align:left;font-size:13px;}
 td{padding:10px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
@@ -498,6 +516,8 @@ td{padding:10px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
 .orphan-row{background:#fff7ed;}
 .reason-cell{color:#92400e;font-style:italic;}
 mark{padding:1px 2px;border-radius:3px;}
+.ctx-line{margin:0 0 10px;padding-bottom:10px;border-bottom:1px dashed #e2e8f0;}
+.ctx-line:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
 .ctx-copy{cursor:pointer;border-radius:4px;padding:1px 3px;transition:background .15s ease;}
 .ctx-copy:hover{background:#eff6ff;outline:1px dashed #93c5fd;}
 .ctx-copy.copied{background:#dcfce7 !important;outline:1px solid #22c55e;}
@@ -514,22 +534,58 @@ mark{padding:1px 2px;border-radius:3px;}
   <div class="stat"><div class="num" style="color:#d97706;">${dupCount}</div>Duplicate Entries</div>
   <div class="stat"><div class="num" style="color:#ea580c;">${orphanCount}</div>Orphan In-Text Citations</div>
 </div>
+<div class="filter-bar" role="group" aria-label="Filter report rows">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="loose">Loose Match <span class="filter-count">(${looseCount})</span></button>
+  <button class="filter-btn" data-filter="unlinked">Unlinked <span class="filter-count">(${unlinkedCount})</span></button>
+  <button class="filter-btn" data-filter="orphan">Orphan <span class="filter-count">(${orphanCount})</span></button>
+</div>
+<section data-section="linked">
 <h2>Linked Citations (${linkedCount})</h2>
 <p style="color:#64748b;font-size:13px;">"loose match" = surname and year found with extra words between them rather than directly adjacent. Matched <mark style="background:#fef08a;">surname</mark> and <mark style="background:#bbf7d0;">year</mark> are highlighted.</p>
 <p style="color:#64748b;font-size:13px;">⚠ "check '&lt;name&gt;': also in ..." = the named surname is a loose match here but also shows up in the Unlinked or Orphan tables below - worth a manual look, since the loose match may have grabbed a different citation of the same surname.</p>
 <p style="color:#64748b;font-size:13px;">Click any line in "Context Found" to copy it - handy for Ctrl+F in your Word file.</p>
 <table><thead><tr><th>Bib ID</th><th>Reference</th><th>Context Found</th></tr></thead>
 <tbody>${linkedRows}</tbody></table>
+</section>
+<section data-section="unlinked">
 <h2>Unlinked Citations (${unlinkedCount})</h2>
 <p style="color:#64748b;font-size:13px;">"Reason" diagnoses why no match was made.</p>
 <table><thead><tr><th>Bib ID</th><th>Reference</th><th>Reference Text</th><th>Reason</th></tr></thead>
 <tbody>${unlinkedRows}</tbody></table>
+</section>
+<section data-section="orphan">
 <h2>Orphan In-Text Citations (${orphanCount})</h2>
 <p style="color:#64748b;font-size:13px;">Citations in the body text with NO matching reference entry - need a reference added, or are a typo.</p>
 <table><thead><tr><th>Citation</th><th>Context</th><th>Occurrences</th><th>Ref No</th></tr></thead>
 <tbody>${orphanRows}</tbody></table>
+</section>
 </div>
 <div class="copy-toast" id="copy-toast">Copied!</div>
+<script>
+(function () {
+  var filterBtns = document.querySelectorAll('.filter-btn');
+  var sections = document.querySelectorAll('[data-section]');
+  var linkedRowsEls = document.querySelectorAll('.linked-row');
+
+  function applyFilter(filter) {
+    sections.forEach(function (sec) {
+      if (filter === 'all') { sec.style.display = ''; return; }
+      if (filter === 'loose') { sec.style.display = sec.dataset.section === 'linked' ? '' : 'none'; return; }
+      sec.style.display = sec.dataset.section === filter ? '' : 'none';
+    });
+    linkedRowsEls.forEach(function (row) {
+      row.style.display = (filter === 'loose' && row.dataset.method !== 'loose') ? 'none' : '';
+    });
+    filterBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.filter === filter); });
+  }
+
+  filterBtns.forEach(function (b) {
+    b.addEventListener('click', function () { applyFilter(b.dataset.filter); });
+  });
+})();
+</script>
 <script>
 (function () {
   var toast = document.getElementById('copy-toast');
