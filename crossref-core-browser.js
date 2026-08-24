@@ -1,7 +1,6 @@
 // docx_crossref core logic - JS port for in-browser use (no server needed)
 
 function escapeHtml(str) {
-  const div = { textContent: str };
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -24,7 +23,16 @@ function cleanHtmlToPureText(fragment) {
   txt = txt.replace(/\u2019/g, "'").replace(/\u2018/g, "'");
   txt = txt.replace(/\u201c/g, '"').replace(/\u201d/g, '"');
   txt = txt.replace(/\s+/g, " ");
+  // Normalize to NFC so accented characters (e.g. combining-mark vs
+  // precomposed forms of č/ć/ö/etc.) compare equal wherever they appear.
+  if (typeof txt.normalize === "function") txt = txt.normalize("NFC");
   return txt.trim();
+}
+
+// Strip a trailing possessive ('s / 's / ’s or a bare trailing apostrophe)
+// so "Luker's (2008)" is compared as "Luker" against the reference list.
+function stripPossessive(s) {
+  return String(s).replace(/['\u2019]s$/i, "").replace(/['\u2019]$/, "");
 }
 
 const NON_REFERENCE_PATTERNS = [
@@ -38,14 +46,17 @@ function isNonReferenceSection(text) {
   return NON_REFERENCE_PATTERNS.some((p) => p.test(text));
 }
 
-const REFERENCES_HEADING_RE = /<(p|h[1-6])[^>]*>\s*(?:<strong>\s*)?References?\s*(?:<\/strong>\s*)?<\/\1>/i;
+// Accept the common heading variants people actually use, not just
+// "References" - Bibliography / Works Cited / Reference List all mark the
+// same section in different citation styles.
+const REFERENCES_HEADING_RE = /<(p|h[1-6])[^>]*>\s*(?:<strong>\s*)?(References?|Bibliography|Works\s+Cited|Reference\s+List)\s*(?:<\/strong>\s*)?<\/\1>/i;
 
 function splitBodyAndReferences(htmlContent) {
   const m = REFERENCES_HEADING_RE.exec(htmlContent);
   if (m) {
     return [htmlContent.slice(0, m.index), htmlContent.slice(m.index + m[0].length), m[0]];
   }
-  const m2 = /References?\b/i.exec(htmlContent);
+  const m2 = /References?|Bibliography|Works\s+Cited|Reference\s+List/i.exec(htmlContent);
   if (m2) {
     return [htmlContent.slice(0, m2.index), htmlContent.slice(m2.index + m2[0].length), "<p><strong>References</strong></p>"];
   }
@@ -69,8 +80,18 @@ function parseBibEntries(bibContent) {
     const yearMatch = /\b(19\d{2}|20\d{2})[a-z]?\b/.exec(cleanText);
     const yearStr = yearMatch ? yearMatch[0] : "";
 
-    let firstPart = cleanText.split("(")[0].trim();
+    // Take everything before the entry's year, not just before the first
+    // "(" - a reference like "United Nations Development Programme (UNDP).
+    // (2021)." has an abbreviation in its own parens *before* the year's
+    // parens, and splitting on the first "(" was silently discarding it.
+    let firstPart;
+    if (yearMatch) {
+      firstPart = cleanText.slice(0, yearMatch.index).replace(/\(\s*$/, "").trim();
+    } else {
+      firstPart = cleanText.split("(")[0].trim();
+    }
     firstPart = firstPart.replace(/^\[?\d+\]?\.?\s*/, "");
+    firstPart = firstPart.replace(/[.,;:]\s*$/, "").trim();
 
     const surnames = [];
     const surnameAliases = [];
@@ -84,10 +105,12 @@ function parseBibEntries(bibContent) {
           if (run.length) break;
           continue;
         }
-        const candidate = word.replace(/[^A-Za-zÀ-ÿ'\-]/g, "");
-        const isBareInitials = /^[A-Z]{1,3}(-[A-Z]{1,3})?$/.test(candidate || "");
+        // \p{L} (any-language letter) instead of A-Za-zÀ-ÿ so names using
+        // Latin Extended-A/B characters (č, ć, ř, etc.) survive intact.
+        const candidate = word.replace(/[^\p{L}'\-]/gu, "");
+        const isBareInitials = /^\p{Lu}{1,3}(-\p{Lu}{1,3})?$/u.test(candidate || "");
         if (isBareInitials && run.length) break;
-        if (candidate && /^[A-ZÀ-Ý]/.test(candidate) && candidate.length > 1 && !isBareInitials) {
+        if (candidate && /^\p{Lu}/u.test(candidate) && candidate.length > 1 && !isBareInitials) {
           run.push(candidate);
         } else if (run.length) {
           break;
@@ -97,7 +120,21 @@ function parseBibEntries(bibContent) {
         const full = run.join(" ");
         surnames.push(full);
         surnameAliases.push(full);
-        if (run.length > 1) surnameAliases.push(...run);
+        if (run.length === 2) {
+          // Almost always a compound personal surname (Kosterman Zoller,
+          // Van Dijk, De Bruin) - alias each half so a citation using only
+          // the first part still matches.
+          surnameAliases.push(...run);
+        } else if (run.length > 2) {
+          // Likely a multi-word institutional/organization name. Don't
+          // alias every generic word in it (e.g. "International", "Board")
+          // - a common word coincidentally appearing elsewhere with the
+          // same year would create a false match. Only alias genuine
+          // embedded abbreviations (all-caps tokens like "UNDP").
+          for (const w of run) {
+            if (/^\p{Lu}{2,8}$/u.test(w)) surnameAliases.push(w);
+          }
+        }
       }
     }
 
@@ -114,6 +151,12 @@ function parseBibEntries(bibContent) {
       surname,
       surnames: uSurnames,
       surnameAliases: uAliases,
+      // Rough count of listed authors (one per comma/&/and-separated chunk
+      // that yielded a name). Used to sanity-check "et al." citations -
+      // a single- or two-author reference should never be matched by an
+      // "X et al." in-text citation; that citation belongs to a different,
+      // often-missing, reference.
+      authorCount: surnames.length || 1,
       year: yearStr,
       displayName: `${firstPart.slice(0, 40)} (${yearStr})`,
     });
@@ -140,39 +183,75 @@ function escRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// Custom "boundary" strings: JS's built-in \b only treats ASCII
+// [A-Za-z0-9_] as word characters, so it silently fails around names
+// containing non-ASCII letters (č, ć, ř, ...). These lookarounds use
+// \p{L}/\p{N} instead, so they work for any-language surnames. Every
+// regex built with these must use the "u" flag.
+const UB = "(?<![\\p{L}\\p{N}])";
+const UE = "(?![\\p{L}\\p{N}])";
+
 function buildPatterns(surname, year) {
   const s = escRe(surname), y = escRe(year);
   return [
-    { re: new RegExp(`\\b${s}\\b[^A-Za-z0-9]{0,15}\\(?${y}\\)?`, "i"), loose: false },
-    { re: new RegExp(`\\(?${y}\\)?[^A-Za-z0-9]{0,15}\\b${s}\\b`, "i"), loose: false },
-    { re: new RegExp(`\\b${s}\\b(?:\\W+\\w+){0,5}?\\W*\\(?${y}\\)?`, "i"), loose: true },
-    { re: new RegExp(`\\(?${y}\\)?(?:\\W+\\w+){0,5}?\\W*\\b${s}\\b`, "i"), loose: true },
+    { re: new RegExp(`${UB}${s}${UE}[^\\p{L}\\p{N}]{0,15}\\(?${y}${UE}`, "iu"), loose: false },
+    { re: new RegExp(`\\(?${y}${UE}[^\\p{L}\\p{N}]{0,15}${UB}${s}${UE}`, "iu"), loose: false },
+    { re: new RegExp(`${UB}${s}${UE}(?:[^\\p{L}\\p{N}]+[\\p{L}\\p{N}]+){0,5}?[^\\p{L}\\p{N}]*\\(?${y}${UE}`, "iu"), loose: true },
+    { re: new RegExp(`\\(?${y}${UE}(?:[^\\p{L}\\p{N}]+[\\p{L}\\p{N}]+){0,5}?[^\\p{L}\\p{N}]*${UB}${s}${UE}`, "iu"), loose: true },
   ];
 }
 
 function highlightMatch(snippet, surname, year) {
-  let out = snippet.replace(new RegExp(`\\b${escRe(surname)}\\b`, "gi"), (mm) => `<mark style="background:#fef08a;">${mm}</mark>`);
+  let out = snippet.replace(new RegExp(`${UB}${escRe(surname)}${UE}`, "giu"), (mm) => `<mark style="background:#fef08a;">${mm}</mark>`);
   out = out.replace(new RegExp(`\\b${escRe(year)}\\b`, "g"), (mm) => `<mark style="background:#bbf7d0;">${mm}</mark>`);
   return out;
 }
 
 function findOrphanCitations(bodyContent, entries) {
   const cleanBody = cleanHtmlToPureText(bodyContent);
-  const knownPairs = new Set();
+  // Map "surname_year" -> list of authorCounts for every reference that
+  // could plausibly be cited under that surname+year.
+  const knownPairs = {};
   for (const e of entries) {
     const aliases = e.surnameAliases && e.surnameAliases.length ? e.surnameAliases : e.surnames;
-    for (const s of aliases) knownPairs.add(`${s.toLowerCase()}_${e.year}`);
+    for (const s of aliases) {
+      const key = `${stripPossessive(s).toLowerCase()}_${e.year}`;
+      (knownPairs[key] || (knownPairs[key] = [])).push(e.authorCount || 1);
+    }
   }
 
-  const citationRe = /\b([A-Z][A-Za-z'\-]+)(?:\s*(?:&|and)\s*([A-Z][A-Za-z'\-]+))?[,\s]*\(?\s*((?:19|20)\d{2}[a-z]?)\s*\)?/g;
+  // Unicode-aware surname group; optional "& Surname2" / "and Surname2" for
+  // two-author citations, OR "et al." for 3+-author citations (the previous
+  // version had no "et al." branch at all, so citations like "Mulholland
+  // et al., 2016" or "Hodgkins et al., 2012" were never even detected).
+  const citationRe = new RegExp(
+    `${UB}(\\p{Lu}[\\p{L}'\\-]+)(?:\\s*(?:&|and)\\s*(\\p{Lu}[\\p{L}'\\-]+)|(\\s+et\\s*al\\.?))?[,\\s]*\\(?\\s*((?:19|20)\\d{2}[a-z]?)\\s*\\)?`,
+    "gu"
+  );
   const orphans = {};
   let m;
   while ((m = citationRe.exec(cleanBody)) !== null) {
-    const sur1 = m[1], sur2 = m[2], year = m[3];
+    const sur1raw = m[1], sur2raw = m[2], isEtAl = !!m[3], year = m[4];
+    const sur1 = stripPossessive(sur1raw), sur2 = sur2raw ? stripPossessive(sur2raw) : "";
     const yearClean = year.replace(/[a-z]$/, "");
     const candidates = [sur1, sur2].filter(Boolean);
     if (!candidates.length) continue;
-    if (candidates.some((s) => knownPairs.has(`${s.toLowerCase()}_${yearClean}`))) continue;
+
+    // A surname+year pair only "explains away" this citation if it's
+    // compatible with how the citation was written: an "et al." citation
+    // must be backed by a reference with 3+ authors (single/two-author
+    // references cited as "et al." actually belong to a different,
+    // missing reference and should still surface as an orphan). Check the
+    // exact year first (preserving any a/b disambiguation suffix) and only
+    // fall back to the bare year if that fails.
+    const pairIsKnown = (s, y) => {
+      const counts = knownPairs[`${s.toLowerCase()}_${y}`];
+      if (!counts) return false;
+      return isEtAl ? counts.some((c) => c >= 3) : true;
+    };
+    const isKnown = candidates.some((s) => pairIsKnown(s, year) || (year !== yearClean && pairIsKnown(s, yearClean)));
+    if (isKnown) continue;
+
     const falsePositiveWords = [
       "table", "figure", "see", "chapter", "section", "equation", "note",
       "january", "february", "march", "april", "may", "june", "july",
@@ -183,12 +262,12 @@ function findOrphanCitations(bodyContent, entries) {
     const tail = cleanBody.slice(m.index + m[0].length, m.index + m[0].length + 6);
     if (/^-\d/.test(tail)) continue;
 
-    const key = `${sur1}|${sur2 || ""}|${yearClean}`;
+    const key = `${sur1}|${sur2 || ""}|${isEtAl ? "etal" : ""}|${yearClean}`;
     if (!orphans[key]) {
       const start = Math.max(0, m.index - 40);
       const end = Math.min(cleanBody.length, m.index + m[0].length + 40);
       orphans[key] = {
-        sur1, sur2: sur2 || "", year: yearClean,
+        sur1: sur1 + (isEtAl ? " et al." : ""), sur2: sur2 || "", year: yearClean,
         context: cleanBody.slice(start, end).trim(),
         count: 0,
       };
@@ -198,6 +277,12 @@ function findOrphanCitations(bodyContent, entries) {
   return orphans;
 }
 
+// True if the matched span's surname-year gap reads as an "et al." citation
+// that this reference (with authorCount listed authors) shouldn't claim.
+function isInvalidEtAlMatch(matchedText, authorCount) {
+  return (authorCount || 1) < 3 && /et\s*al\.?/i.test(matchedText);
+}
+
 function linkAndReport(bodyContent, entries, dupIds) {
   const cleanBody = cleanHtmlToPureText(bodyContent);
   let linkedBody = bodyContent;
@@ -205,19 +290,29 @@ function linkAndReport(bodyContent, entries, dupIds) {
 
   for (const e of entries) {
     const year = e.year, spanId = e.id;
-    const surnames = e.surnames && e.surnames.length ? e.surnames : [e.surname];
+    // Try every alias (full multi-word surname first, then each individual
+    // word) - not just the combined surname - so a compound surname like
+    // "Kosterman Zoller" still matches an in-text "Kosterman", and an
+    // organization reference like "United Nations Development Programme
+    // (UNDP)" still matches an in-text "UNDP".
+    const surnames = e.surnameAliases && e.surnameAliases.length
+      ? e.surnameAliases
+      : (e.surnames && e.surnames.length ? e.surnames : [e.surname]);
 
     let matchSurname = null, matchMethod = null, found = null;
     for (const surname of surnames) {
       const patterns = buildPatterns(surname, year);
       for (const p of patterns) {
-        const mm = p.re.exec(cleanBody);
-        if (mm) {
+        const re = new RegExp(p.re.source, p.re.flags.includes("g") ? p.re.flags : p.re.flags + "g");
+        let mm;
+        while ((mm = re.exec(cleanBody)) !== null) {
+          if (isInvalidEtAlMatch(mm[0], e.authorCount)) continue;
           found = mm;
           matchSurname = surname;
           matchMethod = p.loose ? "loose" : "tight";
           break;
         }
+        if (found) break;
       }
       if (found) break;
     }
@@ -231,6 +326,7 @@ function linkAndReport(bodyContent, entries, dupIds) {
         const re2 = new RegExp(p.re.source, p.re.flags.includes("g") ? p.re.flags : p.re.flags + "g");
         let mm2;
         while ((mm2 = re2.exec(cleanBody)) !== null) {
+          if (isInvalidEtAlMatch(mm2[0], e.authorCount)) continue;
           const start = Math.max(0, mm2.index - 35);
           const end = Math.min(cleanBody.length, mm2.index + mm2[0].length + 35);
           const snippet = cleanBody.slice(start, end).trim();
@@ -241,12 +337,19 @@ function linkAndReport(bodyContent, entries, dupIds) {
         }
       }
 
-      const htmlPattern = new RegExp(`${escRe(matchSurname)}(?:[^<]{0,60})${escRe(year)}`, "i");
-      const mLink = htmlPattern.exec(linkedBody);
-      if (mLink && !mLink[0].includes("href=") && !mLink[0].includes("</a>")) {
+      // Find the same valid (non-et-al, when applicable) occurrence in the
+      // raw HTML to place the hyperlink, rather than always the first raw
+      // occurrence of the surname (which might be a different, et-al,
+      // citation belonging to a different reference).
+      const htmlRe = new RegExp(`${escRe(matchSurname)}(?:[^<]{0,60})${escRe(year)}`, "gi");
+      let mLink;
+      while ((mLink = htmlRe.exec(linkedBody)) !== null) {
+        if (isInvalidEtAlMatch(mLink[0], e.authorCount)) continue;
+        if (mLink[0].includes("href=") || mLink[0].includes("</a>")) continue;
         linkedBody = linkedBody.slice(0, mLink.index) +
           `<a href="#${spanId}" style="color:#2563eb;text-decoration:underline;">${mLink[0]}</a>` +
           linkedBody.slice(mLink.index + mLink[0].length);
+        break;
       }
 
       linkedEntries.push({
@@ -257,10 +360,10 @@ function linkAndReport(bodyContent, entries, dupIds) {
       let reason = "No occurrence of author surname found in text";
       let anySurnameFound = false;
       for (const surname of surnames) {
-        if (new RegExp(`\\b${escRe(surname)}\\b`, "i").test(cleanBody)) {
+        if (new RegExp(`${UB}${escRe(surname)}${UE}`, "iu").test(cleanBody)) {
           anySurnameFound = true;
           const widePattern = new RegExp(
-            `\\b${escRe(surname)}\\b[\\s\\S]{0,150}\\b${escRe(year)}\\b|\\b${escRe(year)}\\b[\\s\\S]{0,150}\\b${escRe(surname)}\\b`, "i"
+            `${UB}${escRe(surname)}${UE}[\\s\\S]{0,150}\\b${escRe(year)}\\b|\\b${escRe(year)}\\b[\\s\\S]{0,150}${UB}${escRe(surname)}${UE}`, "iu"
           );
           if (widePattern.test(cleanBody)) {
             reason = `'${surname}' and '${year}' both found, but far apart / unusual punctuation or word-gap between them (formatting mismatch)`;
@@ -274,7 +377,7 @@ function linkAndReport(bodyContent, entries, dupIds) {
 
       unlinkedEntries.push({
         id: spanId, displayName: e.displayName, cleanText: e.cleanText,
-        isDuplicate: dupIds.has(spanId), reason,
+        isDuplicate: dupIds.has(spanId), reason, surnameAliases: surnames,
       });
     }
   }
@@ -289,12 +392,63 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans)
   const methodBadge = (method) => method === "loose"
     ? ' <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:11px;">loose match</span>'
     : '';
+  const crossRefBadge = (info) => info
+    ? ` <span title="${escapeHtml(info.detail)}" style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">⚠ check "${escapeHtml(info.surname)}": also in ${escapeHtml(info.detail)}</span>`
+    : '';
+
+  // Surname -> where else it shows up, so a "loose match" linked row can be
+  // flagged if the same surname also sits in the Unlinked or Orphan tables
+  // (a strong signal the loose match may have grabbed the wrong citation -
+  // see the single-author-vs-"et al." class of bug).
+  const unlinkedBySurname = new Map();
+  for (const e of unlinkedEntries) {
+    for (const s of (e.surnameAliases && e.surnameAliases.length ? e.surnameAliases : [])) {
+      const k = s.toLowerCase();
+      if (!unlinkedBySurname.has(k)) unlinkedBySurname.set(k, []);
+      unlinkedBySurname.get(k).push(e.id);
+    }
+  }
+  const orphanBySurname = new Map();
+  for (const k of Object.keys(orphans)) {
+    const d = orphans[k];
+    for (const s of [d.sur1.replace(/\s+et al\.?$/i, ""), d.sur2].filter(Boolean)) {
+      const key = s.toLowerCase();
+      if (!orphanBySurname.has(key)) orphanBySurname.set(key, 0);
+      orphanBySurname.set(key, orphanBySurname.get(key) + 1);
+    }
+  }
+  const crossRefFor = (e) => {
+    if (e.matchMethod !== "loose" || !e.matchedSurname) return null;
+    const k = e.matchedSurname.toLowerCase();
+    const hits = [];
+    if (unlinkedBySurname.has(k)) hits.push(`Unlinked (${unlinkedBySurname.get(k).join(", ")})`);
+    if (orphanBySurname.has(k)) hits.push(`Orphan citations (${orphanBySurname.get(k)})`);
+    if (!hits.length) return null;
+    // Name the exact surname the loose match latched onto, so the reader
+    // immediately knows which author in a multi-author reference is the
+    // uncertain one - e.g. "Provan, K. G., Nakama, L., Veazie, M. A. (2003)"
+    // matched on "Veazie", and "Veazie" is also an orphan citation elsewhere.
+    return { surname: e.matchedSurname, detail: hits.join(" & ") };
+  };
+
+  // Clean up spacing right inside parentheses (e.g. "( Anheier, 2005 )" ->
+  // "(Anheier, 2005)") so the copied text matches exactly what a Ctrl+F
+  // search in the original Word file expects, with no odd extra spaces.
+  const cleanForCopy = (s) => String(s)
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const contextCell = (contexts) => contexts.length
+    ? contexts.map((c) => `<span class="ctx-copy" data-copy="${escapeHtml(cleanForCopy(c.plain))}" title="Click to copy">${c.html}</span>`).join("<br>")
+    : "-";
 
   const linkedRows = linkedEntries.map((e) => `
         <tr class="linked-row">
             <td>${escapeHtml(e.id)}${dupBadge(e.isDuplicate)}</td>
-            <td><strong>${escapeHtml(e.displayName)}</strong>${methodBadge(e.matchMethod)}</td>
-            <td>${e.contexts.map((c) => c.html).join("<br>") || "-"}</td>
+            <td><strong>${escapeHtml(e.displayName)}</strong>${methodBadge(e.matchMethod)}${crossRefBadge(crossRefFor(e))}</td>
+            <td>${contextCell(e.contexts)}</td>
         </tr>`).join("") || `
         <tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No linked citations found.</td></tr>`;
 
@@ -344,6 +498,11 @@ td{padding:10px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
 .orphan-row{background:#fff7ed;}
 .reason-cell{color:#92400e;font-style:italic;}
 mark{padding:1px 2px;border-radius:3px;}
+.ctx-copy{cursor:pointer;border-radius:4px;padding:1px 3px;transition:background .15s ease;}
+.ctx-copy:hover{background:#eff6ff;outline:1px dashed #93c5fd;}
+.ctx-copy.copied{background:#dcfce7 !important;outline:1px solid #22c55e;}
+.copy-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:999;}
+.copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style></head>
 <body><div class="container">
 <h1>Reference Cross-Link Audit Report</h1>
@@ -357,6 +516,8 @@ mark{padding:1px 2px;border-radius:3px;}
 </div>
 <h2>Linked Citations (${linkedCount})</h2>
 <p style="color:#64748b;font-size:13px;">"loose match" = surname and year found with extra words between them rather than directly adjacent. Matched <mark style="background:#fef08a;">surname</mark> and <mark style="background:#bbf7d0;">year</mark> are highlighted.</p>
+<p style="color:#64748b;font-size:13px;">⚠ "check '&lt;name&gt;': also in ..." = the named surname is a loose match here but also shows up in the Unlinked or Orphan tables below - worth a manual look, since the loose match may have grabbed a different citation of the same surname.</p>
+<p style="color:#64748b;font-size:13px;">Click any line in "Context Found" to copy it - handy for Ctrl+F in your Word file.</p>
 <table><thead><tr><th>Bib ID</th><th>Reference</th><th>Context Found</th></tr></thead>
 <tbody>${linkedRows}</tbody></table>
 <h2>Unlinked Citations (${unlinkedCount})</h2>
@@ -367,7 +528,52 @@ mark{padding:1px 2px;border-radius:3px;}
 <p style="color:#64748b;font-size:13px;">Citations in the body text with NO matching reference entry - need a reference added, or are a typo.</p>
 <table><thead><tr><th>Citation</th><th>Context</th><th>Occurrences</th><th>Ref No</th></tr></thead>
 <tbody>${orphanRows}</tbody></table>
-</div></body></html>`;
+</div>
+<div class="copy-toast" id="copy-toast">Copied!</div>
+<script>
+(function () {
+  var toast = document.getElementById('copy-toast');
+  var toastTimer = null;
+  function showToast(msg) {
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1200);
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('.ctx-copy') : null;
+    if (!el) return;
+    var text = el.getAttribute('data-copy') || '';
+    if (!text) return;
+    var mark = function () {
+      el.classList.add('copied');
+      setTimeout(function () { el.classList.remove('copied'); }, 900);
+      showToast('Copied to clipboard');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(mark).catch(function () {
+        if (fallbackCopy(text)) mark(); else showToast('Could not copy - please select manually');
+      });
+    } else {
+      if (fallbackCopy(text)) mark(); else showToast('Could not copy - please select manually');
+    }
+  });
+})();
+</script>
+</body></html>`;
 }
 
 function generateReport(htmlContent) {
