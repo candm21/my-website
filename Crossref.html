@@ -40,10 +40,10 @@
 
         body.report-active {
             background-color: #ffffff;
-            height: auto;
+            height: 100vh;
             min-height: 100vh;
             display: block;
-            padding-bottom: 76px;
+            overflow: hidden;
         }
 
         .bg-orb { position: fixed; border-radius: 50%; filter: blur(100px); opacity: 0.25; z-index: 0; animation: float 18s infinite ease-in-out; pointer-events: none; transition: opacity 0.5s ease; }
@@ -120,18 +120,6 @@
         .dropzone .browse-btn { color: #6ee7b7; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
         #file-input { display: none; }
 
-        .help-hint {
-            margin-top: 18px; font-size: 0.85rem; color: var(--text-secondary);
-            opacity: 0.8; line-height: 1.5; text-align: center;
-        }
-
-        .error-banner {
-            display: none; margin-top: 16px; padding: 14px 16px; border-radius: 12px;
-            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.35);
-            color: #fca5a5; font-size: 0.9rem; font-weight: 500; animation: fadeIn 0.3s ease;
-        }
-        .error-banner.active { display: block; }
-
         .status-area { margin-top: 24px; display: none; }
         .status-area.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -140,21 +128,6 @@
             display: flex; align-items: center; gap: 12px; padding: 16px;
             background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);
             border-radius: 12px; color: #6ee7b7; font-weight: 500;
-        }
-        .file-info.is-error {
-            background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.35); color: #fca5a5;
-        }
-
-        .spinner {
-            display: none; width: 16px; height: 16px; border-radius: 50%;
-            border: 2px solid rgba(110, 231, 183, 0.25); border-top-color: #6ee7b7;
-            animation: spin 0.8s linear infinite; flex-shrink: 0;
-        }
-        .spinner.active { display: inline-block; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .dropzone:focus-visible, .browse-btn:focus-visible {
-            outline: 2px solid #34d399; outline-offset: 3px;
         }
 
         /* ACTION STATUS BAR (bottom) */
@@ -194,6 +167,8 @@
             align-items: center;
             gap: 20px;
         }
+
+
 
         .floating-panel .panel-label {
             font-size: 0.7rem;
@@ -266,7 +241,8 @@
             transform: translateY(-2px);
         }
 
-        /* FULL PAGE PREVIEW - No scroll inside */
+        /* FULL PAGE PREVIEW - iframe scrolls internally so its sticky
+           filter/search bar can freeze in place while you scroll the report */
         .preview-section {
             z-index: 10;
             width: 100%;
@@ -278,7 +254,9 @@
         }
 
         .preview-section.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 76px);
             animation: fadeIn 0.6s ease;
         }
 
@@ -287,19 +265,21 @@
             width: 100%;
             position: relative;
             box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
-            overflow: visible;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
         }
 
         .iframe-bar {
             height: 40px;
+            flex: 0 0 auto;
             background: #f1f5f9;
             border-bottom: 1px solid #e2e8f0;
             display: flex;
             align-items: center;
             padding-left: 16px;
             gap: 8px;
-            position: sticky;
-            top: 0;
             z-index: 10;
         }
         .iframe-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -325,14 +305,8 @@
             border: none;
             display: block;
             background: #ffffff;
-            overflow: visible;
-            min-height: 100vh;
-            height: auto;
-        }
-
-        /* Ensure iframe content doesn't have scrollbars */
-        #report-iframe body {
-            overflow: visible !important;
+            flex: 1;
+            min-height: 0;
         }
 
         footer {
@@ -366,7 +340,7 @@
         }
 
         body.report-active .preview-section {
-            display: block !important;
+            display: flex !important;
         }
 
         /* Override for the footer inside report iframe */
@@ -402,7 +376,10 @@
                 max-width: none;
             }
             body.report-active {
-                padding-bottom: 120px;
+                height: 100vh;
+            }
+            .preview-section.active {
+                height: calc(100vh - 150px);
             }
         }
     </style>
@@ -421,7 +398,7 @@
 
     <main id="main-upload">
         <div class="glass-card">
-            <div class="dropzone" id="drop-zone" role="button" tabindex="0" aria-label="Upload a .docx file — click, drag and drop, or press Enter">
+            <div class="dropzone" id="drop-zone">
                 <div class="dropzone-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -429,17 +406,12 @@
                 </div>
                 <h3>Drop your <code>.docx</code> here</h3>
                 <p>or <span class="browse-btn">click to browse</span> — we'll check in‑text citations against your reference list.</p>
-                <input type="file" id="file-input" accept=".docx" aria-label="Upload a .docx file to audit">
+                <input type="file" id="file-input" accept=".docx">
             </div>
 
-            <p class="help-hint">💡 Your document needs a heading called <strong>References</strong> (Bibliography / Works Cited also work). Nothing is uploaded anywhere — everything runs right here in your browser.</p>
-
-            <div class="error-banner" id="error-banner" role="alert"></div>
-
             <div class="status-area" id="status-area">
-                <div class="file-info" id="file-info-box">
+                <div class="file-info">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    <span class="spinner" id="file-spinner" aria-hidden="true"></span>
                     <span id="file-name">Ready to audit.</span>
                 </div>
             </div>
@@ -455,7 +427,7 @@
                 <div class="iframe-dot dot-green"></div>
                 <div class="iframe-url">crossref-report://audit-result</div>
             </div>
-            <iframe id="report-iframe" title="Report Preview" scrolling="no" allow="clipboard-write"></iframe>
+            <iframe id="report-iframe" title="Report Preview"></iframe>
         </div>
     </section>
 
@@ -463,11 +435,11 @@
     <div class="floating-panel" id="floating-panel">
         <div class="panel-left">
             <div class="panel-label">Actions</div>
-            <button class="btn btn-primary" id="download-btn" disabled aria-label="Download the audit report">
+            <button class="btn btn-primary" id="download-btn" disabled>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download
             </button>
-            <button class="btn btn-secondary" id="reset-btn" aria-label="Start over with a new file">
+            <button class="btn btn-secondary" id="reset-btn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                 New file
             </button>
@@ -479,10 +451,10 @@
     </div>
 
     <footer>
-        <strong>© C&M Digitals</strong>
+        ✨ <strong>SelvaPrabhu</strong> · Crossref Checker · <strong>© C&M Digitals</strong>
     </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" onerror="window.__mammothFailed = true;"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="crossref-core-browser.js"></script>
     
     <script>
@@ -500,23 +472,6 @@
         const appFooter = document.querySelector('footer');
         const panelFileInfo = document.getElementById('panel-file-info');
         const panelClock = document.getElementById('panel-clock');
-        const errorBanner = document.getElementById('error-banner');
-        const fileInfoBox = document.getElementById('file-info-box');
-        const fileSpinner = document.getElementById('file-spinner');
-
-        let reportDownloaded = false;
-
-        function showError(message) {
-            errorBanner.textContent = message;
-            errorBanner.classList.add('active');
-            statusArea.classList.remove('active');
-            fileInfoBox.classList.remove('is-error');
-        }
-
-        function clearError() {
-            errorBanner.classList.remove('active');
-            errorBanner.textContent = '';
-        }
 
         let currentReportHtml = null;
         let currentFileName = null;
@@ -533,12 +488,6 @@
 
         // Dropzone interactions
         dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                fileInput.click();
-            }
-        });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 
@@ -552,21 +501,20 @@
             if (e.target.files.length > 0) handleFile(e.target.files[0]);
         });
 
-        // Inject CSS into iframe to remove scrollbars
+        // Inject minimal CSS into iframe: keep normal internal scrolling
+        // (needed for the report's own sticky filter bar to freeze on scroll),
+        // just make sure the page can't grow taller than the iframe itself.
         function injectIframeStyles() {
             try {
                 const iframeDoc = reportIframe.contentDocument || reportIframe.contentWindow.document;
                 if (!iframeDoc) return;
-                
+
                 const style = iframeDoc.createElement('style');
                 style.textContent = `
                     html, body {
-                        overflow: visible !important;
-                        height: auto !important;
-                        min-height: 100vh !important;
-                    }
-                    * {
-                        overflow: visible !important;
+                        height: 100%;
+                        overflow-y: auto;
+                        overflow-x: hidden;
                     }
                 `;
                 iframeDoc.head.appendChild(style);
@@ -576,24 +524,13 @@
         }
 
         function handleFile(file) {
-            clearError();
-
-            if (window.__mammothFailed || typeof mammoth === 'undefined') {
-                showError('This tool needs an internet connection the first time it loads (to fetch a required library). Please check your connection and reload the page.');
-                return;
-            }
-
             if (!file.name.toLowerCase().endsWith('.docx')) {
-                showError(`"${file.name}" isn't a .docx file. Older .doc files and PDFs aren't supported yet — please save/export as .docx and try again.`);
-                fileInput.value = '';
+                alert('Please upload a valid .docx file.');
                 return;
             }
 
             currentFileName = file.name;
-            reportDownloaded = false;
-            fileInfoBox.classList.remove('is-error');
-            fileNameDisplay.textContent = `Processing "${file.name}"...`;
-            fileSpinner.classList.add('active');
+            fileNameDisplay.textContent = `⏳ Processing "${file.name}"...`;
             statusArea.classList.add('active');
             downloadBtn.disabled = true;
 
@@ -617,25 +554,15 @@
                         reportIframe.srcdoc = reportHtml;
                         previewSection.classList.add('active');
                         
-                        // Auto-resize iframe to content height - no scroll inside
+                        // iframe now sizes itself via CSS (flex: 1, fixed viewport
+                        // height) and scrolls internally - no JS height calc needed
                         reportIframe.onload = function() {
                             injectIframeStyles();
-                            try {
-                                const iframeDoc = reportIframe.contentDocument || reportIframe.contentWindow.document;
-                                if (iframeDoc) {
-                                    const height = Math.max(iframeDoc.body.scrollHeight, iframeDoc.documentElement.scrollHeight, window.innerHeight);
-                                    reportIframe.style.height = height + 'px';
-                                    reportIframe.style.overflow = 'visible';
-                                }
-                            } catch (err) {
-                                reportIframe.style.height = '100vh';
-                            }
                         };
                         
                         // Also inject styles immediately if iframe already loaded
                         setTimeout(injectIframeStyles, 100);
                         
-                        fileSpinner.classList.remove('active');
                         fileNameDisplay.textContent = `✅ "${file.name}" analyzed successfully!`;
                         panelFileInfo.textContent = `Imported: ${file.name} · processed ${new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
                         panelFileInfo.title = panelFileInfo.textContent;
@@ -643,44 +570,20 @@
                     })
                     .catch(function(err) {
                         console.error(err);
-                        fileSpinner.classList.remove('active');
-                        fileInfoBox.classList.add('is-error');
-                        fileNameDisplay.textContent = `Ready to audit.`;
-                        showError(`Couldn't read "${file.name}": ${err.message}. Please check the file isn't corrupted or password-protected, and try again.`);
-                        statusArea.classList.remove('active');
-                        downloadBtn.disabled = true;
-                        currentFileName = null;
-                        currentReportHtml = null;
-                        fileInput.value = '';
+                        fileNameDisplay.textContent = `❌ Error: ${err.message}`;
                     });
             };
             
-            reader.onerror = function() {
-                fileSpinner.classList.remove('active');
-                fileInfoBox.classList.add('is-error');
-                fileNameDisplay.textContent = `Ready to audit.`;
-                showError('Something went wrong reading that file. Please try again.');
-                statusArea.classList.remove('active');
-                downloadBtn.disabled = true;
-                currentFileName = null;
-                fileInput.value = '';
-            };
+            reader.onerror = () => fileNameDisplay.textContent = `❌ Error reading file.`;
             reader.readAsArrayBuffer(file);
         }
 
         // NEW FILE - restore home page
         resetBtn.addEventListener('click', () => {
-            if (currentReportHtml && !reportDownloaded) {
-                const proceed = confirm('You haven\'t downloaded this report yet — it will be lost. Start a new file anyway?');
-                if (!proceed) return;
-            }
-
             // Reset data
-            clearError();
             fileInput.value = '';
             currentReportHtml = null;
             currentFileName = null;
-            reportDownloaded = false;
             
             // Hide floating panel
             floatingPanel.classList.remove('active');
@@ -688,8 +591,6 @@
             // Hide preview
             previewSection.classList.remove('active');
             reportIframe.srcdoc = '';
-            reportIframe.style.height = '';
-            reportIframe.style.overflow = '';
             
             // Restore home page
             document.body.classList.remove('report-active');
@@ -717,25 +618,13 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            reportDownloaded = true;
         });
 
-        // Re-calculate iframe height on window resize
-        window.addEventListener('resize', () => {
-            if (previewSection.classList.contains('active') && reportIframe.srcdoc) {
-                try {
-                    const iframeDoc = reportIframe.contentDocument || reportIframe.contentWindow.document;
-                    if (iframeDoc) {
-                        const height = Math.max(iframeDoc.body.scrollHeight, iframeDoc.documentElement.scrollHeight, window.innerHeight);
-                        reportIframe.style.height = height + 'px';
-                    }
-                } catch (err) {}
-            }
-        });
-
-        // Force scroll on main page only
+        // Force scroll on main page only (home screen; report screen scrolls internally)
         document.addEventListener('DOMContentLoaded', () => {
-            document.body.style.overflowY = 'auto';
+            if (!document.body.classList.contains('report-active')) {
+                document.body.style.overflowY = 'auto';
+            }
         });
     </script>
 </body>

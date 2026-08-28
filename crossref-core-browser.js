@@ -1,6 +1,7 @@
 // docx_crossref core logic - JS port for in-browser use (no server needed)
 
 function escapeHtml(str) {
+  const div = { textContent: str };
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -46,17 +47,14 @@ function isNonReferenceSection(text) {
   return NON_REFERENCE_PATTERNS.some((p) => p.test(text));
 }
 
-// Accept the common heading variants people actually use, not just
-// "References" - Bibliography / Works Cited / Reference List all mark the
-// same section in different citation styles.
-const REFERENCES_HEADING_RE = /<(p|h[1-6])[^>]*>\s*(?:<strong>\s*)?(References?|Bibliography|Works\s+Cited|Reference\s+List)\s*(?:<\/strong>\s*)?<\/\1>/i;
+const REFERENCES_HEADING_RE = /<(p|h[1-6])[^>]*>\s*(?:<strong>\s*)?References?\s*(?:<\/strong>\s*)?<\/\1>/i;
 
 function splitBodyAndReferences(htmlContent) {
   const m = REFERENCES_HEADING_RE.exec(htmlContent);
   if (m) {
     return [htmlContent.slice(0, m.index), htmlContent.slice(m.index + m[0].length), m[0]];
   }
-  const m2 = /References?|Bibliography|Works\s+Cited|Reference\s+List/i.exec(htmlContent);
+  const m2 = /References?\b/i.exec(htmlContent);
   if (m2) {
     return [htmlContent.slice(0, m2.index), htmlContent.slice(m2.index + m2[0].length), "<p><strong>References</strong></p>"];
   }
@@ -96,6 +94,8 @@ function parseBibEntries(bibContent) {
     const surnames = [];
     const surnameAliases = [];
     const authorChunks = firstPart.split(/,|\band\b|&/);
+    let authorRunCount = 0;
+    let firstAuthorCaptured = false;
     for (const chunk of authorChunks) {
       const words = chunk.trim().split(/\s+/).filter(Boolean);
       const run = [];
@@ -117,23 +117,31 @@ function parseBibEntries(bibContent) {
         }
       }
       if (run.length) {
-        const full = run.join(" ");
-        surnames.push(full);
-        surnameAliases.push(full);
-        if (run.length === 2) {
-          // Almost always a compound personal surname (Kosterman Zoller,
-          // Van Dijk, De Bruin) - alias each half so a citation using only
-          // the first part still matches.
-          surnameAliases.push(...run);
-        } else if (run.length > 2) {
-          // Likely a multi-word institutional/organization name. Don't
-          // alias every generic word in it (e.g. "International", "Board")
-          // - a common word coincidentally appearing elsewhere with the
-          // same year would create a false match. Only alias genuine
-          // embedded abbreviations (all-caps tokens like "UNDP").
-          for (const w of run) {
-            if (/^\p{Lu}{2,8}$/u.test(w)) surnameAliases.push(w);
+        authorRunCount++;
+        // Only the first author contributes match aliases - a citation
+        // naming any other author on the list isn't valid APA form, and
+        // should surface as unlinked/orphan rather than being silently
+        // absorbed by this reference.
+        if (!firstAuthorCaptured) {
+          const full = run.join(" ");
+          surnames.push(full);
+          surnameAliases.push(full);
+          if (run.length === 2) {
+            // Almost always a compound personal surname (Kosterman Zoller,
+            // Van Dijk, De Bruin) - alias each half so a citation using only
+            // the first part still matches.
+            surnameAliases.push(...run);
+          } else if (run.length > 2) {
+            // Likely a multi-word institutional/organization name. Don't
+            // alias every generic word in it (e.g. "International", "Board")
+            // - a common word coincidentally appearing elsewhere with the
+            // same year would create a false match. Only alias genuine
+            // embedded abbreviations (all-caps tokens like "UNDP").
+            for (const w of run) {
+              if (/^\p{Lu}{2,8}$/u.test(w)) surnameAliases.push(w);
+            }
           }
+          firstAuthorCaptured = true;
         }
       }
     }
@@ -156,7 +164,7 @@ function parseBibEntries(bibContent) {
       // a single- or two-author reference should never be matched by an
       // "X et al." in-text citation; that citation belongs to a different,
       // often-missing, reference.
-      authorCount: surnames.length || 1,
+      authorCount: authorRunCount || 1,
       year: yearStr,
       displayName: `${firstPart.slice(0, 40)} (${yearStr})`,
     });
@@ -300,29 +308,17 @@ function linkAndReport(bodyContent, entries, dupIds) {
       : (e.surnames && e.surnames.length ? e.surnames : [e.surname]);
 
     let matchSurname = null, matchMethod = null, found = null;
-
-    // Two passes, not one: check every author's TIGHT (exact, adjacent)
-    // pattern first, and only fall back to LOOSE patterns if nobody got a
-    // tight hit. Previously this checked ALL of author #1's patterns
-    // (tight *and* loose) before ever looking at author #2/#3 - so a weak
-    // loose coincidence on the first-listed author (e.g. "Provan") always
-    // won, even when a later author (e.g. "Veazie") had an exact tight
-    // match sitting right there in the text. That's why the "doubtful
-    // author" badge kept naming the first author no matter what.
-    for (const looseOnly of [false, true]) {
-      for (const surname of surnames) {
-        const patterns = buildPatterns(surname, year).filter((p) => p.loose === looseOnly);
-        for (const p of patterns) {
-          const re = new RegExp(p.re.source, p.re.flags.includes("g") ? p.re.flags : p.re.flags + "g");
-          let mm;
-          while ((mm = re.exec(cleanBody)) !== null) {
-            if (isInvalidEtAlMatch(mm[0], e.authorCount)) continue;
-            found = mm;
-            matchSurname = surname;
-            matchMethod = p.loose ? "loose" : "tight";
-            break;
-          }
-          if (found) break;
+    for (const surname of surnames) {
+      const patterns = buildPatterns(surname, year);
+      for (const p of patterns) {
+        const re = new RegExp(p.re.source, p.re.flags.includes("g") ? p.re.flags : p.re.flags + "g");
+        let mm;
+        while ((mm = re.exec(cleanBody)) !== null) {
+          if (isInvalidEtAlMatch(mm[0], e.authorCount)) continue;
+          found = mm;
+          matchSurname = surname;
+          matchMethod = p.loose ? "loose" : "tight";
+          break;
         }
         if (found) break;
       }
@@ -367,13 +363,21 @@ function linkAndReport(bodyContent, entries, dupIds) {
       linkedEntries.push({
         id: spanId, displayName: e.displayName, contexts,
         isDuplicate: dupIds.has(spanId), matchMethod, matchedSurname: matchSurname,
+        firstAuthorSurname: e.surname, surnameAliases: surnames,
       });
     } else {
       let reason = "No occurrence of author surname found in text";
       let anySurnameFound = false;
+      let foundContext = null;
       for (const surname of surnames) {
-        if (new RegExp(`${UB}${escRe(surname)}${UE}`, "iu").test(cleanBody)) {
+        const re = new RegExp(`${UB}${escRe(surname)}${UE}`, "iu");
+        const mFound = re.exec(cleanBody);
+        if (mFound) {
           anySurnameFound = true;
+          const start = Math.max(0, mFound.index - 35);
+          const end = Math.min(cleanBody.length, mFound.index + mFound[0].length + 35);
+          const snippet = cleanBody.slice(start, end).trim();
+          foundContext = { plain: snippet, html: highlightMatch(snippet, surname, year) };
           const widePattern = new RegExp(
             `${UB}${escRe(surname)}${UE}[\\s\\S]{0,150}\\b${escRe(year)}\\b|\\b${escRe(year)}\\b[\\s\\S]{0,150}${UB}${escRe(surname)}${UE}`, "iu"
           );
@@ -390,6 +394,7 @@ function linkAndReport(bodyContent, entries, dupIds) {
       unlinkedEntries.push({
         id: spanId, displayName: e.displayName, cleanText: e.cleanText,
         isDuplicate: dupIds.has(spanId), reason, surnameAliases: surnames,
+        context: foundContext, year: e.year,
       });
     }
   }
@@ -397,15 +402,89 @@ function linkAndReport(bodyContent, entries, dupIds) {
   return { linkedBody, linkedEntries, unlinkedEntries };
 }
 
+function levenshtein(a, b) {
+  a = String(a).toLowerCase(); b = String(b).toLowerCase();
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = new Array(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[n];
+}
+
+// "Did you mean?" - pair up Unlinked references with same-year Orphan
+// citations whose surname is a near-miss (small edit distance), the exact
+// shape of a spelling typo between the reference list and the body text
+// (e.g. "Thornton" in the reference list vs. "Thorton" in the citation).
+// Both maps are keyed so the renderer can look up a suggestion by id.
+function buildDidYouMeanSuggestions(unlinkedEntries, orphans) {
+  const unlinkedSuggestion = {};
+  const orphanSuggestion = {};
+  const orphanKeys = Object.keys(orphans);
+
+  for (const e of unlinkedEntries) {
+    const aliases = e.surnameAliases && e.surnameAliases.length ? e.surnameAliases : [];
+    let best = null;
+    for (const ok of orphanKeys) {
+      const d = orphans[ok];
+      if (d.year !== e.year) continue;
+      const orphanNames = [d.sur1.replace(/\s+et al\.?$/i, ""), d.sur2].filter(Boolean);
+      for (const a of aliases) {
+        for (const on of orphanNames) {
+          if (a.toLowerCase() === on.toLowerCase()) continue; // exact match would've linked already
+          const dist = levenshtein(a, on);
+          const maxLen = Math.max(a.length, on.length);
+          if (dist === 0 || dist > 2 || maxLen < 4) continue;
+          const similarity = Math.round((1 - dist / maxLen) * 100);
+          if (similarity < 65) continue;
+          if (!best || dist < best.dist) {
+            best = { dist, similarity, orphanKey: ok, orphanLabel: `${d.sur1}${d.sur2 ? " & " + d.sur2 : ""} (${d.year})` };
+          }
+        }
+      }
+    }
+    if (best) {
+      unlinkedSuggestion[e.id] = best;
+      if (!orphanSuggestion[best.orphanKey] || best.similarity > orphanSuggestion[best.orphanKey].similarity) {
+        orphanSuggestion[best.orphanKey] = { similarity: best.similarity, refId: e.id, refLabel: e.displayName };
+      }
+    }
+  }
+  return { unlinkedSuggestion, orphanSuggestion };
+}
+
+function cleanForCopy(text) {
+  return String(text)
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans) {
+  const { unlinkedSuggestion, orphanSuggestion } = buildDidYouMeanSuggestions(unlinkedEntries, orphans);
+
   const dupBadge = (isDup) => isDup
     ? ' <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;">Duplicate</span>'
     : '';
   const methodBadge = (method) => method === "loose"
     ? ' <span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:11px;">loose match</span>'
     : '';
-  const crossRefBadge = (info) => info
-    ? ` <span title="${escapeHtml(info.detail)}" style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">⚠ check "${escapeHtml(info.surname)}": also in ${escapeHtml(info.detail)}</span>`
+  const crossRefBadge = (surname, msg) => msg
+    ? ` <span title="${escapeHtml(`'${surname}' `+msg)}" style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">⚠ check "${escapeHtml(surname)}" - also in ${escapeHtml(msg)}</span>`
+    : '';
+  const suggestBadge = (text) => text
+    ? `<div style="margin-top:4px;font-size:12px;color:#0369a1;">💡 ${escapeHtml(text)}</div>`
     : '';
 
   // Surname -> where else it shows up, so a "loose match" linked row can be
@@ -430,61 +509,76 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans)
     }
   }
   const crossRefFor = (e) => {
-    if (e.matchMethod !== "loose" || !e.matchedSurname) return null;
-    const k = e.matchedSurname.toLowerCase();
+    if (e.matchMethod !== "loose") return "";
+    const aliases = e.surnameAliases && e.surnameAliases.length ? e.surnameAliases : [e.matchedSurname].filter(Boolean);
+    const unlinkedHits = new Set(), orphanIds = new Set();
+    let orphanTotal = 0;
+    for (const s of aliases) {
+      const k = s.toLowerCase();
+      if (unlinkedBySurname.has(k)) unlinkedBySurname.get(k).forEach((id) => unlinkedHits.add(id));
+      if (orphanBySurname.has(k)) orphanTotal += orphanBySurname.get(k);
+    }
     const hits = [];
-    if (unlinkedBySurname.has(k)) hits.push(`Unlinked (${unlinkedBySurname.get(k).join(", ")})`);
-    if (orphanBySurname.has(k)) hits.push(`Orphan citations (${orphanBySurname.get(k)})`);
-    if (!hits.length) return null;
-    // Name the exact surname the loose match latched onto, so the reader
-    // immediately knows which author in a multi-author reference is the
-    // uncertain one - e.g. "Provan, K. G., Nakama, L., Veazie, M. A. (2003)"
-    // matched on "Veazie", and "Veazie" is also an orphan citation elsewhere.
-    return { surname: e.matchedSurname, detail: hits.join(" & ") };
+    if (unlinkedHits.size) hits.push(`Unlinked (${[...unlinkedHits].join(", ")})`);
+    if (orphanTotal) hits.push(`Orphan citations (${orphanTotal})`);
+    return hits.join(" & ");
   };
 
-  // Clean up spacing right inside parentheses (e.g. "( Anheier, 2005 )" ->
-  // "(Anheier, 2005)") so the copied text matches exactly what a Ctrl+F
-  // search in the original Word file expects, with no odd extra spaces.
-  const cleanForCopy = (s) => String(s)
-    .replace(/\(\s+/g, "(")
-    .replace(/\s+\)/g, ")")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const contextCell = (contexts) => contexts.length
-    ? contexts.map((c) => `<div class="ctx-line"><span class="ctx-copy" data-copy="${escapeHtml(cleanForCopy(c.plain))}" title="Click to copy">${c.html}</span></div>`).join("")
-    : "-";
-
-  const linkedRows = linkedEntries.map((e) => `
-        <tr class="linked-row" data-method="${e.matchMethod}">
+  const linkedRows = linkedEntries.map((e) => {
+    const ctxHtml = e.contexts.map((c) =>
+      `<span class="ctx-copy" title="Click to copy" data-copy="${escapeHtml(cleanForCopy(c.plain))}">${c.html}</span>`
+    ).join("<br>") || "-";
+    const badgeName = e.firstAuthorSurname || e.matchedSurname || "";
+    const crossMsg = crossRefFor(e);
+    const qIssue = crossMsg ? `Loose match - also appears in ${crossMsg}` : (e.matchMethod === "loose" ? "Loose match - please verify against the reference." : "");
+    const qContext = e.contexts[0] ? cleanForCopy(e.contexts[0].plain) : "";
+    return `
+        <tr class="linked-row" data-method="${escapeHtml(e.matchMethod || "")}">
+            <td class="check-cell"><input type="checkbox" class="query-check" data-qtype="Linked citation" data-qid="${escapeHtml(e.id)}" data-qref="${escapeHtml(e.displayName)}" data-qissue="${escapeHtml(qIssue)}" data-qcontext="${escapeHtml(qContext)}"></td>
             <td>${escapeHtml(e.id)}${dupBadge(e.isDuplicate)}</td>
-            <td><strong>${escapeHtml(e.displayName)}</strong>${methodBadge(e.matchMethod)}${crossRefBadge(crossRefFor(e))}</td>
-            <td>${contextCell(e.contexts)}</td>
-        </tr>`).join("") || `
-        <tr><td colspan="3" style="text-align:center;color:#64748b;padding:20px;">No linked citations found.</td></tr>`;
+            <td><strong>${escapeHtml(e.displayName)}</strong>${methodBadge(e.matchMethod)}${crossRefBadge(badgeName, crossMsg)}</td>
+            <td>${ctxHtml}</td>
+        </tr>`;
+  }).join("") || `
+        <tr><td colspan="4" style="text-align:center;color:#64748b;padding:20px;">No linked citations found.</td></tr>`;
 
-  const unlinkedRows = unlinkedEntries.map((e) => `
+  const unlinkedRows = unlinkedEntries.map((e) => {
+    const ctxCell = e.context
+      ? `<span class="ctx-copy" title="Click to copy" data-copy="${escapeHtml(cleanForCopy(e.context.plain))}">${e.context.html}</span>`
+      : '<span style="color:#94a3b8;">-</span>';
+    const sug = unlinkedSuggestion[e.id];
+    const sugText = sug ? `Possibly matches orphan citation "${sug.orphanLabel}" (${sug.similarity}% similar) - check for a typo.` : "";
+    const qIssue = (e.reason || "") + (sug ? ` | Did you mean: "${sug.orphanLabel}"?` : "");
+    const qContext = e.context ? cleanForCopy(e.context.plain) : "";
+    return `
         <tr class="unlinked-row">
+            <td class="check-cell"><input type="checkbox" class="query-check" data-qtype="Unlinked reference" data-qid="${escapeHtml(e.id)}" data-qref="${escapeHtml(e.displayName)}" data-qissue="${escapeHtml(qIssue)}" data-qcontext="${escapeHtml(qContext)}"></td>
             <td>${escapeHtml(e.id)}${dupBadge(e.isDuplicate)}</td>
             <td><strong>${escapeHtml(e.displayName)}</strong></td>
             <td>${escapeHtml(e.cleanText.slice(0, 150))}${e.cleanText.length > 150 ? "..." : ""}</td>
-            <td class="reason-cell">${escapeHtml(e.reason || "")}</td>
-        </tr>`).join("") || `
-        <tr><td colspan="4" style="text-align:center;color:#27ae60;padding:20px;">All references were linked.</td></tr>`;
+            <td>${ctxCell}</td>
+            <td class="reason-cell">${escapeHtml(e.reason || "")}${suggestBadge(sugText)}</td>
+        </tr>`;
+  }).join("") || `
+        <tr><td colspan="6" style="text-align:center;color:#27ae60;padding:20px;">All references were linked.</td></tr>`;
 
   const orphanKeys = Object.keys(orphans);
   const orphanRows = orphanKeys.map((k) => {
     const d = orphans[k];
+    const citationLabel = `${d.sur1}${d.sur2 ? " & " + d.sur2 : ""} (${d.year})`;
+    const sug = orphanSuggestion[k];
+    const sugText = sug ? `Possibly matches reference ${sug.refId} "${sug.refLabel}" (${sug.similarity}% similar) - check for a typo.` : "";
+    const qIssue = "No matching reference entry found." + (sug ? ` | Did you mean: ${sug.refId} "${sug.refLabel}"?` : "");
     return `
         <tr class="orphan-row">
-            <td><strong>${escapeHtml(d.sur1)}${d.sur2 ? " &amp; " + escapeHtml(d.sur2) : ""} (${escapeHtml(d.year)})</strong></td>
-            <td>${escapeHtml(d.context)}</td>
+            <td class="check-cell"><input type="checkbox" class="query-check" data-qtype="Orphan citation" data-qid="" data-qref="${escapeHtml(citationLabel)}" data-qissue="${escapeHtml(qIssue)}" data-qcontext="${escapeHtml(cleanForCopy(d.context))}"></td>
+            <td><strong>${escapeHtml(citationLabel)}</strong>${suggestBadge(sugText)}</td>
+            <td><span class="ctx-copy" title="Click to copy" data-copy="${escapeHtml(cleanForCopy(d.context))}">${escapeHtml(d.context)}</span></td>
             <td style="text-align:center;">${d.count}</td>
             <td style="text-align:center;color:#9a3412;font-style:italic;">Unnumbered</td>
         </tr>`;
   }).join("") || `
-        <tr><td colspan="4" style="text-align:center;color:#27ae60;padding:20px;">No orphan citations found - every in-text citation has a matching reference entry.</td></tr>`;
+        <tr><td colspan="5" style="text-align:center;color:#27ae60;padding:20px;">No orphan citations found - every in-text citation has a matching reference entry.</td></tr>`;
 
   const linkedCount = linkedEntries.length;
   const unlinkedCount = unlinkedEntries.length;
@@ -496,36 +590,68 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans)
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Reference Cross-Link Report</title>
 <style>
-body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:16px;background:#f8fafc;color:#1a202c;}
-.container{max-width:1640px;margin:0 auto;background:#fff;padding:30px 44px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:30px;background:#f8fafc;color:#1a202c;}
+.container{max-width:1800px;width:97%;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1);}
 h1{color:#0f172a;border-bottom:3px solid #3498db;padding-bottom:15px;}
-.stats{display:flex;gap:15px;margin:25px 0;flex-wrap:wrap;}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin:25px 0;}
 .stat{flex:1;min-width:150px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:18px;text-align:center;}
 .stat .num{font-size:28px;font-weight:700;}
-.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 20px;padding:12px 16px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;}
-.filter-label{font-size:13px;font-weight:600;color:#475569;margin-right:2px;}
-.filter-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;transition:all .15s ease;}
-.filter-btn:hover{border-color:#94a3b8;background:#f8fafc;}
-.filter-btn.active{background:#0f172a;border-color:#0f172a;color:#fff;}
-.filter-count{opacity:.65;font-size:12px;margin-left:2px;}
-table{width:100%;border-collapse:collapse;margin:15px 0 35px;}
+table{width:100%;max-width:100%;border-collapse:collapse;margin:15px 0 35px;table-layout:auto;}
 th{background:#0f172a;color:#fff;padding:12px;text-align:left;font-size:13px;}
 td{padding:10px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
+.dist-intro{font-weight:700;color:#0f172a;font-size:15px;margin:22px 0 10px;}
+.dist-heading{font-weight:800;color:#0f172a;font-size:18px;margin:0 0 12px;}
+.dist-table{max-width:720px;}
+.dist-table th{background:#0f172a;}
+.dist-table td:first-child{font-weight:700;white-space:nowrap;}
+.dist-table td:nth-child(1){color:#0f172a;}
+.report-footer{margin-top:40px;padding-top:18px;border-top:1px solid #e2e8f0;text-align:center;font-size:13px;color:#64748b;font-weight:600;}
+.report-footer strong{color:#0f172a;}
+/* Density (S|M|L) sizing for all report tables */
+.density-s table th{padding:6px 8px;font-size:11px;}
+.density-s table td{padding:5px 8px;font-size:11px;}
+.density-m table th{padding:12px;font-size:13px;}
+.density-m table td{padding:10px;font-size:13px;}
+.density-l table th{padding:16px 14px;font-size:15px;}
+.density-l table td{padding:14px;font-size:15px;}
+.size-toggle{display:inline-flex;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;margin-left:8px;}
+.size-btn{background:#fff;border:none;border-right:1px solid #e2e8f0;color:#334155;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;}
+.size-btn:last-child{border-right:none;}
+.size-btn.active{background:#0f172a;color:#fff;}
 .linked-row{background:#f0fdf4;}
 .unlinked-row{background:#fef2f2;}
 .orphan-row{background:#fff7ed;}
 .reason-cell{color:#92400e;font-style:italic;}
 mark{padding:1px 2px;border-radius:3px;}
-.ctx-line{margin:0 0 10px;padding-bottom:10px;border-bottom:1px dashed #e2e8f0;}
-.ctx-line:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
-.ctx-copy{cursor:pointer;border-radius:4px;padding:1px 3px;transition:background .15s ease;}
-.ctx-copy:hover{background:#eff6ff;outline:1px dashed #93c5fd;}
-.ctx-copy.copied{background:#dcfce7 !important;outline:1px solid #22c55e;}
-.copy-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:999;}
-.copy-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.ctx-copy{cursor:pointer;border-radius:4px;padding:1px 2px;transition:background .15s ease;}
+.ctx-copy:hover{background:#e0f2fe;}
+.ctx-copy.copied{background:#bbf7d0 !important;}
+.filter-bar{display:flex;gap:8px;margin:20px 0 30px;flex-wrap:wrap;position:sticky;top:0;background:#fff;padding:10px 0;z-index:5;}
+.filter-btn{background:#f1f5f9;border:1px solid #e2e8f0;color:#334155;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s ease;}
+.filter-btn:hover{background:#e2e8f0;}
+.filter-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;}
+.report-section{scroll-margin-top:110px;}
+.live-search{margin-left:auto;padding:8px 14px;border:1px solid #e2e8f0;border-radius:20px;font-size:13px;min-width:240px;outline:none;}
+.live-search:focus{border-color:#0f172a;}
+.check-cell{width:34px;text-align:center;}
+.query-check{width:16px;height:16px;cursor:pointer;}
+.query-bar{display:flex;align-items:center;gap:10px;margin:0 0 20px;padding:10px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:13px;color:#1e3a8a;position:sticky;top:56px;z-index:4;}
+.query-btn{background:#fff;border:1px solid #93c5fd;color:#1d4ed8;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease;}
+.query-btn:hover{background:#dbeafe;}
+.query-btn-ghost{border-color:#cbd5e1;color:#475569;}
+.query-btn-ghost:hover{background:#f1f5f9;}
 </style></head>
-<body><div class="container">
+<body class="density-m"><div class="container">
 <h1>Reference Cross-Link Audit Report</h1>
+<h2 class="dist-heading">The distinction across your three tables</h2>
+<table class="dist-table">
+<thead><tr><th>Table</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Linked</td><td>Citation ↔ reference correctly paired</td></tr>
+<tr><td>Unlinked</td><td>Reference exists, but no matching citation found anywhere in the text</td></tr>
+<tr><td>Orphan In-Text</td><td>Citation exists, but no reference matches it at all</td></tr>
+</tbody>
+</table>
 <div class="stats">
   <div class="stat"><div class="num">${total}</div>Total References</div>
   <div class="stat"><div class="num" style="color:#16a34a;">${linkedCount}</div>Linked (${pct}%)</div>
@@ -534,98 +660,180 @@ mark{padding:1px 2px;border-radius:3px;}
   <div class="stat"><div class="num" style="color:#d97706;">${dupCount}</div>Duplicate Entries</div>
   <div class="stat"><div class="num" style="color:#ea580c;">${orphanCount}</div>Orphan In-Text Citations</div>
 </div>
-<div class="filter-bar" role="group" aria-label="Filter report rows">
-  <span class="filter-label">Filter:</span>
+<div class="filter-bar" id="filter-bar">
   <button class="filter-btn active" data-filter="all">All</button>
-  <button class="filter-btn" data-filter="loose">Loose Match <span class="filter-count">(${looseCount})</span></button>
-  <button class="filter-btn" data-filter="unlinked">Unlinked <span class="filter-count">(${unlinkedCount})</span></button>
-  <button class="filter-btn" data-filter="orphan">Orphan <span class="filter-count">(${orphanCount})</span></button>
+  <button class="filter-btn" data-filter="loose">Loose Match (${looseCount})</button>
+  <button class="filter-btn" data-filter="orphan">Orphan (${orphanCount})</button>
+  <button class="filter-btn" data-filter="intext">In Text (${unlinkedCount})</button>
+  <input type="text" id="live-search" class="live-search" placeholder="🔎 Search author, year, or text...">
+  <div class="size-toggle" id="size-toggle" role="group" aria-label="Table density">
+    <button class="size-btn" data-size="s">S</button>
+    <button class="size-btn active" data-size="m">M</button>
+    <button class="size-btn" data-size="l">L</button>
+  </div>
 </div>
-<section data-section="linked">
+<div class="query-bar" id="query-bar">
+  <span id="query-count">0 selected</span>
+  <button class="query-btn" id="query-copy-btn">📋 Copy Query List</button>
+  <button class="query-btn" id="query-download-btn">⬇ Download .txt</button>
+  <button class="query-btn query-btn-ghost" id="query-clear-btn">Clear selection</button>
+</div>
+<section class="report-section" data-section="linked">
 <h2>Linked Citations (${linkedCount})</h2>
 <p style="color:#64748b;font-size:13px;">"loose match" = surname and year found with extra words between them rather than directly adjacent. Matched <mark style="background:#fef08a;">surname</mark> and <mark style="background:#bbf7d0;">year</mark> are highlighted.</p>
-<p style="color:#64748b;font-size:13px;">⚠ "check '&lt;name&gt;': also in ..." = the named surname is a loose match here but also shows up in the Unlinked or Orphan tables below - worth a manual look, since the loose match may have grabbed a different citation of the same surname.</p>
-<p style="color:#64748b;font-size:13px;">Click any line in "Context Found" to copy it - handy for Ctrl+F in your Word file.</p>
-<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Context Found</th></tr></thead>
+<p style="color:#64748b;font-size:13px;">⚠ "check ..." = this loose match's named surname also appears in the Unlinked or Orphan tables below - worth a manual look, since the loose match may have grabbed a different citation of the same surname.</p>
+<p style="color:#64748b;font-size:13px;">Click any context snippet to copy it (cleaned of extra spacing) for a Ctrl+F search in the Word file. Tick a row to add it to your query list.</p>
+<table><thead><tr><th class="check-cell"></th><th>Bib ID</th><th>Reference</th><th>Context Found</th></tr></thead>
 <tbody>${linkedRows}</tbody></table>
 </section>
-<section data-section="unlinked">
+<section class="report-section" data-section="unlinked">
 <h2>Unlinked Citations (${unlinkedCount})</h2>
-<p style="color:#64748b;font-size:13px;">"Reason" diagnoses why no match was made.</p>
-<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Reference Text</th><th>Reason</th></tr></thead>
+<p style="color:#64748b;font-size:13px;">"Context Found" shows where that surname turns up in the body text even though it didn't fully match (click to copy); "Reason" diagnoses why no match was made. 💡 marks a likely typo match with an orphan citation below.</p>
+<table><thead><tr><th class="check-cell"></th><th>Bib ID</th><th>Reference</th><th>Reference Text</th><th>Context Found</th><th>Reason</th></tr></thead>
 <tbody>${unlinkedRows}</tbody></table>
 </section>
-<section data-section="orphan">
+<section class="report-section" data-section="orphan">
 <h2>Orphan In-Text Citations (${orphanCount})</h2>
-<p style="color:#64748b;font-size:13px;">Citations in the body text with NO matching reference entry - need a reference added, or are a typo.</p>
-<table><thead><tr><th>Citation</th><th>Context</th><th>Occurrences</th><th>Ref No</th></tr></thead>
+<p style="color:#64748b;font-size:13px;">Citations in the body text with NO matching reference entry - need a reference added, or are a typo. Click a context to copy it. 💡 marks a likely typo match with an unlinked reference above.</p>
+<table><thead><tr><th class="check-cell"></th><th>Citation</th><th>Context</th><th>Occurrences</th><th>Ref No</th></tr></thead>
 <tbody>${orphanRows}</tbody></table>
 </section>
+<div class="report-footer">✨ <strong>SelvaPrabhu</strong> · Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong></div>
 </div>
-<div class="copy-toast" id="copy-toast">Copied!</div>
 <script>
 (function () {
   var filterBtns = document.querySelectorAll('.filter-btn');
-  var sections = document.querySelectorAll('[data-section]');
-  var linkedRowsEls = document.querySelectorAll('.linked-row');
+  var searchBox = document.getElementById('live-search');
+  var linkedSection = document.querySelector('[data-section="linked"]');
+  var unlinkedSection = document.querySelector('[data-section="unlinked"]');
+  var orphanSection = document.querySelector('[data-section="orphan"]');
+  var allRows = document.querySelectorAll('.linked-row, .unlinked-row, .orphan-row');
+  var currentFilter = 'all';
 
-  function applyFilter(filter) {
-    sections.forEach(function (sec) {
-      if (filter === 'all') { sec.style.display = ''; return; }
-      if (filter === 'loose') { sec.style.display = sec.dataset.section === 'linked' ? '' : 'none'; return; }
-      sec.style.display = sec.dataset.section === filter ? '' : 'none';
+  function applyRowVisibility() {
+    var term = (searchBox.value || '').trim().toLowerCase();
+    allRows.forEach(function (row) {
+      var hiddenByMethod = currentFilter === 'loose' && row.classList.contains('linked-row') && row.getAttribute('data-method') !== 'loose';
+      var hiddenBySearch = term.length > 0 && row.textContent.toLowerCase().indexOf(term) === -1;
+      row.style.display = (hiddenByMethod || hiddenBySearch) ? 'none' : '';
     });
-    linkedRowsEls.forEach(function (row) {
-      row.style.display = (filter === 'loose' && row.dataset.method !== 'loose') ? 'none' : '';
-    });
-    filterBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.filter === filter); });
   }
 
-  filterBtns.forEach(function (b) {
-    b.addEventListener('click', function () { applyFilter(b.dataset.filter); });
+  filterBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      filterBtns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentFilter = btn.getAttribute('data-filter');
+      linkedSection.style.display = (currentFilter === 'all' || currentFilter === 'loose') ? '' : 'none';
+      unlinkedSection.style.display = (currentFilter === 'all' || currentFilter === 'intext') ? '' : 'none';
+      orphanSection.style.display = (currentFilter === 'all' || currentFilter === 'orphan') ? '' : 'none';
+      applyRowVisibility();
+    });
   });
-})();
-</script>
-<script>
-(function () {
-  var toast = document.getElementById('copy-toast');
-  var toastTimer = null;
-  function showToast(msg) {
-    if (!toast) return;
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1200);
+  searchBox.addEventListener('input', applyRowVisibility);
+
+  // Table density toggle (S | M | L)
+  var sizeBtns = document.querySelectorAll('.size-btn');
+  sizeBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      sizeBtns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.body.classList.remove('density-s', 'density-m', 'density-l');
+      document.body.classList.add('density-' + btn.getAttribute('data-size'));
+    });
+  });
+
+  // Click-to-copy for context snippets (silent - no alerts, just a brief flash)
+  function flashCopied(el) {
+    el.classList.add('copied');
+    setTimeout(function () { el.classList.remove('copied'); }, 500);
   }
-  function fallbackCopy(text) {
+  function fallbackCopy(t) {
     var ta = document.createElement('textarea');
-    ta.value = text;
+    ta.value = t;
     ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
     document.body.appendChild(ta);
+    ta.focus();
     ta.select();
-    var ok = false;
-    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    try { document.execCommand('copy'); } catch (err) { /* silent */ }
     document.body.removeChild(ta);
-    return ok;
   }
-  document.addEventListener('click', function (e) {
-    var el = e.target.closest ? e.target.closest('.ctx-copy') : null;
-    if (!el) return;
-    var text = el.getAttribute('data-copy') || '';
-    if (!text) return;
-    var mark = function () {
-      el.classList.add('copied');
-      setTimeout(function () { el.classList.remove('copied'); }, 900);
-      showToast('Copied to clipboard');
-    };
+  function copyText(text, onDone) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(mark).catch(function () {
-        if (fallbackCopy(text)) mark(); else showToast('Could not copy - please select manually');
-      });
+      navigator.clipboard.writeText(text).then(onDone).catch(function () { fallbackCopy(text); onDone(); });
     } else {
-      if (fallbackCopy(text)) mark(); else showToast('Could not copy - please select manually');
+      fallbackCopy(text);
+      onDone();
     }
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('.ctx-copy');
+    if (!el) return;
+    var text = el.getAttribute('data-copy') || el.textContent;
+    copyText(text, function () { flashCopied(el); });
+  });
+
+  // Query list: tick rows, then copy or download a formatted follow-up list
+  var queryCountEl = document.getElementById('query-count');
+  var copyBtn = document.getElementById('query-copy-btn');
+  var downloadBtn = document.getElementById('query-download-btn');
+  var clearBtn = document.getElementById('query-clear-btn');
+
+  function updateQueryCount() {
+    var n = document.querySelectorAll('.query-check:checked').length;
+    queryCountEl.textContent = n + (n === 1 ? ' selected' : ' selected');
+  }
+  document.addEventListener('change', function (e) {
+    if (e.target.classList && e.target.classList.contains('query-check')) updateQueryCount();
+  });
+
+  function buildQueryText() {
+    var checked = document.querySelectorAll('.query-check:checked');
+    if (!checked.length) return '';
+    var lines = ['Citation Query List', 'Generated: ' + new Date().toLocaleString(), '', checked.length + ' item(s) need a closer look:', ''];
+    checked.forEach(function (cb, i) {
+      var d = cb.dataset;
+      var head = (i + 1) + '. [' + (d.qtype || '') + (d.qid ? ' ' + d.qid : '') + '] ' + (d.qref || '');
+      lines.push(head);
+      if (d.qissue) lines.push('   Issue: ' + d.qissue);
+      if (d.qcontext) lines.push('   Text: "' + d.qcontext + '"');
+      lines.push('');
+    });
+    return lines.join('\\n');
+  }
+
+  function flashBtn(btn, label) {
+    var original = btn.textContent;
+    btn.textContent = label;
+    setTimeout(function () { btn.textContent = original; }, 1400);
+  }
+
+  copyBtn.addEventListener('click', function () {
+    var text = buildQueryText();
+    if (!text) { flashBtn(copyBtn, 'Select a row first'); return; }
+    copyText(text, function () { flashBtn(copyBtn, '✅ Copied!'); });
+  });
+
+  downloadBtn.addEventListener('click', function () {
+    var text = buildQueryText();
+    if (!text) { flashBtn(downloadBtn, 'Select a row first'); return; }
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'citation-query-list.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    flashBtn(downloadBtn, '✅ Downloaded');
+  });
+
+  clearBtn.addEventListener('click', function () {
+    document.querySelectorAll('.query-check:checked').forEach(function (cb) { cb.checked = false; });
+    updateQueryCount();
   });
 })();
 </script>
