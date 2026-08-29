@@ -153,12 +153,20 @@ function parseBibEntries(bibContent) {
 
     if (!surname || !yearStr) continue;
 
+    // Pull out an already-present DOI, if the reference happens to have
+    // one typed in (e.g. "... 296-314. https://doi.org/10.1002/nml.21322"
+    // or "doi:10.1002/nml.21322"). Strip a trailing period/comma/paren
+    // that's actually sentence punctuation, not part of the DOI.
+    const doiMatch = /\b10\.\d{4,9}\/[^\s"'<>]+/i.exec(cleanText);
+    const existingDoi = doiMatch ? doiMatch[0].replace(/[.,;)\]]+$/, "") : null;
+
     entries.push({
       id: spanId,
       cleanText,
       surname,
       surnames: uSurnames,
       surnameAliases: uAliases,
+      existingDoi,
       // Rough count of listed authors (one per comma/&/and-separated chunk
       // that yielded a name). Used to sanity-check "et al." citations -
       // a single- or two-author reference should never be matched by an
@@ -167,6 +175,10 @@ function parseBibEntries(bibContent) {
       authorCount: authorRunCount || 1,
       year: yearStr,
       displayName: `${firstPart.slice(0, 40)} (${yearStr})`,
+      // Original inline markup (italics, bold, etc.) for this entry, kept
+      // so an exported reference list can reproduce the source doc's
+      // formatting instead of the tag-stripped plain-text cleanText.
+      rawHtml: entry.trim(),
     });
   }
   return entries;
@@ -471,7 +483,7 @@ function cleanForCopy(text) {
     .trim();
 }
 
-function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans) {
+function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans, allEntries) {
   const { unlinkedSuggestion, orphanSuggestion } = buildDidYouMeanSuggestions(unlinkedEntries, orphans);
 
   const dupBadge = (isDup) => isDup
@@ -580,6 +592,36 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans)
   }).join("") || `
         <tr><td colspan="5" style="text-align:center;color:#27ae60;padding:20px;">No orphan citations found - every in-text citation has a matching reference entry.</td></tr>`;
 
+  // ---- DOI Finder section (queries Crossref.org live, in the browser, when
+  // the report's own "Run Crossref DOI Lookup" button is clicked). Rows are
+  // rendered here with placeholders; the report's embedded script fills
+  // each one in as its lookup resolves. Entries that already have a DOI
+  // typed into the reference are shown immediately, no lookup needed. ----
+  const doiRows = allEntries.map((e) => {
+    const already = e.existingDoi
+      ? `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;">✅ already has DOI</span>`
+      : `<span style="color:#94a3b8;">⏳ not checked</span>`;
+    const doiCell = e.existingDoi
+      ? `<span class="ctx-copy" title="Click to copy" data-copy="${escapeHtml(e.existingDoi)}">${escapeHtml(e.existingDoi)}</span>`
+      : "-";
+    return `
+        <tr class="doi-row" id="doi-row-${escapeHtml(e.id)}">
+            <td>${escapeHtml(e.id)}</td>
+            <td class="doi-ref-cell">${escapeHtml(e.cleanText)}</td>
+            <td class="doi-status-cell">${already}</td>
+            <td class="doi-match-cell">-</td>
+            <td class="doi-doi-cell">${doiCell}</td>
+        </tr>`;
+  }).join("") || `
+        <tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">No references parsed.</td></tr>`;
+
+  const doiEntriesForJs = allEntries.map((e) => ({
+    id: e.id, cleanText: e.cleanText, existingDoi: e.existingDoi,
+    surnames: e.surnames, year: e.year, rawHtml: e.rawHtml,
+  }));
+  const doiEntriesJson = JSON.stringify(doiEntriesForJs).replace(/<\/script/gi, "<\\/script");
+  const doiCandidateCount = allEntries.filter((e) => !e.existingDoi).length;
+
   const linkedCount = linkedEntries.length;
   const unlinkedCount = unlinkedEntries.length;
   const dupCount = dupIds.size;
@@ -640,6 +682,15 @@ mark{padding:1px 2px;border-radius:3px;}
 .query-btn:hover{background:#dbeafe;}
 .query-btn-ghost{border-color:#cbd5e1;color:#475569;}
 .query-btn-ghost:hover{background:#f1f5f9;}
+.doi-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 20px;font-size:12px;color:#475569;}
+.doi-controls #doi-email-input{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;min-width:220px;outline:none;}
+.doi-controls #doi-email-input:focus{border-color:#0f172a;}
+#doi-run-btn:disabled{opacity:.6;cursor:default;}
+.doi-ref-cell{max-width:480px;}
+.doi-match-cell{max-width:340px;}
+.doi-match-hit{background:#bbf7d0;padding:1px 2px;border-radius:3px;}
+.doi-export{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 8px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;}
+.doi-export-note{font-size:12px;color:#166534;}
 </style></head>
 <body class="density-m"><div class="container">
 <h1>Reference Cross-Link Audit Report</h1>
@@ -665,6 +716,7 @@ mark{padding:1px 2px;border-radius:3px;}
   <button class="filter-btn" data-filter="loose">Loose Match (${looseCount})</button>
   <button class="filter-btn" data-filter="orphan">Orphan (${orphanCount})</button>
   <button class="filter-btn" data-filter="intext">In Text (${unlinkedCount})</button>
+  <button class="filter-btn" data-filter="doi">DOI (${doiCandidateCount})</button>
   <input type="text" id="live-search" class="live-search" placeholder="🔎 Search author, year, or text...">
   <div class="size-toggle" id="size-toggle" role="group" aria-label="Table density">
     <button class="size-btn" data-size="s">S</button>
@@ -698,8 +750,32 @@ mark{padding:1px 2px;border-radius:3px;}
 <table><thead><tr><th class="check-cell"></th><th>Citation</th><th>Context</th><th>Occurrences</th><th>Ref No</th></tr></thead>
 <tbody>${orphanRows}</tbody></table>
 </section>
+<section class="report-section" data-section="doi">
+<h2>DOI Finder <span style="color:#64748b;font-weight:400;font-size:14px;">(${doiCandidateCount} to check)</span></h2>
+<p style="color:#64748b;font-size:13px;">Looks up each reference against Crossref.org live in your browser and scores how confident the match is. 🟢 ≥85% - safe to accept · 🟡 60-84% - quick human check · 🔴 below 60% - Crossref found nothing confident (common for books, older items, or anything with no registered DOI - that's not a tool failure). Click a found DOI to copy a ready-to-paste "reference + doi.org link" line for Word.</p>
+<div class="doi-controls">
+  <label for="doi-email-input">Crossref polite-pool email (optional, speeds up lookups):</label>
+  <input type="email" id="doi-email-input" placeholder="you@example.com">
+  <button class="query-btn" id="doi-run-btn">🔍 Run Crossref DOI Lookup</button>
+</div>
+<div class="stats" id="doi-stats" style="display:none;">
+  <div class="stat"><div class="num" id="doi-stat-already">0</div>Already Had DOI</div>
+  <div class="stat"><div class="num" style="color:#16a34a;" id="doi-stat-green">0</div>Auto-matched (≥85%)</div>
+  <div class="stat"><div class="num" style="color:#d97706;" id="doi-stat-yellow">0</div>Needs QC (60-84%)</div>
+  <div class="stat"><div class="num" style="color:#dc2626;" id="doi-stat-red">0</div>Not Found</div>
+</div>
+<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Status</th><th>Crossref Match</th><th>DOI</th></tr></thead>
+<tbody id="doi-tbody">${doiRows}</tbody></table>
+<div class="doi-export" id="doi-export">
+  <strong style="color:#14532d;font-size:13px;">Download Reference List</strong>
+  <button class="query-btn" id="doi-export-html-btn">⬇ Download as HTML</button>
+  <button class="query-btn" id="doi-export-doc-btn">⬇ Download as Word (.doc)</button>
+  <span class="doi-export-note" id="doi-export-note">Same order, same wording as the source doc - DOIs appended where found.</span>
+</div>
+</section>
 <div class="report-footer">✨ <strong>SelvaPrabhu</strong> · Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong></div>
 </div>
+<script>window.__DOI_ENTRIES__ = ${doiEntriesJson};</script>
 <script>
 (function () {
   var filterBtns = document.querySelectorAll('.filter-btn');
@@ -707,6 +783,7 @@ mark{padding:1px 2px;border-radius:3px;}
   var linkedSection = document.querySelector('[data-section="linked"]');
   var unlinkedSection = document.querySelector('[data-section="unlinked"]');
   var orphanSection = document.querySelector('[data-section="orphan"]');
+  var doiSection = document.querySelector('[data-section="doi"]');
   var allRows = document.querySelectorAll('.linked-row, .unlinked-row, .orphan-row');
   var currentFilter = 'all';
 
@@ -727,6 +804,8 @@ mark{padding:1px 2px;border-radius:3px;}
       linkedSection.style.display = (currentFilter === 'all' || currentFilter === 'loose') ? '' : 'none';
       unlinkedSection.style.display = (currentFilter === 'all' || currentFilter === 'intext') ? '' : 'none';
       orphanSection.style.display = (currentFilter === 'all' || currentFilter === 'orphan') ? '' : 'none';
+      if (doiSection) doiSection.style.display = (currentFilter === 'all' || currentFilter === 'doi') ? '' : 'none';
+      if (currentFilter === 'doi' && doiSection) doiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       applyRowVisibility();
     });
   });
@@ -837,6 +916,251 @@ mark{padding:1px 2px;border-radius:3px;}
   });
 })();
 </script>
+<script>
+(function () {
+  var entries = window.__DOI_ENTRIES__ || [];
+  var runBtn = document.getElementById('doi-run-btn');
+  var emailInput = document.getElementById('doi-email-input');
+  var statsBox = document.getElementById('doi-stats');
+  var statAlready = document.getElementById('doi-stat-already');
+  var statGreen = document.getElementById('doi-stat-green');
+  var statYellow = document.getElementById('doi-stat-yellow');
+  var statRed = document.getElementById('doi-stat-red');
+  if (!runBtn) return;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+  }
+
+  function norm(s) {
+    return String(s || '').toLowerCase().replace(/[^\\p{L}\\p{N}\\s]/gu, ' ').replace(/\\s+/g, ' ').trim();
+  }
+
+  // Wraps the first case-insensitive occurrence of any given term (plain
+  // substring match, no regex) in a <mark> so it's visible why a Crossref
+  // result was picked. Operates on already-escaped HTML text; terms are
+  // escaped the same way before matching so entities line up.
+  function highlightHit(escText, termOrTerms) {
+    var terms = Array.isArray(termOrTerms) ? termOrTerms : [termOrTerms];
+    terms.forEach(function (raw) {
+      if (!raw) return;
+      var term = esc(String(raw));
+      if (!term) return;
+      var idx = escText.toLowerCase().indexOf(term.toLowerCase());
+      if (idx === -1) return;
+      escText = escText.slice(0, idx) + '<mark class="doi-match-hit">' + escText.slice(idx, idx + term.length) + '</mark>' + escText.slice(idx + term.length);
+    });
+    return escText;
+  }
+
+  // Same scoring idea as the DOI-report workflow this replaces: title
+  // carries most of the weight, author + year corroborate it. Tuned to
+  // work off Crossref's own "bibliographic" relevance ranking rather than
+  // trying to out-search it.
+  function scoreItem(entry, item) {
+    var score = 0, max = 0;
+    max += 20;
+    var dp = item.issued && item.issued['date-parts'] && item.issued['date-parts'][0];
+    var itemYear = dp && dp[0] ? String(dp[0]) : null;
+    if (itemYear && itemYear === String(entry.year)) score += 20;
+    else if (itemYear && Math.abs(parseInt(itemYear, 10) - parseInt(entry.year, 10)) <= 1) score += 10;
+
+    max += 25;
+    var itemAuthors = (item.author || []).map(function (a) { return (a.family || '').toLowerCase(); }).filter(Boolean);
+    var entrySurnames = (entry.surnames || []).map(function (s) { return s.toLowerCase(); });
+    var authorHit = entrySurnames.some(function (s) {
+      return itemAuthors.some(function (a) { return a === s || a.indexOf(s) !== -1 || s.indexOf(a) !== -1; });
+    });
+    if (authorHit) score += 25;
+
+    max += 55;
+    var title = (item.title && item.title[0]) || '';
+    if (title) {
+      var nTitle = norm(title);
+      var nText = norm(entry.cleanText);
+      if (nTitle && nText.indexOf(nTitle) !== -1) {
+        score += 55;
+      } else if (nTitle) {
+        var titleTokens = nTitle.split(' ').filter(function (w) { return w.length > 2; });
+        var textTokenSet = {};
+        nText.split(' ').forEach(function (w) { textTokenSet[w] = true; });
+        var hit = 0;
+        titleTokens.forEach(function (t) { if (textTokenSet[t]) hit++; });
+        var ratio = titleTokens.length ? hit / titleTokens.length : 0;
+        score += Math.round(ratio * 55);
+      }
+    }
+    return max ? Math.round((score / max) * 100) : 0;
+  }
+
+  function tierFor(score) { return score >= 85 ? 'green' : (score >= 60 ? 'yellow' : 'red'); }
+
+  function tierBadge(tier, score) {
+    if (tier === 'green') return '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;">🟢 ' + score + '% match</span>';
+    if (tier === 'yellow') return '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;">🟡 ' + score + '% - check</span>';
+    return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">🔴 not found</span>';
+  }
+
+  var counts = { already: 0, green: 0, yellow: 0, red: 0 };
+  entries.forEach(function (e) { if (e.existingDoi) counts.already++; });
+
+  // DOIs found by a completed lookup, keyed by entry id - kept separately
+  // from the entries array (which never mutates) so the exporter can pick
+  // up results live as the run progresses.
+  var foundDoi = {};
+
+  function bumpStats() {
+    statsBox.style.display = '';
+    statAlready.textContent = counts.already;
+    statGreen.textContent = counts.green;
+    statYellow.textContent = counts.yellow;
+    statRed.textContent = counts.red;
+    updateExportNote();
+  }
+  if (counts.already) bumpStats();
+
+  // ---- Export: "Download Reference List" - rebuilds the full reference
+  // list in original order/wording (using each entry's original inline
+  // markup, not the tag-stripped search text), appending a doi.org link
+  // wherever a DOI is known (typed-in originally, or found by the lookup
+  // above). Entries with no DOI are left exactly as they were. ----
+  var exportHtmlBtn = document.getElementById('doi-export-html-btn');
+  var exportDocBtn = document.getElementById('doi-export-doc-btn');
+  var exportNote = document.getElementById('doi-export-note');
+
+  function updateExportNote() {
+    if (!exportNote) return;
+    var withDoi = entries.filter(function (e) { return e.existingDoi || foundDoi[e.id]; }).length;
+    exportNote.textContent = withDoi + ' of ' + entries.length + ' references have a DOI - same order, same wording, DOIs appended where found.';
+  }
+  updateExportNote();
+
+  function endsWithSentencePunct(cleanText) {
+    return /[.?!]\\s*$/.test(String(cleanText || '').trim());
+  }
+
+  function buildReferenceListParagraphs() {
+    return entries.map(function (e) {
+      var doi = e.existingDoi || foundDoi[e.id] || null;
+      var html = (e.rawHtml && e.rawHtml.trim()) ? e.rawHtml.trim() : esc(e.cleanText);
+      if (doi && !e.existingDoi) {
+        // Only append a link if the reference doesn't already contain a DOI.
+        if (!endsWithSentencePunct(e.cleanText)) html += '.';
+        html += ' <a href="https://doi.org/' + esc(doi) + '">https://doi.org/' + esc(doi) + '</a>';
+      }
+      return '<p style="margin:0 0 12pt 0;line-height:1.5;text-indent:-0.5in;margin-left:0.5in;">' + html + '</p>';
+    }).join('\\n');
+  }
+
+  function downloadBlob(content, filename, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  if (exportHtmlBtn) {
+    exportHtmlBtn.addEventListener('click', function () {
+      var body = buildReferenceListParagraphs();
+      var doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reference List</title>'
+        + '<style>body{font-family:"Times New Roman",Georgia,serif;font-size:12pt;max-width:800px;margin:40px auto;color:#111;}'
+        + 'h1{font-size:16pt;font-family:Arial,sans-serif;}a{color:#1d4ed8;}</style>'
+        + '</head><body><h1>References</h1>' + body + '</body></html>';
+      downloadBlob(doc, 'Reference-List.html', 'text/html;charset=utf-8');
+    });
+  }
+
+  if (exportDocBtn) {
+    exportDocBtn.addEventListener('click', function () {
+      var body = buildReferenceListParagraphs();
+      var doc = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+        + '<head><meta charset="utf-8"><title>Reference List</title>'
+        + '<style>body{font-family:"Times New Roman",serif;font-size:12pt;}h1{font-family:Arial,sans-serif;font-size:16pt;}</style>'
+        + '</head><body><h1>References</h1>' + body + '</body></html>';
+      downloadBlob(doc, 'Reference-List.doc', 'application/msword');
+    });
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function cell(row, cls) { return row.querySelector(cls); }
+
+  async function run() {
+    runBtn.disabled = true;
+    var email = (emailInput.value || '').trim();
+    var todo = entries.filter(function (e) { return !e.existingDoi; });
+    for (var i = 0; i < todo.length; i++) {
+      var e = todo[i];
+      var row = document.getElementById('doi-row-' + e.id);
+      if (!row) continue;
+      cell(row, '.doi-status-cell').innerHTML = '<span style="color:#0369a1;">🔄 checking…</span>';
+      runBtn.textContent = 'Checking ' + (i + 1) + ' / ' + todo.length + '…';
+      try {
+        var q = encodeURIComponent(e.cleanText.slice(0, 300));
+        var url = 'https://api.crossref.org/works?query.bibliographic=' + q + '&rows=3' + (email ? '&mailto=' + encodeURIComponent(email) : '');
+        var res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        var items = (data.message && data.message.items) || [];
+        var best = null, bestScore = -1;
+        items.forEach(function (item) {
+          var s = scoreItem(e, item);
+          if (s > bestScore) { bestScore = s; best = item; }
+        });
+        if (best && bestScore > 0) {
+          var tier = tierFor(bestScore);
+          counts[tier]++;
+          cell(row, '.doi-status-cell').innerHTML = tierBadge(tier, bestScore);
+          var foundTitle = (best.title && best.title[0]) || '(untitled)';
+          var foundJournal = (best['container-title'] && best['container-title'][0]) || '';
+          var foundYear = (best.issued && best.issued['date-parts'] && best.issued['date-parts'][0] && best.issued['date-parts'][0][0]) || '';
+          // Highlight why this was picked: the author surname wherever it
+          // shows up in the matched title/journal, and the year when it
+          // exactly matches this entry's year - the same signals scoreItem()
+          // used to pick this result.
+          var titleHtml = highlightHit(esc(foundTitle), e.surnames);
+          var journalHtml = highlightHit(esc(foundJournal), e.surnames);
+          var yearHtml = esc(String(foundYear));
+          if (foundYear && String(foundYear) === String(e.year)) {
+            yearHtml = '<mark class="doi-match-hit">' + yearHtml + '</mark>';
+          }
+          cell(row, '.doi-match-cell').innerHTML = '<div style="font-weight:600;">' + titleHtml + '</div><div style="color:#64748b;font-size:12px;">' + journalHtml + (foundYear ? ' · ' + yearHtml : '') + '</div>';
+          var doiVal = best.DOI || '';
+          if (doiVal) foundDoi[e.id] = doiVal;
+          var copyLine = e.cleanText.replace(/\\s+$/, '');
+          if (!/[.]\\s*$/.test(copyLine)) copyLine += '.';
+          copyLine += ' https://doi.org/' + doiVal;
+          cell(row, '.doi-doi-cell').innerHTML = doiVal
+            ? '<span class="ctx-copy" title="Click to copy reference + DOI" data-copy="' + esc(copyLine) + '">' + esc(doiVal) + '</span>'
+            : '-';
+        } else {
+          counts.red++;
+          cell(row, '.doi-status-cell').innerHTML = tierBadge('red', 0);
+          cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">No confident Crossref match</span>';
+          cell(row, '.doi-doi-cell').innerHTML = '-';
+        }
+      } catch (err) {
+        cell(row, '.doi-status-cell').innerHTML = '<span style="color:#991b1b;">⚠ lookup failed</span>';
+        cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">' + esc(err.message || 'network error') + '</span>';
+      }
+      bumpStats();
+      await sleep(180);
+    }
+    runBtn.disabled = false;
+    runBtn.textContent = '✅ Done - Run Again';
+    updateExportNote();
+  }
+
+  runBtn.addEventListener('click', function () { run(); });
+})();
+</script>
 </body></html>`;
 }
 
@@ -846,6 +1170,6 @@ function generateReport(htmlContent) {
   const dupIds = findDuplicates(entries);
   const { linkedEntries, unlinkedEntries } = linkAndReport(bodyContent, entries, dupIds);
   const orphans = findOrphanCitations(bodyContent, entries);
-  return buildReportHtml(entries.length, linkedEntries, unlinkedEntries, dupIds, orphans);
+  return buildReportHtml(entries.length, linkedEntries, unlinkedEntries, dupIds, orphans, entries);
 }
 
