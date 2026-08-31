@@ -10,6 +10,54 @@ function escapeHtml(str) {
     .replace(/'/g, "&#x27;");
 }
 
+// Rough APA-pattern guess at what kind of source a reference is, so the
+// CE team can tell at a glance which entries are worth running through
+// DOI Finder and which almost never carry a DOI (theses, plain web
+// pages) and are fine to skip. This is a heuristic over the reference
+// text only - it runs before any lookup and is never treated as fact;
+// once a Crossref match comes back the runtime script overwrites this
+// cell with the type Crossref itself reports for that DOI.
+function guessRefType(text) {
+  const t = String(text || "");
+  // GB/T 7714 (common in Chinese-authored engineering/science journals)
+  // tags the document type explicitly right after the title, e.g.
+  // "...micro-pit arrays[J]. International Journal..." - trust that over
+  // guessing from punctuation when it's present.
+  const gbMatch = /\[([A-Z])\]/.exec(t);
+  if (gbMatch) {
+    const gbTypes = {
+      J: { emoji: "📄", label: "Journal article", note: "DOI common — worth checking", cls: "type-check" },
+      M: { emoji: "📗", label: "Book", note: "DOI varies by publisher", cls: "type-maybe" },
+      D: { emoji: "🎓", label: "Thesis/Dissertation", note: "DOI rare — OK to skip", cls: "type-skip" },
+      C: { emoji: "🎤", label: "Conference paper", note: "DOI common — worth checking", cls: "type-check" },
+      R: { emoji: "📋", label: "Report", note: "DOI varies", cls: "type-maybe" },
+      S: { emoji: "📐", label: "Standard", note: "DOI rare — OK to skip", cls: "type-skip" },
+      P: { emoji: "🔧", label: "Patent", note: "DOI rare — OK to skip", cls: "type-skip" },
+      N: { emoji: "🌐", label: "Newspaper", note: "DOI rare — OK to skip", cls: "type-skip" },
+    };
+    if (gbTypes[gbMatch[1]]) return gbTypes[gbMatch[1]];
+  }
+  if (/\b(unpublished\s+)?(doctoral\s+dissertation|doctoral\s+thesis|master'?s?\s+thesis|senior\s+thesis)\b/i.test(t)) {
+    return { emoji: "🎓", label: "Thesis/Dissertation", note: "DOI rare — OK to skip", cls: "type-skip" };
+  }
+  if (/\b(paper presented at|proceedings of|in\s+proceedings|annual (meeting|conference) of|\d{1,2}(st|nd|rd|th)\s+(international\s+)?conference)\b/i.test(t)) {
+    return { emoji: "🎤", label: "Conference paper", note: "DOI common — worth checking", cls: "type-check" };
+  }
+  if (/\bIn\b[\s\S]{0,80}?\(Eds?\.\)/i.test(t) && /\(pp\.\s*\d+[\u2013-]\d+\)/i.test(t)) {
+    return { emoji: "📖", label: "Book chapter", note: "DOI varies by publisher", cls: "type-maybe" };
+  }
+  if (/,\s*\d+\(\d+\),\s*\d+[\u2013-]\d+|,\s*\d+,\s*\d+[\u2013-]\d+\.?\s*$/.test(t)) {
+    return { emoji: "📄", label: "Journal article", note: "DOI common — worth checking", cls: "type-check" };
+  }
+  if (/\bretrieved\s+from\b/i.test(t) || (/https?:\/\/(?!doi\.org)/i.test(t) && !/\(\d+\)/.test(t))) {
+    return { emoji: "🌐", label: "Website/Report", note: "DOI rare — OK to skip", cls: "type-skip" };
+  }
+  if (/\(\d+(st|nd|rd|th)\s*ed\.\)/i.test(t) || /:\s*[A-Z][A-Za-z&.,' ]{2,40}\.\s*$/.test(t)) {
+    return { emoji: "📗", label: "Book", note: "DOI varies by publisher", cls: "type-maybe" };
+  }
+  return { emoji: "❔", label: "Unclear", note: "check manually", cls: "type-unknown" };
+}
+
 function cleanHtmlToPureText(fragment) {
   let txt = fragment.replace(/<[^>]+>/g, " ");
   // basic entity unescape
@@ -602,18 +650,33 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans,
       ? `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;">✅ already has DOI</span>`
       : `<span style="color:#94a3b8;">⏳ not checked</span>`;
     const doiCell = e.existingDoi
-      ? `<span class="ctx-copy" title="Click to copy" data-copy="${escapeHtml(e.existingDoi)}">${escapeHtml(e.existingDoi)}</span>`
+      ? `<a href="https://doi.org/${escapeHtml(e.existingDoi)}" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy · opens link" data-copy="https://doi.org/${escapeHtml(e.existingDoi)}">https://doi.org/${escapeHtml(e.existingDoi)}</a>`
       : "-";
+    const typeGuess = guessRefType(e.cleanText);
+    const typeCell = `<span class="type-badge ${typeGuess.cls}">${typeGuess.emoji} ${escapeHtml(typeGuess.label)}</span><div class="type-note">${escapeHtml(typeGuess.note)}</div>`;
     return `
         <tr class="doi-row" id="doi-row-${escapeHtml(e.id)}">
             <td>${escapeHtml(e.id)}</td>
-            <td class="doi-ref-cell">${escapeHtml(e.cleanText)}</td>
+            <td class="doi-ref-cell">${escapeHtml(e.cleanText)}
+              <div class="retry-wrap">
+                <button type="button" class="retry-toggle-btn" data-id="${escapeHtml(e.id)}">🔁 Edit &amp; search again</button>
+                <div class="retry-box" id="retry-box-${escapeHtml(e.id)}" style="display:none;">
+                  <textarea class="retry-input" id="retry-input-${escapeHtml(e.id)}" rows="2">${escapeHtml(e.cleanText)}</textarea>
+                  <div class="retry-actions">
+                    <button type="button" class="retry-search-btn query-btn" data-id="${escapeHtml(e.id)}">🔍 Search this text</button>
+                    <button type="button" class="retry-cancel-btn query-btn query-btn-ghost" data-id="${escapeHtml(e.id)}">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="doi-type-cell">${typeCell}</td>
             <td class="doi-status-cell">${already}</td>
             <td class="doi-match-cell">-</td>
+            <td class="doi-pubmed-cell">-</td>
             <td class="doi-doi-cell">${doiCell}</td>
         </tr>`;
   }).join("") || `
-        <tr><td colspan="5" style="text-align:center;color:#64748b;padding:20px;">No references parsed.</td></tr>`;
+        <tr><td colspan="7" style="text-align:center;color:#64748b;padding:20px;">No references parsed.</td></tr>`;
 
   const doiEntriesForJs = allEntries.map((e) => ({
     id: e.id, cleanText: e.cleanText, existingDoi: e.existingDoi,
@@ -649,6 +712,9 @@ td{padding:10px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
 .dist-table td:nth-child(1){color:#0f172a;}
 .report-footer{margin-top:40px;padding-top:18px;border-top:1px solid #e2e8f0;text-align:center;font-size:13px;color:#64748b;font-weight:600;}
 .report-footer strong{color:#0f172a;}
+.report-footer-note{margin-top:8px;font-size:12px;color:#94a3b8;font-weight:500;}
+.report-footer-note a{color:#64748b;text-decoration:underline;}
+.report-footer-note a:hover{color:#334155;}
 /* Density (S|M|L) sizing for all report tables */
 .density-s table th{padding:6px 8px;font-size:11px;}
 .density-s table td{padding:5px 8px;font-size:11px;}
@@ -656,7 +722,7 @@ td{padding:10px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
 .density-m table td{padding:10px;font-size:13px;}
 .density-l table th{padding:16px 14px;font-size:15px;}
 .density-l table td{padding:14px;font-size:15px;}
-.size-toggle{display:inline-flex;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;margin-left:8px;}
+.size-toggle{display:inline-flex;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;margin-left:0;}
 .size-btn{background:#fff;border:none;border-right:1px solid #e2e8f0;color:#334155;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;}
 .size-btn:last-child{border-right:none;}
 .size-btn.active{background:#0f172a;color:#fff;}
@@ -672,22 +738,62 @@ mark{padding:1px 2px;border-radius:3px;}
 .filter-btn{background:#f1f5f9;border:1px solid #e2e8f0;color:#334155;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s ease;}
 .filter-btn:hover{background:#e2e8f0;}
 .filter-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;}
-.report-section{scroll-margin-top:110px;}
-.live-search{margin-left:auto;padding:8px 14px;border:1px solid #e2e8f0;border-radius:20px;font-size:13px;min-width:240px;outline:none;}
+.report-section{scroll-margin-top:150px;}
+.live-search{margin-left:0;padding:8px 14px;border:1px solid #e2e8f0;border-radius:20px;font-size:13px;min-width:240px;outline:none;}
 .live-search:focus{border-color:#0f172a;}
 .check-cell{width:34px;text-align:center;}
 .query-check{width:16px;height:16px;cursor:pointer;}
-.query-bar{display:flex;align-items:center;gap:10px;margin:0 0 20px;padding:10px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:13px;color:#1e3a8a;position:sticky;top:56px;z-index:4;}
-.query-btn{background:#fff;border:1px solid #93c5fd;color:#1d4ed8;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease;}
+.query-bar{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:0;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:12px;color:#1e3a8a;}
+.query-btn{background:#fff;border:1px solid #93c5fd;color:#1d4ed8;padding:7px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease;width:100%;text-align:left;}
 .query-btn:hover{background:#dbeafe;}
 .query-btn-ghost{border-color:#cbd5e1;color:#475569;}
 .query-btn-ghost:hover{background:#f1f5f9;}
+/* ---- Top toolbar: sidebar show/hide + live search + density (S|M|L),
+   all one row, right-aligned controls on the right like a browser
+   chrome bar - keeps the working page free of the old wrap-heavy pill
+   row so it reads as one clean tool strip for a copyeditor. ---- */
+.report-toolbar{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0f172a;padding:10px 14px;border-radius:10px;margin:20px 0 0;}
+.report-toolbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.report-toolbar-title{color:#e2e8f0;font-size:13px;font-weight:700;letter-spacing:.02em;white-space:nowrap;}
+.sidebar-toggle-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background .15s ease;}
+.sidebar-toggle-btn:hover{background:rgba(255,255,255,.18);}
+.report-toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
+.report-toolbar .live-search{background:#fff;min-width:230px;}
+.report-toolbar .size-toggle{margin-left:0;border-color:rgba(255,255,255,.25);}
+.report-toolbar .size-btn{background:transparent;color:#cbd5e1;border-right-color:rgba(255,255,255,.2);}
+.report-toolbar .size-btn.active{background:#fff;color:#0f172a;}
+/* ---- Left filter sidebar (collapsible) + main content column ---- */
+.report-shell{display:flex;align-items:flex-start;gap:20px;margin-top:16px;}
+.filter-sidebar{flex:0 0 190px;width:190px;position:sticky;top:64px;display:flex;flex-direction:column;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;box-sizing:border-box;}
+.filter-sidebar.is-hidden{display:none;}
+.filter-sidebar-label{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;margin:0 0 4px;}
+.sidebar-query-label{margin-top:10px;}
+.filter-sidebar .filter-btn{width:100%;text-align:left;border-radius:8px;}
+.report-main{flex:1;min-width:0;}
 .doi-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 20px;font-size:12px;color:#475569;}
 .doi-controls #doi-email-input{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;min-width:220px;outline:none;}
 .doi-controls #doi-email-input:focus{border-color:#0f172a;}
 #doi-run-btn:disabled{opacity:.6;cursor:default;}
 .doi-ref-cell{max-width:480px;}
 .doi-match-cell{max-width:340px;}
+.doi-pubmed-cell{max-width:220px;font-size:12px;}
+.doi-doi-cell{max-width:230px;word-break:break-all;font-size:12px;}
+.doi-doi-cell a{color:#1d4ed8;text-decoration:none;}
+.doi-doi-cell a:hover{text-decoration:underline;}
+.doi-type-cell{max-width:150px;}
+.retry-wrap{margin-top:6px;}
+.retry-toggle-btn{background:none;border:none;color:#1d4ed8;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;}
+.retry-toggle-btn:hover{color:#1e40af;}
+.retry-box{margin-top:6px;padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;}
+.retry-input{width:100%;font-size:12px;font-family:inherit;padding:6px;border:1px solid #cbd5e1;border-radius:6px;resize:vertical;box-sizing:border-box;}
+.retry-actions{display:flex;gap:8px;margin-top:6px;}
+.type-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;white-space:nowrap;}
+.type-note{font-size:10px;color:#94a3b8;margin-top:3px;}
+.type-check{background:#dcfce7;color:#15803d;}
+.type-maybe{background:#fef3c7;color:#92400e;}
+.type-skip{background:#f1f5f9;color:#64748b;}
+.type-unknown{background:#f1f5f9;color:#94a3b8;}
+.type-confirmed{background:#dbeafe;color:#1e40af;}
 .doi-match-hit{background:#bbf7d0;padding:1px 2px;border-radius:3px;}
 .doi-export{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 8px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;}
 .doi-export-note{font-size:12px;color:#166534;}
@@ -711,25 +817,37 @@ mark{padding:1px 2px;border-radius:3px;}
   <div class="stat"><div class="num" style="color:#d97706;">${dupCount}</div>Duplicate Entries</div>
   <div class="stat"><div class="num" style="color:#ea580c;">${orphanCount}</div>Orphan In-Text Citations</div>
 </div>
-<div class="filter-bar" id="filter-bar">
-  <button class="filter-btn active" data-filter="all">All</button>
-  <button class="filter-btn" data-filter="loose">Loose Match (${looseCount})</button>
-  <button class="filter-btn" data-filter="orphan">Orphan (${orphanCount})</button>
-  <button class="filter-btn" data-filter="intext">In Text (${unlinkedCount})</button>
-  <button class="filter-btn" data-filter="doi">DOI (${doiCandidateCount})</button>
-  <input type="text" id="live-search" class="live-search" placeholder="🔎 Search author, year, or text...">
-  <div class="size-toggle" id="size-toggle" role="group" aria-label="Table density">
-    <button class="size-btn" data-size="s">S</button>
-    <button class="size-btn active" data-size="m">M</button>
-    <button class="size-btn" data-size="l">L</button>
+<div class="report-toolbar">
+  <div class="report-toolbar-left">
+    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-expanded="true" aria-controls="filter-bar">☰ <span id="sidebar-toggle-label">Hide Filters</span></button>
+    <span class="report-toolbar-title">Reference cross-ref and DOI checker can make mistakes - please manually check all results once more on <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google</a> </span>
+  </div>
+  <div class="report-toolbar-right">
+    <input type="text" id="live-search" class="live-search" placeholder="🔎 Search author, year, or text...">
+    <div class="size-toggle" id="size-toggle" role="group" aria-label="Table density">
+      <button class="size-btn" data-size="s">S</button>
+      <button class="size-btn active" data-size="m">M</button>
+      <button class="size-btn" data-size="l">L</button>
+    </div>
   </div>
 </div>
-<div class="query-bar" id="query-bar">
-  <span id="query-count">0 selected</span>
-  <button class="query-btn" id="query-copy-btn">📋 Copy Query List</button>
-  <button class="query-btn" id="query-download-btn">⬇ Download .txt</button>
-  <button class="query-btn query-btn-ghost" id="query-clear-btn">Clear selection</button>
-</div>
+<div class="report-shell">
+  <aside class="filter-sidebar" id="filter-bar">
+    <div class="filter-sidebar-label">Filter</div>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="loose">Loose Match (${looseCount})</button>
+    <button class="filter-btn" data-filter="orphan">Orphan (${orphanCount})</button>
+    <button class="filter-btn" data-filter="intext">In Text (${unlinkedCount})</button>
+    <button class="filter-btn" data-filter="doi">DOI (${doiCandidateCount})</button>
+    <div class="filter-sidebar-label sidebar-query-label">Query</div>
+    <div class="query-bar" id="query-bar">
+      <span id="query-count">0 selected</span>
+      <button class="query-btn" id="query-copy-btn">📋 Copy Query List</button>
+      <button class="query-btn" id="query-download-btn">⬇ Download .txt</button>
+      <button class="query-btn query-btn-ghost" id="query-clear-btn">Clear selection</button>
+    </div>
+  </aside>
+  <div class="report-main">
 <section class="report-section" data-section="linked">
 <h2>Linked Citations (${linkedCount})</h2>
 <p style="color:#64748b;font-size:13px;">"loose match" = surname and year found with extra words between them rather than directly adjacent. Matched <mark style="background:#fef08a;">surname</mark> and <mark style="background:#bbf7d0;">year</mark> are highlighted.</p>
@@ -752,10 +870,14 @@ mark{padding:1px 2px;border-radius:3px;}
 </section>
 <section class="report-section" data-section="doi">
 <h2>DOI Finder <span style="color:#64748b;font-weight:400;font-size:14px;">(${doiCandidateCount} to check)</span></h2>
-<p style="color:#64748b;font-size:13px;">Looks up each reference against Crossref.org live in your browser and scores how confident the match is. 🟢 ≥85% - safe to accept · 🟡 60-84% - quick human check · 🔴 below 60% - Crossref found nothing confident (common for books, older items, or anything with no registered DOI - that's not a tool failure). Click a found DOI to copy a ready-to-paste "reference + doi.org link" line for Word.</p>
+<p style="color:#64748b;font-size:13px;">Looks up each reference against Crossref.org live in your browser and scores how confident the match is. 🟢 ≥85% - safe to accept · 🟡 60-84% - quick human check · 🔴 below 60% - Crossref found nothing confident (common for books, older items, or anything with no registered DOI - that's not a tool failure). Click a found DOI to copy a ready-to-paste "reference + doi.org link" line for Word. When PubMed is enabled, anything Crossref can't confidently place also gets checked against PubMed, which often carries a DOI for biomedical/nursing/clinical references that Crossref misses. The <strong>Type</strong> column is a guess from the reference text (journal / book / book chapter / thesis / conference / website), so you can see up front which entries are worth checking and which types (theses, plain web pages) rarely have a DOI at all; it's replaced with the confirmed type from Crossref once a match is found.</p>
 <div class="doi-controls">
   <label for="doi-email-input">Crossref polite-pool email (optional, speeds up lookups):</label>
   <input type="email" id="doi-email-input" placeholder="you@example.com">
+  <label for="doi-pubmed-toggle" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+    <input type="checkbox" id="doi-pubmed-toggle" checked>
+    Also check PubMed (biomedical fallback)
+  </label>
   <button class="query-btn" id="doi-run-btn">🔍 Run Crossref DOI Lookup</button>
 </div>
 <div class="stats" id="doi-stats" style="display:none;">
@@ -763,8 +885,9 @@ mark{padding:1px 2px;border-radius:3px;}
   <div class="stat"><div class="num" style="color:#16a34a;" id="doi-stat-green">0</div>Auto-matched (≥85%)</div>
   <div class="stat"><div class="num" style="color:#d97706;" id="doi-stat-yellow">0</div>Needs QC (60-84%)</div>
   <div class="stat"><div class="num" style="color:#dc2626;" id="doi-stat-red">0</div>Not Found</div>
+  <div class="stat"><div class="num" style="color:#0369a1;" id="doi-stat-pubmed">0</div>Found via PubMed</div>
 </div>
-<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Status</th><th>Crossref Match</th><th>DOI</th></tr></thead>
+<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Type</th><th>Status</th><th>Crossref Match</th><th>PubMed</th><th>DOI</th></tr></thead>
 <tbody id="doi-tbody">${doiRows}</tbody></table>
 <div class="doi-export" id="doi-export">
   <strong style="color:#14532d;font-size:13px;">Download Reference List</strong>
@@ -773,7 +896,11 @@ mark{padding:1px 2px;border-radius:3px;}
   <span class="doi-export-note" id="doi-export-note">Same order, same wording as the source doc - DOIs appended where found.</span>
 </div>
 </section>
-<div class="report-footer">✨ <strong>SelvaPrabhu</strong> · Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong></div>
+<div class="report-footer">✨ <strong>SelvaPrabhu</strong> · Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong>
+  <div class="report-footer-note">Reference cross-ref and DOI checker <a href="https://scholar.google.com/" target="_blank" rel="noopener">can make mistakes</a> - please manually check all results once more.</div>
+</div>
+  </div>
+</div>
 </div>
 <script>window.__DOI_ENTRIES__ = ${doiEntriesJson};</script>
 <script>
@@ -810,6 +937,20 @@ mark{padding:1px 2px;border-radius:3px;}
     });
   });
   searchBox.addEventListener('input', applyRowVisibility);
+
+  // Sidebar show/hide toggle for the filter buttons (professional/compact
+  // layout - keeps the working area wide for copyeditors, filters tucked
+  // away until needed).
+  var sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+  var sidebarToggleLabel = document.getElementById('sidebar-toggle-label');
+  var filterSidebar = document.getElementById('filter-bar');
+  if (sidebarToggleBtn && filterSidebar) {
+    sidebarToggleBtn.addEventListener('click', function () {
+      var nowHidden = filterSidebar.classList.toggle('is-hidden');
+      sidebarToggleBtn.setAttribute('aria-expanded', String(!nowHidden));
+      if (sidebarToggleLabel) sidebarToggleLabel.textContent = nowHidden ? 'Show Filters' : 'Hide Filters';
+    });
+  }
 
   // Table density toggle (S | M | L)
   var sizeBtns = document.querySelectorAll('.size-btn');
@@ -880,6 +1021,9 @@ mark{padding:1px 2px;border-radius:3px;}
       if (d.qcontext) lines.push('   Text: "' + d.qcontext + '"');
       lines.push('');
     });
+    lines.push('---');
+    lines.push('Reference cross-ref and DOI checker can make mistakes - please manually check all results once more.');
+    lines.push('If in doubt, please refer to Google Scholar (https://scholar.google.com/) or another reliable source.');
     return lines.join('\\n');
   }
 
@@ -921,11 +1065,13 @@ mark{padding:1px 2px;border-radius:3px;}
   var entries = window.__DOI_ENTRIES__ || [];
   var runBtn = document.getElementById('doi-run-btn');
   var emailInput = document.getElementById('doi-email-input');
+  var pubmedToggle = document.getElementById('doi-pubmed-toggle');
   var statsBox = document.getElementById('doi-stats');
   var statAlready = document.getElementById('doi-stat-already');
   var statGreen = document.getElementById('doi-stat-green');
   var statYellow = document.getElementById('doi-stat-yellow');
   var statRed = document.getElementById('doi-stat-red');
+  var statPubmed = document.getElementById('doi-stat-pubmed');
   if (!runBtn) return;
 
   function esc(s) {
@@ -959,7 +1105,7 @@ mark{padding:1px 2px;border-radius:3px;}
   // carries most of the weight, author + year corroborate it. Tuned to
   // work off Crossref's own "bibliographic" relevance ranking rather than
   // trying to out-search it.
-  function scoreItem(entry, item) {
+  function scoreItem(entry, item, queryText) {
     var score = 0, max = 0;
     max += 20;
     var dp = item.issued && item.issued['date-parts'] && item.issued['date-parts'][0];
@@ -979,7 +1125,12 @@ mark{padding:1px 2px;border-radius:3px;}
     var title = (item.title && item.title[0]) || '';
     if (title) {
       var nTitle = norm(title);
-      var nText = norm(entry.cleanText);
+      // Score against whatever text was actually searched (the edited
+      // retry text, if this came from "Edit & search again") rather than
+      // always falling back to the entry's original parsed cleanText -
+      // otherwise a fix typed into the retry box changes the Crossref
+      // query but never changes what the result is scored against.
+      var nText = norm(queryText || entry.cleanText);
       if (nTitle && nText.indexOf(nTitle) !== -1) {
         score += 55;
       } else if (nTitle) {
@@ -997,13 +1148,31 @@ mark{padding:1px 2px;border-radius:3px;}
 
   function tierFor(score) { return score >= 85 ? 'green' : (score >= 60 ? 'yellow' : 'red'); }
 
+  // Crossref's own "type" field for the matched work - used to replace the
+  // pre-lookup text-based guess with a confirmed answer once we have one.
+  var CROSSREF_TYPE_LABELS = {
+    'journal-article': { emoji: '📄', label: 'Journal article' },
+    'proceedings-article': { emoji: '🎤', label: 'Conference paper' },
+    'book': { emoji: '📗', label: 'Book' },
+    'monograph': { emoji: '📗', label: 'Book' },
+    'edited-book': { emoji: '📗', label: 'Book' },
+    'book-chapter': { emoji: '📖', label: 'Book chapter' },
+    'reference-entry': { emoji: '📚', label: 'Reference entry' },
+    'dissertation': { emoji: '🎓', label: 'Thesis/Dissertation' },
+    'report': { emoji: '📋', label: 'Report' },
+    'posted-content': { emoji: '📰', label: 'Preprint' },
+    'peer-review': { emoji: '🔍', label: 'Peer review' },
+    'standard': { emoji: '📐', label: 'Standard' },
+    'dataset': { emoji: '🗂', label: 'Dataset' }
+  };
+
   function tierBadge(tier, score) {
     if (tier === 'green') return '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;">🟢 ' + score + '% match</span>';
     if (tier === 'yellow') return '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;">🟡 ' + score + '% - check</span>';
     return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">🔴 not found</span>';
   }
 
-  var counts = { already: 0, green: 0, yellow: 0, red: 0 };
+  var counts = { already: 0, green: 0, yellow: 0, red: 0, pubmed: 0 };
   entries.forEach(function (e) { if (e.existingDoi) counts.already++; });
 
   // DOIs found by a completed lookup, keyed by entry id - kept separately
@@ -1011,12 +1180,62 @@ mark{padding:1px 2px;border-radius:3px;}
   // up results live as the run progresses.
   var foundDoi = {};
 
+  // Last-known tier per entry id, so a manual retry (see "Edit & search
+  // again") can undo its previous contribution to the stats bar before
+  // adding the new one, instead of double-counting.
+  var entryTier = {};
+  var entryPubmedFound = {};
+  function setTier(id, tier) {
+    if (entryTier[id] && counts[entryTier[id]] > 0) counts[entryTier[id]]--;
+    counts[tier] = (counts[tier] || 0) + 1;
+    entryTier[id] = tier;
+  }
+  function setPubmedFound(id, found) {
+    if (entryPubmedFound[id] && !found) counts.pubmed--;
+    if (!entryPubmedFound[id] && found) counts.pubmed++;
+    entryPubmedFound[id] = found;
+  }
+
+  // Cleans up common copy/paste artifacts where punctuation is glued
+  // directly to the next word with no space, e.g.:
+  //  - "Wu X.Multi-physical field simulation" (period + letter)
+  //  - "Managing change:A practitioner's guide" (colon + letter, common
+  //    in subtitles - "Title:Subtitle" search terms merge into one
+  //    unsearchable token otherwise)
+  // Each of these glues two words into one token and breaks both the
+  // Crossref/PubMed search query and the reference-type guess. Vancouver/
+  // AMA-style volume/issue/page strings like "15(3):45-67" are left
+  // untouched on purpose - the colon there sits between digits, not a
+  // letter, so it's not a word-glue problem and inserting a space would
+  // just add noise to the query. Only used for building the search query -
+  // the displayed reference text is left exactly as-is.
+  function sanitizeQueryText(text) {
+    return String(text || '')
+      .replace(/[.:](?=[A-Za-z])/g, function (m) { return m + ' '; })
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // A Crossref field that's mostly U+FFFD (the "replacement character")
+  // means the bytes were already invalid UTF-8 before they left Crossref's
+  // server - i.e. corrupted at the source (a common issue for records
+  // deposited with the wrong encoding). Nothing on this end can recover
+  // the original text, so this is used to swap raw "�����" for an honest
+  // note instead of displaying it as if it were readable.
+  function hasEncodingCorruption(s) {
+    var str = String(s || '');
+    if (!str) return false;
+    var bad = (str.match(/\uFFFD/g) || []).length;
+    return bad > 0 && bad / str.length > 0.15;
+  }
+
   function bumpStats() {
     statsBox.style.display = '';
     statAlready.textContent = counts.already;
     statGreen.textContent = counts.green;
     statYellow.textContent = counts.yellow;
     statRed.textContent = counts.red;
+    if (statPubmed) statPubmed.textContent = counts.pubmed;
     updateExportNote();
   }
   if (counts.already) bumpStats();
@@ -1071,8 +1290,12 @@ mark{padding:1px 2px;border-radius:3px;}
       var body = buildReferenceListParagraphs();
       var doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reference List</title>'
         + '<style>body{font-family:"Times New Roman",Georgia,serif;font-size:12pt;max-width:800px;margin:40px auto;color:#111;}'
-        + 'h1{font-size:16pt;font-family:Arial,sans-serif;}a{color:#1d4ed8;}</style>'
-        + '</head><body><h1>References</h1>' + body + '</body></html>';
+        + 'h1{font-size:16pt;font-family:Arial,sans-serif;}a{color:#1d4ed8;}'
+        + '.export-footer{margin-top:30px;padding-top:14px;border-top:1px solid #ccc;font-family:Arial,sans-serif;font-size:9pt;color:#666;}'
+        + '.export-footer a{color:#666;}</style>'
+        + '</head><body><h1>References</h1>' + body
+        + '<div class="export-footer">For viewing purposes only. Reference cross-ref and DOI checker can make mistakes - please manually check all results once more. If in doubt, please refer to <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google Scholar</a> or another reliable source.</div>'
+        + '</body></html>';
       downloadBlob(doc, 'Reference-List.html', 'text/html;charset=utf-8');
     });
   }
@@ -1082,8 +1305,11 @@ mark{padding:1px 2px;border-radius:3px;}
       var body = buildReferenceListParagraphs();
       var doc = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
         + '<head><meta charset="utf-8"><title>Reference List</title>'
-        + '<style>body{font-family:"Times New Roman",serif;font-size:12pt;}h1{font-family:Arial,sans-serif;font-size:16pt;}</style>'
-        + '</head><body><h1>References</h1>' + body + '</body></html>';
+        + '<style>body{font-family:"Times New Roman",serif;font-size:12pt;}h1{font-family:Arial,sans-serif;font-size:16pt;}'
+        + '.export-footer{margin-top:30px;padding-top:14px;border-top:1px solid #ccc;font-family:Arial,sans-serif;font-size:9pt;color:#666;}</style>'
+        + '</head><body><h1>References</h1>' + body
+        + '<p class="export-footer">For viewing purposes only. Reference cross-ref and DOI checker can make mistakes - please manually check all results once more. If in doubt, please refer to <a href="https://scholar.google.com/">Google Scholar</a> or another reliable source.</p>'
+        + '</body></html>';
       downloadBlob(doc, 'Reference-List.doc', 'application/msword');
     });
   }
@@ -1092,65 +1318,201 @@ mark{padding:1px 2px;border-radius:3px;}
 
   function cell(row, cls) { return row.querySelector(cls); }
 
+  // Fetch with a single retry on 429 (NCBI eutils allows only 3 req/sec
+  // without an API key, so a burst of red/yellow entries can trip this).
+  // Backs off ~700ms, honoring Retry-After if NCBI sends one, then gives
+  // up and lets the caller's normal error handling take over.
+  async function fetchWithRetry(url) {
+    var res = await fetch(url);
+    if (res.status === 429) {
+      var retryAfter = parseInt(res.headers.get('Retry-After'), 10);
+      await sleep(isNaN(retryAfter) ? 700 : retryAfter * 1000);
+      res = await fetch(url);
+    }
+    return res;
+  }
+
+  // ---- PubMed fallback - called for entries Crossref left uncertain
+  // (yellow or red/errored). PubMed's esearch does its own relevance
+  // ranking, so we just take its top hit and pull the DOI out of
+  // esummary's articleids list (idtype "doi"), which is where PubMed
+  // registers it. No API key needed for this volume of traffic. ----
+  async function checkPubMed(e, queryText) {
+    var term = encodeURIComponent(sanitizeQueryText(queryText || e.cleanText).slice(0, 250));
+    var searchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=1&term=' + term;
+    var searchRes = await fetchWithRetry(searchUrl);
+    if (!searchRes.ok) throw new Error('PubMed HTTP ' + searchRes.status);
+    var searchData = await searchRes.json();
+    var idlist = (searchData.esearchresult && searchData.esearchresult.idlist) || [];
+    if (!idlist.length) return null;
+    var pmid = idlist[0];
+    var summaryUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=' + pmid;
+    var summaryRes = await fetchWithRetry(summaryUrl);
+    if (!summaryRes.ok) throw new Error('PubMed HTTP ' + summaryRes.status);
+    var summaryData = await summaryRes.json();
+    var rec = summaryData.result && summaryData.result[pmid];
+    if (!rec) return null;
+    var doi = null;
+    (rec.articleids || []).forEach(function (a) { if (a.idtype === 'doi' && a.value) doi = a.value; });
+    return { pmid: pmid, doi: doi, title: rec.title || '' };
+  }
+
+  // Runs Crossref (then PubMed, if applicable) for a single entry and
+  // writes the result into that entry's row. opts.queryText lets a manual
+  // retry search on edited text instead of the parsed e.cleanText, without
+  // changing what's shown or exported for the reference itself.
+  async function lookupEntry(e, row, opts) {
+    var email = (opts && opts.email) || '';
+    var usePubmed = !!(opts && opts.usePubmed);
+    var queryText = (opts && opts.queryText) || e.cleanText;
+    cell(row, '.doi-status-cell').innerHTML = '<span style="color:#0369a1;">🔄 checking…</span>';
+    cell(row, '.doi-match-cell').innerHTML = '-';
+    cell(row, '.doi-pubmed-cell').innerHTML = '-';
+    delete foundDoi[e.id];
+    var crossrefDoi = '';
+    var crossrefTier = 'red';
+    try {
+      var q = encodeURIComponent(sanitizeQueryText(queryText).slice(0, 300));
+      var url = 'https://api.crossref.org/works?query.bibliographic=' + q + '&rows=3' + (email ? '&mailto=' + encodeURIComponent(email) : '');
+      var res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      var items = (data.message && data.message.items) || [];
+      var best = null, bestScore = -1;
+      items.forEach(function (item) {
+        var s = scoreItem(e, item, queryText);
+        if (s > bestScore) { bestScore = s; best = item; }
+      });
+      if (best && bestScore > 0) {
+        var tier = tierFor(bestScore);
+        crossrefTier = tier;
+        setTier(e.id, tier);
+        cell(row, '.doi-status-cell').innerHTML = tierBadge(tier, bestScore);
+        var foundTitle = (best.title && best.title[0]) || '(untitled)';
+        var foundJournal = (best['container-title'] && best['container-title'][0]) || '';
+        var foundYear = (best.issued && best.issued['date-parts'] && best.issued['date-parts'][0] && best.issued['date-parts'][0][0]) || '';
+        // Highlight why this was picked: the author surname wherever it
+        // shows up in the matched title/journal, and the year when it
+        // exactly matches this entry's year - the same signals scoreItem()
+        // used to pick this result.
+        var titleHtml = hasEncodingCorruption(foundTitle)
+          ? '<span style="color:#94a3b8;font-style:italic;" title="This Crossref record has a corrupted title in its own stored metadata (invalid UTF-8 at the source) - not something a re-search here can fix.">⚠ title unreadable - source metadata is corrupted</span>'
+          : highlightHit(esc(foundTitle), e.surnames);
+        var journalHtml = hasEncodingCorruption(foundJournal)
+          ? '<span style="color:#94a3b8;font-style:italic;">journal name unreadable</span>'
+          : highlightHit(esc(foundJournal), e.surnames);
+        var yearHtml = esc(String(foundYear));
+        if (foundYear && String(foundYear) === String(e.year)) {
+          yearHtml = '<mark class="doi-match-hit">' + yearHtml + '</mark>';
+        }
+        cell(row, '.doi-match-cell').innerHTML = '<div style="font-weight:600;">' + titleHtml + '</div><div style="color:#64748b;font-size:12px;">' + journalHtml + (foundYear ? ' · ' + yearHtml : '') + '</div>';
+        // Swap the pre-lookup text guess for Crossref's own type field,
+        // now that we have a real answer for this entry.
+        var crType = CROSSREF_TYPE_LABELS[best.type];
+        var typeCellEl = cell(row, '.doi-type-cell');
+        if (crType && typeCellEl) {
+          typeCellEl.innerHTML = '<span class="type-badge type-confirmed">' + crType.emoji + ' ' + esc(crType.label) + '</span>';
+        }
+        // A red-tier "match" (score under 60) is Crossref's best guess,
+        // not a usable result - it's shown above for context only.
+        // Trusting its DOI here would silently attach the wrong paper
+        // (e.g. an unrelated conference paper just because the year
+        // matched), and would also block the PubMed fallback below from
+        // ever running. Only green/yellow DOIs get written through.
+        if (tier !== 'red') {
+          crossrefDoi = best.DOI || '';
+          if (crossrefDoi) foundDoi[e.id] = crossrefDoi;
+        }
+        var copyLine = e.cleanText.replace(/\\s+$/, '');
+        if (!/[.]\\s*$/.test(copyLine)) copyLine += '.';
+        copyLine += ' https://doi.org/' + crossrefDoi;
+        cell(row, '.doi-doi-cell').innerHTML = crossrefDoi
+          ? '<a href="https://doi.org/' + esc(crossrefDoi) + '" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy reference + DOI · opens link" data-copy="' + esc(copyLine) + '">https://doi.org/' + esc(crossrefDoi) + '</a>'
+          : '-';
+      } else {
+        setTier(e.id, 'red');
+        cell(row, '.doi-status-cell').innerHTML = tierBadge('red', 0);
+        cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">No confident Crossref match</span>';
+        cell(row, '.doi-doi-cell').innerHTML = '-';
+      }
+    } catch (err) {
+      cell(row, '.doi-status-cell').innerHTML = '<span style="color:#991b1b;">⚠ lookup failed</span>';
+      cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">' + esc(err.message || 'network error') + '</span>';
+    }
+
+    // Spend a PubMed call on anything Crossref left uncertain: red (no
+    // usable DOI at all) AND yellow (a DOI exists but still needs QC) -
+    // errored counts as red since crossrefTier stays 'red' on catch.
+    // Green is skipped; a >=85% Crossref match doesn't need corroborating.
+    if (usePubmed && crossrefTier !== 'green') {
+      var pmCell = cell(row, '.doi-pubmed-cell');
+      if (pmCell) pmCell.innerHTML = '<span style="color:#0369a1;">🔄…</span>';
+      try {
+        var pm = await checkPubMed(e, queryText);
+        if (pm && pm.pmid) {
+          // Show the PMID as soon as we have one - it's a citable,
+          // reliable identifier on its own, even for the (common) case
+          // where the journal never registered a DOI with Crossref.
+          if (pmCell) {
+            pmCell.innerHTML = '<a href="https://pubmed.ncbi.nlm.nih.gov/' + esc(pm.pmid) + '/" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy PMID · opens PubMed record" data-copy="PMID: ' + esc(pm.pmid) + '" style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:10px;font-size:11px;text-decoration:none;">🔵 PMID ' + esc(pm.pmid) + '</a>';
+          }
+          if (pm.doi) {
+            if (crossrefDoi) {
+              // Crossref already produced a yellow-tier DOI - don't
+              // silently swap it for PubMed's top hit (PubMed isn't
+              // scored the way Crossref results are here). Just note
+              // agreement/disagreement next to the PMID for the QC pass.
+              if (pmCell) {
+                var agrees = String(pm.doi).toLowerCase() === String(crossrefDoi).toLowerCase();
+                pmCell.innerHTML += ' <span style="color:' + (agrees ? '#15803d' : '#b45309') + ';font-size:11px;">' + (agrees ? '✓ DOI matches Crossref' : '⚠ PubMed DOI differs - check') + '</span>';
+              }
+            } else {
+              foundDoi[e.id] = pm.doi;
+              setPubmedFound(e.id, true);
+              var doiCellNow = cell(row, '.doi-doi-cell');
+              if (doiCellNow) {
+                var pmCopyLine = e.cleanText.replace(/\\s+$/, '');
+                if (!/[.]\\s*$/.test(pmCopyLine)) pmCopyLine += '.';
+                pmCopyLine += ' https://doi.org/' + pm.doi;
+                doiCellNow.innerHTML = '<a href="https://doi.org/' + esc(pm.doi) + '" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy reference + DOI (via PubMed) · opens link" data-copy="' + esc(pmCopyLine) + '">https://doi.org/' + esc(pm.doi) + '</a>';
+              }
+              var statusCellNow = cell(row, '.doi-status-cell');
+              if (statusCellNow) {
+                statusCellNow.innerHTML = '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:11px;">🔵 found via PubMed</span>';
+              }
+            }
+          } else if (!crossrefDoi) {
+            // Found the article on PubMed, but it has no DOI on record
+            // (common for smaller/regional journals) - flag that clearly
+            // rather than implying nothing was found at all.
+            var doiCellNoDoi = cell(row, '.doi-doi-cell');
+            if (doiCellNoDoi && doiCellNoDoi.innerHTML === '-') {
+              doiCellNoDoi.innerHTML = '<span style="color:#94a3b8;font-style:italic;" title="' + esc(pm.title || '') + '">on PubMed, no DOI on record</span>';
+            }
+          }
+        } else if (pmCell) {
+          pmCell.innerHTML = '<span style="color:#94a3b8;">no match</span>';
+        }
+      } catch (pmErr) {
+        if (pmCell) pmCell.innerHTML = '<span style="color:#991b1b;">⚠ ' + esc(pmErr.message || 'error') + '</span>';
+      }
+    } else if (!usePubmed && entryPubmedFound[e.id]) {
+      setPubmedFound(e.id, false);
+    }
+    bumpStats();
+  }
+
   async function run() {
     runBtn.disabled = true;
     var email = (emailInput.value || '').trim();
+    var usePubmed = !!(pubmedToggle && pubmedToggle.checked);
     var todo = entries.filter(function (e) { return !e.existingDoi; });
     for (var i = 0; i < todo.length; i++) {
       var e = todo[i];
       var row = document.getElementById('doi-row-' + e.id);
       if (!row) continue;
-      cell(row, '.doi-status-cell').innerHTML = '<span style="color:#0369a1;">🔄 checking…</span>';
       runBtn.textContent = 'Checking ' + (i + 1) + ' / ' + todo.length + '…';
-      try {
-        var q = encodeURIComponent(e.cleanText.slice(0, 300));
-        var url = 'https://api.crossref.org/works?query.bibliographic=' + q + '&rows=3' + (email ? '&mailto=' + encodeURIComponent(email) : '');
-        var res = await fetch(url);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var data = await res.json();
-        var items = (data.message && data.message.items) || [];
-        var best = null, bestScore = -1;
-        items.forEach(function (item) {
-          var s = scoreItem(e, item);
-          if (s > bestScore) { bestScore = s; best = item; }
-        });
-        if (best && bestScore > 0) {
-          var tier = tierFor(bestScore);
-          counts[tier]++;
-          cell(row, '.doi-status-cell').innerHTML = tierBadge(tier, bestScore);
-          var foundTitle = (best.title && best.title[0]) || '(untitled)';
-          var foundJournal = (best['container-title'] && best['container-title'][0]) || '';
-          var foundYear = (best.issued && best.issued['date-parts'] && best.issued['date-parts'][0] && best.issued['date-parts'][0][0]) || '';
-          // Highlight why this was picked: the author surname wherever it
-          // shows up in the matched title/journal, and the year when it
-          // exactly matches this entry's year - the same signals scoreItem()
-          // used to pick this result.
-          var titleHtml = highlightHit(esc(foundTitle), e.surnames);
-          var journalHtml = highlightHit(esc(foundJournal), e.surnames);
-          var yearHtml = esc(String(foundYear));
-          if (foundYear && String(foundYear) === String(e.year)) {
-            yearHtml = '<mark class="doi-match-hit">' + yearHtml + '</mark>';
-          }
-          cell(row, '.doi-match-cell').innerHTML = '<div style="font-weight:600;">' + titleHtml + '</div><div style="color:#64748b;font-size:12px;">' + journalHtml + (foundYear ? ' · ' + yearHtml : '') + '</div>';
-          var doiVal = best.DOI || '';
-          if (doiVal) foundDoi[e.id] = doiVal;
-          var copyLine = e.cleanText.replace(/\\s+$/, '');
-          if (!/[.]\\s*$/.test(copyLine)) copyLine += '.';
-          copyLine += ' https://doi.org/' + doiVal;
-          cell(row, '.doi-doi-cell').innerHTML = doiVal
-            ? '<span class="ctx-copy" title="Click to copy reference + DOI" data-copy="' + esc(copyLine) + '">' + esc(doiVal) + '</span>'
-            : '-';
-        } else {
-          counts.red++;
-          cell(row, '.doi-status-cell').innerHTML = tierBadge('red', 0);
-          cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">No confident Crossref match</span>';
-          cell(row, '.doi-doi-cell').innerHTML = '-';
-        }
-      } catch (err) {
-        cell(row, '.doi-status-cell').innerHTML = '<span style="color:#991b1b;">⚠ lookup failed</span>';
-        cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">' + esc(err.message || 'network error') + '</span>';
-      }
-      bumpStats();
+      await lookupEntry(e, row, { email: email, usePubmed: usePubmed });
       await sleep(180);
     }
     runBtn.disabled = false;
@@ -1159,6 +1521,48 @@ mark{padding:1px 2px;border-radius:3px;}
   }
 
   runBtn.addEventListener('click', function () { run(); });
+
+  // ---- Manual "Edit & search again" retry, for entries whose parsed
+  // text trips up the search (merged words, non-English citation styles,
+  // OCR artifacts, etc.) - lets the CE team tweak the search text for one
+  // reference and re-run just that lookup, without touching the rest. ----
+  function findEntry(id) {
+    for (var i = 0; i < entries.length; i++) { if (entries[i].id === id) return entries[i]; }
+    return null;
+  }
+  document.querySelectorAll('.retry-toggle-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var box = document.getElementById('retry-box-' + btn.getAttribute('data-id'));
+      if (box) box.style.display = (box.style.display === 'none' || !box.style.display) ? '' : 'none';
+    });
+  });
+  document.querySelectorAll('.retry-cancel-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var box = document.getElementById('retry-box-' + btn.getAttribute('data-id'));
+      if (box) box.style.display = 'none';
+    });
+  });
+  document.querySelectorAll('.retry-search-btn').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      var id = btn.getAttribute('data-id');
+      var entry = findEntry(id);
+      var row = document.getElementById('doi-row-' + id);
+      if (!entry || !row) return;
+      var input = document.getElementById('retry-input-' + id);
+      var customText = input ? input.value : entry.cleanText;
+      btn.disabled = true;
+      var oldLabel = btn.textContent;
+      btn.textContent = 'Searching…';
+      await lookupEntry(entry, row, {
+        email: (emailInput.value || '').trim(),
+        usePubmed: !!(pubmedToggle && pubmedToggle.checked),
+        queryText: customText,
+      });
+      btn.disabled = false;
+      btn.textContent = oldLabel;
+      updateExportNote();
+    });
+  });
 })();
 </script>
 </body></html>`;
