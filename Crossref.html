@@ -455,7 +455,9 @@
     </footer>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="crossref-core-browser.js"></script>
+    <script src="docx-meta-browser.js"></script>
     
     <script>
         const dropZone = document.getElementById('drop-zone');
@@ -538,10 +540,22 @@
             reader.onload = function(e) {
                 const arrayBuffer = e.target.result;
                 
-                mammoth.convertToHtml({arrayBuffer: arrayBuffer})
-                    .then(function(result) {
+                // Parse manuscript metadata (front matter, sections, tables,
+                // equations, style inventory) from the raw OOXML in parallel
+                // with mammoth's prose->HTML conversion. Both consume the
+                // same ArrayBuffer, so they run concurrently with no conflict.
+                const metaPromise = (typeof docxMeta !== 'undefined')
+                    ? docxMeta.parse(arrayBuffer)
+                    : Promise.resolve(null);
+                
+                const mammothPromise = mammoth.convertToHtml({arrayBuffer: arrayBuffer});
+                
+                Promise.all([mammothPromise, metaPromise])
+                    .then(function(results) {
+                        const result = results[0];
+                        const meta = results[1];
                         const htmlContent = result.value;
-                        const reportHtml = generateReport(htmlContent);
+                        const reportHtml = generateReport(htmlContent, meta);
                         currentReportHtml = reportHtml;
                         
                         // Hide home page elements

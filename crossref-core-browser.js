@@ -531,8 +531,278 @@ function cleanForCopy(text) {
     .trim();
 }
 
-function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans, allEntries) {
+function buildManuscriptOverview(meta) {
+  if (!meta || !meta.front) return "";
+  const esc = escapeHtml;
+  const f = meta.front || {}, b = meta.body || {}, s = meta.styles || {}, bk = meta.back || {};
+  const hasFront = f.title || f.articleType || f.doi || f.authors.length || f.abstract.paragraphs.length || f.keywords.length;
+  if (!hasFront && !b.headings.length) return "";
+
+  // --- Summary grid (shown by default) ---
+  // Section tree (flat, indented by level).
+  let sectionHtml = "";
+  if (b.headings && b.headings.length) {
+    const heads = b.headings.map((h) => {
+      const depth = Math.min(6, h.level || 1);
+      return `<div class="ov-sec" style="padding-left:${(depth - 1) * 18}px;">
+        <span class="ov-sec-lvl">H${h.level || 1}</span>${esc(h.title)}</div>`;
+    }).join("");
+    sectionHtml = `<div class="ov-block"><div class="ov-label">Sections (${b.headings.length})</div>${heads}</div>`;
+  } else if (b.sections && b.sections.length) {
+    sectionHtml = "";
+  }
+
+  // Style inventory — XML document order (at, au, af, abstract, keyword,
+  // sections, bullets, tables, refs, back matter ...).
+  let styleChips = "";
+  if (s.inventory && s.inventory.length) {
+    styleChips = s.inventory.map((x) =>
+      `<span class="ov-style" title="${esc(x.id + (x.isHeading ? " · heading" : ""))}">${esc(x.label)} <b>${x.count}</b></span>`).join("");
+  }
+
+  // Tables (summary list with captions).
+  let tablesHtml = "";
+  if (b.tables && b.tables.length) {
+    tablesHtml = b.tables.map((t, i) => {
+      const title = t.captionTitle || "(no caption)";
+      const label = t.captionLabel ? esc(t.captionLabel) : `Table ${i + 1}`;
+      return `<div class="ov-item"><b>${label}</b> — ${esc(title)} <span class="ov-dim">(${t.rows} × ${t.cols})</span></div>`;
+    }).join("");
+    tablesHtml = `<div class="ov-block" data-ov-target="tables"><div class="ov-label">Tables (${b.tables.length}) <span class="ov-dim">· click for details</span></div>${tablesHtml}</div>`;
+  }
+
+  // Figures (summary list: pointer/inline + caption).
+  let figuresHtml = "";
+  if (b.figures && b.figures.length) {
+    figuresHtml = b.figures.map((g, i) => {
+      const cap = (g.captionRich || g.caption) ? (g.captionRich || esc(g.caption)) : "(no caption)";
+      const type = g.type === "pointer" ? "insertion pointer" : (g.type || "figure");
+      return `<div class="ov-item"><b>Figure ${i + 1}</b> <span class="ov-dim">(${esc(type)})</span> — ${cap}</div>`;
+    }).join("");
+    figuresHtml = `<div class="ov-block" data-ov-target="figures"><div class="ov-label">Figures (${b.figures.length}) <span class="ov-dim">· click for details</span></div>${figuresHtml}</div>`;
+  }
+
+  // Equations + math.
+  const e = b.equations || {};
+  const eqBits = [];
+  if (e.native) eqBits.push(`${e.native} native Office Math`);
+  if (e.mathtype) eqBits.push(`${e.mathtype} MathType/Equation`);
+  const eqHtml = eqBits.length ? `<div class="ov-block" data-ov-target="equations"><div class="ov-label">Equations / math <span class="ov-dim">· click for details</span></div><div class="ov-item">${esc(eqBits.join(" · "))}</div></div>` : "";
+
+  // Front-matter summary block.
+  let authorsHtml = "";
+  if (f.authors && f.authors.length) authorsHtml += `<div class="ov-meta"><b>Authors:</b> ${esc(f.authors.join("; "))}</div>`;
+  const affilPreview = (f.affiliations || []).slice(0, 2).join(" | ");
+  if (affilPreview) authorsHtml += `<div class="ov-meta"><b>Affiliations:</b> ${esc(affilPreview)}${(f.affiliations||[]).length > 2 ? " …" : ""}</div>`;
+  if (f.articleType) authorsHtml += `<div class="ov-meta"><b>Article type:</b> ${esc(f.articleType)}</div>`;
+  if (f.doi) authorsHtml += `<div class="ov-meta"><b>DOI:</b> <a href="https://doi.org/${esc(f.doi)}" target="_blank" rel="noopener">https://doi.org/${esc(f.doi)}</a></div>`;
+  const sizeBits = [];
+  if (f.pageCount) sizeBits.push(`${f.pageCount} pages`);
+  if (f.wordCount) sizeBits.push(`${f.wordCount} words`);
+  if (b.charCount) sizeBits.push(`${b.charCount} chars`);
+  if (sizeBits.length) authorsHtml += `<div class="ov-meta"><b>Size:</b> ${esc(sizeBits.join(" · "))}${b.equations ? ` · <b>${esc(eqBits.length ? eqBits.join(" / ") : "0 math")}</b>` : ""}</div>`;
+  if (authorsHtml) authorsHtml = `<div class="ov-block" data-ov-target="people">${authorsHtml}</div>`;
+
+  // ---- Interactive structure counts (clickable cards). ----
+  // Derive counts from the parsed data + style inventory (XML doc order).
+  let textCount = 0, bulletCount = 0, tableish = 0;
+  (s.inventory || []).forEach((x) => {
+    if (/text\b|body/i.test(x.label) || /^TEXT/.test(x.id)) textCount += x.count;
+    if (/bullet|list/i.test(x.label) || x.id === "BL" || x.id === "UL") bulletCount += x.count;
+    if (/table/i.test(x.label)) tableish += x.count;
+  });
+  const eqTotal = (e.native || 0) + (e.mathtype || 0);
+  const counts = [
+    { label: "Sections", n: (b.headings || []).length, target: "sections" },
+    { label: "Tables", n: (b.tables || []).length, target: "tables" },
+    { label: "Figures", n: (b.figures || []).length, target: "figures" },
+    { label: "Equations / math", n: eqTotal, target: "equations" },
+    { label: "Affiliations", n: (f.affiliations || []).length, target: "people" },
+    { label: "Body text", n: textCount || b.paragraphCount, target: "sections" },
+    { label: "Bullets", n: bulletCount, target: "sections" },
+    { label: "Footnotes", n: (b.footnotes || 0), target: "back" },
+    { label: "Endnotes", n: (b.endnotes || 0), target: "back" },
+    { label: "Appendix", n: (bk.appendix || []).length, target: "back" },
+    { label: "References", n: (bk.references || []).length, target: "references" }
+  ].filter((c) => c.n >= 0);
+  const countCards = counts.map((c) =>
+    `<button type="button" class="ov-countcard" data-ov-target="${esc(c.target)}" title="Show ${esc(c.label)} details">
+       <span class="ov-countnum">${c.n}</span>
+       <span class="ov-countlabel">${esc(c.label)}</span>
+     </button>`).join("");
+  const countsHtml = countCards ? `<div class="ov-block ov-counts"><div class="ov-label">Structure counts <span class="ov-dim">· click a card for detail</span></div><div class="ov-countrow">${countCards}<button type="button" class="ov-countcard ov-allcard" data-ov-target="__all__"><span class="ov-countnum">⇣</span><span class="ov-countlabel">Show all below</span></button></div></div>` : "";
+
+  // --- Detailed dropdown body (hidden until the button is clicked) ---
+  // Full abstract (maximum in-line formatting preserved from OOXML runs).
+  let absDetail = "";
+  const absParas = f.abstract && f.abstract.paragraphs ? f.abstract.paragraphs : [];
+  if (f.abstract && absParas.length) {
+    let body = "";
+    const richParas = (f.abstract.paragraphsRich && f.abstract.paragraphsRich.length)
+      ? f.abstract.paragraphsRich : absParas;
+    if (f.abstract.sectionsRich && f.abstract.hasStructured) {
+      // Structured abstract — one ABKW paragraph holds all labelled segments
+      // with real <b>label</b> runs already in the rich HTML.
+      const segText = Object.keys(f.abstract.sectionsRich).map((k) => f.abstract.sectionsRich[k]).join(" ").trim();
+      if (segText) body = `<p class="ov-abs">${segText}</p>`;
+    }
+    if (!body && f.abstract.sections && f.abstract.hasStructured) {
+      const order = ["background", "methods", "results", "conclusions", "objectives"];
+      const labels = { background: "Background", methods: "Methods", results: "Results", conclusions: "Conclusions", objectives: "Objectives" };
+      order.forEach((k) => { if (f.abstract.sections[k]) body += `<p class="ov-abs"><b>${esc(labels[k])}.</b> ${esc(f.abstract.sections[k].trim())}</p>`; });
+    }
+    if (!body) body = richParas.map((p) => `<p class="ov-abs">${p}</p>`).join("");
+    if (!body) body = absParas.map((p) => `<p class="ov-abs">${esc(p)}</p>`).join("");
+    absDetail = `<div class="ov-detail-block"><div class="ov-label">Abstract${f.abstract.hasStructured ? " (structured)" : ""}</div>${body}</div>`;
+  }
+
+  // Keywords.
+  let kwDetail = "";
+  if (f.keywords && f.keywords.length) {
+    kwDetail = `<div class="ov-detail-block"><div class="ov-label">Keywords (${f.keywords.length})</div>${f.keywords.map((k) => `<span class="ov-key">${esc(k)}</span>`).join(" ")}</div>`;
+  }
+
+  // Authors & affiliations full (affiliations keep in-line formatting).
+  let auDetail = `<div class="ov-detail-block" data-ov-target="people"><div class="ov-label">Authors &amp; affiliations</div>`;
+  if (f.authors && f.authors.length) auDetail += `<div class="ov-meta"><b>Authors:</b> ${esc(f.authors.join("; "))}</div>`;
+  const affRich = (f.affiliationsRich && f.affiliationsRich.length) ? f.affiliationsRich : (f.affiliations || []);
+  if (affRich.length) auDetail += `<div class="ov-meta"><b>Affiliations:</b></div><ul style="margin:4px 0 0 18px;">${affRich.map((a) => `<li>${a}</li>`).join("")}</ul>`;
+  if (f.creator) auDetail += `<div class="ov-meta"><b>Author of record:</b> ${esc(f.creator)}</div>`;
+  if (f.lastModifiedBy) auDetail += `<div class="ov-meta"><b>Last modified by:</b> ${esc(f.lastModifiedBy)}</div>`;
+  if (f.revision) auDetail += `<div class="ov-meta"><b>Revision:</b> ${esc(f.revision)}</div>`;
+  if (f.created || f.modified) auDetail += `<div class="ov-meta"><b>Dates:</b> created ${esc(f.created || "—")} · modified ${esc(f.modified || "—")}</div>`;
+  auDetail += `</div>`;
+
+  // Full section tree (same as summary; included for completeness under details).
+  let secDetail = "";
+  if (b.headings && b.headings.length) {
+    const heads = b.headings.map((h) => {
+      const depth = Math.min(6, h.level || 1);
+      return `<div class="ov-sec" style="padding-left:${(depth - 1) * 18}px;"><span class="ov-sec-lvl">H${h.level || 1}</span>${esc(h.title)}</div>`;
+    }).join("");
+    secDetail = `<div class="ov-detail-block" data-ov-target="sections"><div class="ov-label">Section tree (${b.headings.length})</div>${heads}</div>`;
+  }
+
+  // Tables with captions (in-line formatting + note) + figures.
+  let tblDetail = "";
+  if (b.tables && b.tables.length) {
+    const rows = b.tables.map((t, i) => {
+      const label = (t.captionLabelRich || t.captionLabel) ? `<b>${t.captionLabelRich || esc(t.captionLabel)}</b>` : `<b>Table ${i + 1}</b>`;
+      const title = (t.captionRich || t.captionTitle)
+        ? (t.captionRich || esc(t.captionTitle))
+        : '<span style="color:#94a3b8;">(no caption title)</span>';
+      const note = (t.captionNoteRich || t.captionNote)
+        ? `<div class="ov-tblnote">${t.captionNoteRich || esc(t.captionNote)}</div>`
+        : "";
+      return `<tr><td>${label}</td><td>${title}${note}</td><td>${t.rows} × ${t.cols}</td></tr>`;
+    }).join("");
+    tblDetail = `<div class="ov-detail-block" data-ov-target="tables"><div class="ov-label">Tables (${b.tables.length})</div><table class="ov-detail-table"><thead><tr><th>Label</th><th>Caption</th><th>Size</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  let figDetail = "";
+  if (b.figures && b.figures.length) {
+    const figRows = b.figures.map((g, i) => {
+      const cap = (g.captionRich || g.caption)
+        ? (g.captionRich || esc(g.caption))
+        : '<span style="color:#94a3b8;">(no caption)</span>';
+      const note = (g.noteRich || g.note)
+        ? `<div class="ov-tblnote" style="margin-top:2px;color:#475569;">${g.noteRich || esc(g.note)}</div>`
+        : "";
+      const type = g.type === "pointer" ? "insertion pointer" : (g.type || "figure");
+      return `<div class="ov-item" style="margin-bottom:8px;"><b>Figure ${i + 1}</b> <span class="ov-dim">(${esc(type)})</span><br>${cap}${note}</div>`;
+    }).join("");
+    figDetail = `<div class="ov-detail-block" data-ov-target="figures"><div class="ov-label">Figures (${b.figures.length})</div>${figRows}</div>`;
+  }
+
+  // Equations detail.
+  let eqDetail = "";
+  if (eqBits.length || b.equations) {
+    eqDetail = `<div class="ov-detail-block" data-ov-target="equations"><div class="ov-label">Equations / math</div>
+      <div class="ov-item">${esc(eqBits.join(" · ") || "none")}</div>
+      ${b.imageFiles ? `<div class="ov-meta" style="margin-top:4px;"><b>Embedded images/metafiles:</b> ${b.imageFiles}</div>` : ""}</div>`;
+  }
+
+  // Back matter (funding, appendix, disclosure, refs, ethics, ORCID ...).
+  let backDetail = "";
+  const backGroups = [];
+  const pushBack = (grp) => { if (grp && grp.heading) backGroups.push(grp); };
+  pushBack(bk.acknowledgements);
+  pushBack(bk.funding);
+  pushBack(bk.disclosure);
+  if (bk.appendix) bk.appendix.forEach(pushBack);
+  if (bk.ethics) bk.ethics.forEach(pushBack);
+  pushBack(bk.dataAvailability);
+  pushBack(bk.orcid);
+  pushBack(bk.corresponding);
+  if (backGroups.length) {
+    backDetail = `<div class="ov-detail-block" data-ov-target="back"><div class="ov-label">Back matter</div>` +
+      backGroups.map((g) => {
+        const items = (g.itemsRich && g.itemsRich.length) ? g.itemsRich : (g.items && g.items.length) ? g.items.map((it) => esc(it)) : [];
+        return `<div class="ov-meta" style="margin-bottom:6px;"><b>${esc(g.heading)}</b>${items.length ? `<ul style="margin:2px 0 0 18px;">${items.map((it) => `<li>${it}</li>`).join("")}</ul>` : ""}</div>`;
+      }).join("") + `</div>`;
+  }
+
+  // References detail (in-line formatting preserved).
+  let refDetail = "";
+  if (bk.references && bk.references.length) {
+    const withDoi = bk.references.filter((r) => /10\.\d{4,9}\//.test(r.text)).length;
+    const refLis = bk.references.slice(0, 200).map((r) => {
+      const rich = r.rich || esc(r.text);
+      return `<li>${rich}</li>`;
+    }).join("");
+    refDetail = `<div class="ov-detail-block" data-ov-target="references"><div class="ov-label">References (${bk.references.length})</div>
+      <div class="ov-meta" style="margin-bottom:6px;"><b>${withDoi} of ${bk.references.length} already carry an inline DOI</b></div>
+      <ol class="ov-reflist">${refLis}</ol>
+      ${bk.references.length > 200 ? `<div class="ov-meta">… and ${bk.references.length - 200} more</div>` : ""}</div>`;
+  }
+
+  // Styles detail in XML order.
+  let styleDetail = "";
+  if (styleChips) {
+    styleDetail = `<div class="ov-detail-block"><div class="ov-label">Word styles used — XML document order (${s.inventory.length} types)</div>
+      <div style="line-height:1.9;">${styleChips}</div></div>`;
+  }
+
+  const detailsBody = (absDetail || kwDetail || auDetail || secDetail || tblDetail || figDetail || eqDetail || backDetail || refDetail || styleDetail)
+    ? `<div>${auDetail}${absDetail}${kwDetail}${secDetail}${tblDetail}${figDetail}${eqDetail}${backDetail}${refDetail}${styleDetail}</div>`
+    : "";
+
+  let warnHtml = "";
+  if (s.warnings && s.warnings.length) {
+    warnHtml = `<div class="ov-warnings"><strong>⚠ Style flags</strong><ul style="margin:6px 0 0 18px;">${
+      s.warnings.map((w) => `<li>${esc(w)}</li>`).join("")
+    }</ul></div>`;
+  }
+
+  return `<section class="report-section ov-overview" data-section="overview">
+    <h2>📄 Manuscript Overview <span class="ov-sub">(from the .docx structure, JATS-style)</span></h2>
+    <p style="color:#64748b;font-size:13px;">Metadata, section tree, structural counts and style inventory read directly from the Word file's XML. Math recognition includes both native Office Math and MathType/Equation Editor objects. These are a copyediting snapshot — <strong>not</strong> a content check.</p>
+    ${f.title || f.subtitle ? `<div class="ov-title">${f.titleRich || (f.title ? esc(f.title) : "")}${f.subtitle ? `<div class="ov-subtitle">${f.subtitleRich || esc(f.subtitle)}</div>` : ""}</div>` : ""}
+    <div class="ov-grid">
+      ${authorsHtml}
+      ${secDetail ? `<div class="ov-block" data-ov-target="sections"><div class="ov-label">Sections (${b.headings.length}) <span class="ov-dim">· click for details</span></div>${sectionHtml}</div>` : ""}
+      ${figuresHtml}
+      ${tablesHtml}
+      ${eqHtml}
+      ${countsHtml}
+      ${styleChips ? `<div class="ov-block"><div class="ov-label">Word styles used (${s.inventory.length} types)</div><div style="line-height:1.9;">${styleChips.slice(0, styleChips.indexOf("</span>") + 8)} … <span class="ov-dim">show all below</span></div></div>` : ""}
+    </div>
+    ${detailsBody ? `
+    <div class="ov-dropdown">
+      <button type="button" class="ov-dropdown-btn" id="ov-detail-toggle" aria-expanded="false" aria-controls="ov-details">
+        <span class="ov-dropdown-label">Show all metadata details</span>
+        <span class="ov-dropdown-arrow">▾</span>
+      </button>
+      <div class="ov-dropdown-body" id="ov-details" hidden>
+        ${detailsBody}
+        ${warnHtml}
+      </div>
+    </div>` : warnHtml}
+  </section>`;
+}
+
+function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans, allEntries, meta) {
   const { unlinkedSuggestion, orphanSuggestion } = buildDidYouMeanSuggestions(unlinkedEntries, orphans);
+  const overviewHtml = buildManuscriptOverview(meta);
 
   const dupBadge = (isDup) => isDup
     ? ' <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;">Duplicate</span>'
@@ -797,6 +1067,56 @@ mark{padding:1px 2px;border-radius:3px;}
 .doi-match-hit{background:#bbf7d0;padding:1px 2px;border-radius:3px;}
 .doi-export{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 8px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;}
 .doi-export-note{font-size:12px;color:#166534;}
+/* ---- Manuscript Overview (JATS-like structural snapshot) ---- */
+.ov-overview{scroll-margin-top:150px;}
+.ov-sub{color:#94a3b8;font-size:13px;font-weight:400;}
+.ov-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin:14px 0;}
+.ov-block{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;}
+.ov-label{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#0f172a;margin-bottom:8px;}
+.ov-meta{font-size:13px;line-height:1.6;color:#1e293b;}
+.ov-meta b{color:#0f172a;}
+.ov-meta a{color:#1d4ed8;}
+.ov-sec{font-size:13px;line-height:1.7;color:#1e293b;}
+.ov-sec-lvl{display:inline-block;min-width:26px;margin-right:6px;background:#0f172a;color:#e2e8f0;font-size:10px;font-weight:700;border-radius:4px;text-align:center;padding:1px 5px;}
+.ov-style{display:inline-block;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:2px 10px;margin:2px;font-size:12px;color:#334155;white-space:nowrap;}
+.ov-style b{color:#16a34a;}
+.ov-item{font-size:13px;line-height:1.7;color:#1e293b;}
+.ov-dim{color:#94a3b8;font-size:12px;white-space:nowrap;}
+.ov-key{display:inline-block;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:14px;padding:2px 10px;margin:2px;font-size:12px;}
+.ov-abstract p{font-size:13px;color:#1e293b;margin:0 0 8px;}
+.ov-title{font-size:20px;font-weight:800;color:#0f172a;line-height:1.3;margin:6px 0 2px;}
+.ov-subtitle{font-size:15px;font-weight:600;color:#334155;line-height:1.3;margin-top:2px;}
+.ov-warnings{margin:16px 0 0;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:12px;color:#92400e;}
+.ov-warnings ul{margin:6px 0 0 18px;line-height:1.6;}
+/* ---- Manuscript Overview dropdown (Show all metadata details) ---- */
+.ov-dropdown{margin:6px 0 0;}
+.ov-dropdown-btn{display:inline-flex;align-items:center;gap:8px;background:#0f172a;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s ease;}
+.ov-dropdown-btn:hover{background:#1e293b;}
+.ov-dropdown-btn[aria-expanded="true"]{background:#16a34a;}
+.ov-dropdown-arrow{transition:transform .2s ease;font-size:12px;}
+.ov-dropdown-btn[aria-expanded="true"] .ov-dropdown-arrow{transform:rotate(180deg);}
+.ov-dropdown-body{margin-top:12px;padding-top:14px;border-top:1px solid #e2e8f0;animation:ovFade .25s ease;}
+@keyframes ovFade{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.ov-detail-block{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;overflow-x:auto;}
+.ov-detail-table{width:100%;border-collapse:collapse;margin-top:6px;min-width:420px;}
+.ov-detail-table th{background:#0f172a;color:#fff;padding:8px;text-align:left;font-size:12px;}
+.ov-detail-table td{padding:8px;border:1px solid #e2e8f0;font-size:13px;vertical-align:top;}
+.ov-reflist{margin:6px 0 0 20px;}
+.ov-reflist li{font-size:13px;color:#1e293b;line-height:1.6;margin-bottom:4px;}
+.ov-tblnote{margin-top:4px;font-size:12px;color:#475569;font-style:italic;}
+.ov-abs{font-size:13px;color:#1e293b;line-height:1.65;}
+/* Interactive structure counts + clickable summary boxes */
+.ov-countrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.ov-countcard{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:96px;padding:10px 6px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;transition:all .15s ease;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+.ov-countcard:hover{border-color:#16a34a;box-shadow:0 3px 10px rgba(22,163,74,.15);transform:translateY(-2px);}
+.ov-countcard:active{transform:translateY(0);}
+.ov-countnum{font-size:20px;font-weight:800;color:#0f172a;line-height:1;}
+.ov-countlabel{font-size:10.5px;color:#475569;text-align:center;line-height:1.2;}
+.ov-allcard{background:#0f172a;border-color:#0f172a;width:auto;min-width:96px;}
+.ov-allcard .ov-countnum{color:#4ade80;}
+.ov-allcard .ov-countlabel{color:#cbd5e1;}
+.ov-block[data-ov-target]{cursor:pointer;border:1px solid #e2e8f0;transition:border-color .15s ease, box-shadow .15s ease;}
+.ov-block[data-ov-target]:hover{border-color:#16a34a;box-shadow:0 2px 8px rgba(22,163,74,.12);}
 </style></head>
 <body class="density-m"><div class="container">
 <h1>Reference Cross-Link Audit Report</h1>
@@ -817,6 +1137,7 @@ mark{padding:1px 2px;border-radius:3px;}
   <div class="stat"><div class="num" style="color:#d97706;">${dupCount}</div>Duplicate Entries</div>
   <div class="stat"><div class="num" style="color:#ea580c;">${orphanCount}</div>Orphan In-Text Citations</div>
 </div>
+${overviewHtml}
 <div class="report-toolbar">
   <div class="report-toolbar-left">
     <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-expanded="true" aria-controls="filter-bar">☰ <span id="sidebar-toggle-label">Hide Filters</span></button>
@@ -961,6 +1282,46 @@ mark{padding:1px 2px;border-radius:3px;}
       document.body.classList.remove('density-s', 'density-m', 'density-l');
       document.body.classList.add('density-' + btn.getAttribute('data-size'));
     });
+  });
+
+  // Manuscript Overview: "Show all metadata details" dropdown
+  var ovToggle = document.getElementById('ov-detail-toggle');
+  var ovDetails = document.getElementById('ov-details');
+  var ovLabel = ovToggle ? ovToggle.querySelector('.ov-dropdown-label') : null;
+  function ovOpenDetails() {
+    if (ovDetails && ovDetails.hidden) {
+      ovDetails.hidden = false;
+      if (ovToggle) { ovToggle.setAttribute('aria-expanded', 'true'); ovToggle.classList.add('ov-open'); }
+      if (ovLabel) ovLabel.textContent = 'Hide metadata details';
+    }
+  }
+  function ovGoTo(target) {
+    if (!ovDetails) return;
+    ovOpenDetails();
+    if (target === '__all__') {
+      ovDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    var els = ovDetails.querySelectorAll('.ov-detail-block[data-ov-target="' + target + '"]');
+    if (els.length) {
+      els[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      els[0].style.outline = '2px solid #16a34a';
+      setTimeout(function () { els[0].style.outline = 'none'; }, 1200);
+    }
+  }
+  if (ovToggle && ovDetails) {
+    ovToggle.addEventListener('click', function () {
+      var open = ovDetails.hidden;
+      ovDetails.hidden = !open;
+      ovToggle.setAttribute('aria-expanded', String(open));
+      ovToggle.classList.toggle('ov-open', open);
+      if (ovLabel) ovLabel.textContent = open ? 'Hide metadata details' : 'Show all metadata details';
+      if (open) ovDetails.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }
+  // Interactive count cards: clicking a card opens details and scrolls there.
+  document.querySelectorAll('.ov-countcard, .ov-block[data-ov-target]').forEach(function (el) {
+    el.addEventListener('click', function () { ovGoTo(el.getAttribute('data-ov-target')); });
   });
 
   // Click-to-copy for context snippets (silent - no alerts, just a brief flash)
@@ -1568,12 +1929,12 @@ mark{padding:1px 2px;border-radius:3px;}
 </body></html>`;
 }
 
-function generateReport(htmlContent) {
+function generateReport(htmlContent, meta) {
   const [bodyContent, bibContent] = splitBodyAndReferences(htmlContent);
   const entries = parseBibEntries(bibContent);
   const dupIds = findDuplicates(entries);
   const { linkedEntries, unlinkedEntries } = linkAndReport(bodyContent, entries, dupIds);
   const orphans = findOrphanCitations(bodyContent, entries);
-  return buildReportHtml(entries.length, linkedEntries, unlinkedEntries, dupIds, orphans, entries);
+  return buildReportHtml(entries.length, linkedEntries, unlinkedEntries, dupIds, orphans, entries, meta);
 }
 
