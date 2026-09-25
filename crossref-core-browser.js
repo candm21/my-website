@@ -910,17 +910,12 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans,
   }).join("") || `
         <tr><td colspan="5" style="text-align:center;color:#27ae60;padding:20px;">No orphan citations found - every in-text citation has a matching reference entry.</td></tr>`;
 
-  // ---- DOI Finder section (queries Crossref.org live, in the browser, when
-  // the report's own "Run Crossref DOI Lookup" button is clicked). Rows are
-  // rendered here with placeholders; the report's embedded script fills
-  // each one in as its lookup resolves. Entries that already have a DOI
-  // typed into the reference are shown immediately, no lookup needed. ----
   const doiRows = allEntries.map((e) => {
-    const already = e.existingDoi
-      ? `<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;">✅ already has DOI</span>`
-      : `<span style="color:#94a3b8;">⏳ not checked</span>`;
-    const doiCell = e.existingDoi
-      ? `<a href="https://doi.org/${escapeHtml(e.existingDoi)}" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy · opens link" data-copy="https://doi.org/${escapeHtml(e.existingDoi)}">https://doi.org/${escapeHtml(e.existingDoi)}</a>`
+    const status = e.existingDoi
+      ? `<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:11px;">Not checked (Word DOI present)</span>`
+      : `<span style="color:#94a3b8;">Not checked</span>`;
+    const wordDoiCell = e.existingDoi
+      ? `<a href="https://doi.org/${escapeHtml(e.existingDoi)}" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy the DOI already present in the Word file" data-copy="${escapeHtml(e.existingDoi)}">https://doi.org/${escapeHtml(e.existingDoi)}</a>`
       : "-";
     const typeGuess = guessRefType(e.cleanText);
     const typeCell = `<span class="type-badge ${typeGuess.cls}">${typeGuess.emoji} ${escapeHtml(typeGuess.label)}</span><div class="type-note">${escapeHtml(typeGuess.note)}</div>`;
@@ -940,20 +935,21 @@ function buildReportHtml(total, linkedEntries, unlinkedEntries, dupIds, orphans,
               </div>
             </td>
             <td class="doi-type-cell">${typeCell}</td>
-            <td class="doi-status-cell">${already}</td>
+            <td class="doi-status-cell">${status}</td>
             <td class="doi-match-cell">-</td>
             <td class="doi-pubmed-cell">-</td>
-            <td class="doi-doi-cell">${doiCell}</td>
+            <td class="doi-word-doi-cell">${wordDoiCell}</td>
+            <td class="doi-doi-cell">-</td>
         </tr>`;
   }).join("") || `
-        <tr><td colspan="7" style="text-align:center;color:#64748b;padding:20px;">No references parsed.</td></tr>`;
+        <tr><td colspan="8" style="text-align:center;color:#64748b;padding:20px;">No references parsed.</td></tr>`;
 
   const doiEntriesForJs = allEntries.map((e) => ({
     id: e.id, cleanText: e.cleanText, existingDoi: e.existingDoi,
     surnames: e.surnames, year: e.year, rawHtml: e.rawHtml,
   }));
   const doiEntriesJson = JSON.stringify(doiEntriesForJs).replace(/<\/script/gi, "<\\/script");
-  const doiCandidateCount = allEntries.filter((e) => !e.existingDoi).length;
+  const doiCheckCount = allEntries.length;
 
   const linkedCount = linkedEntries.length;
   const unlinkedCount = unlinkedEntries.length;
@@ -1047,9 +1043,9 @@ mark{padding:1px 2px;border-radius:3px;}
 .doi-ref-cell{max-width:480px;}
 .doi-match-cell{max-width:340px;}
 .doi-pubmed-cell{max-width:220px;font-size:12px;}
-.doi-doi-cell{max-width:230px;word-break:break-all;font-size:12px;}
-.doi-doi-cell a{color:#1d4ed8;text-decoration:none;}
-.doi-doi-cell a:hover{text-decoration:underline;}
+.doi-word-doi-cell,.doi-doi-cell{max-width:230px;word-break:break-all;font-size:12px;}
+.doi-word-doi-cell a,.doi-doi-cell a{color:#1d4ed8;text-decoration:none;}
+.doi-word-doi-cell a:hover,.doi-doi-cell a:hover{text-decoration:underline;}
 .doi-type-cell{max-width:150px;}
 .retry-wrap{margin-top:6px;}
 .retry-toggle-btn{background:none;border:none;color:#1d4ed8;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;}
@@ -1159,7 +1155,7 @@ ${overviewHtml}
     <button class="filter-btn" data-filter="loose">Loose Match (${looseCount})</button>
     <button class="filter-btn" data-filter="orphan">Orphan (${orphanCount})</button>
     <button class="filter-btn" data-filter="intext">In Text (${unlinkedCount})</button>
-    <button class="filter-btn" data-filter="doi">DOI (${doiCandidateCount})</button>
+    <button class="filter-btn" data-filter="doi">DOI (${doiCheckCount})</button>
     <div class="filter-sidebar-label sidebar-query-label">Query</div>
     <div class="query-bar" id="query-bar">
       <span id="query-count">0 selected</span>
@@ -1190,8 +1186,8 @@ ${overviewHtml}
 <tbody>${orphanRows}</tbody></table>
 </section>
 <section class="report-section" data-section="doi">
-<h2>DOI Finder <span style="color:#64748b;font-weight:400;font-size:14px;">(${doiCandidateCount} to check)</span></h2>
-<p style="color:#64748b;font-size:13px;">Looks up each reference against Crossref.org live in your browser and scores how confident the match is. 🟢 ≥85% - safe to accept · 🟡 60-84% - quick human check · 🔴 below 60% - Crossref found nothing confident (common for books, older items, or anything with no registered DOI - that's not a tool failure). Click a found DOI to copy a ready-to-paste "reference + doi.org link" line for Word. When PubMed is enabled, anything Crossref can't confidently place also gets checked against PubMed, which often carries a DOI for biomedical/nursing/clinical references that Crossref misses. The <strong>Type</strong> column is a guess from the reference text (journal / book / book chapter / thesis / conference / website), so you can see up front which entries are worth checking and which types (theses, plain web pages) rarely have a DOI at all; it's replaced with the confirmed type from Crossref once a match is found.</p>
+<h2>DOI Finder <span style="color:#64748b;font-weight:400;font-size:14px;">(${doiCheckCount} references to check)</span></h2>
+<p style="color:#64748b;font-size:13px;">Looks up every reference against Crossref.org live in your browser and scores how confident the citation match is. References that already contain a DOI are no longer skipped: Crossref checks whether that DOI exists and whether its title, author, and year agree with the Word reference. <strong>Word DOI</strong> always preserves the DOI originally in the document, while <strong>Matched DOI</strong> shows the best result from the current lookup. For references without a DOI, green is at least 85% confidence, yellow is 60-84%, and red is below 60% or no confident result. Click a Matched DOI to copy a ready-to-paste reference and DOI line for Word. When PubMed is enabled, uncertain biomedical references are also checked there.</p>
 <div class="doi-controls">
   <label for="doi-email-input">Crossref polite-pool email (optional, speeds up lookups):</label>
   <input type="email" id="doi-email-input" placeholder="you@example.com">
@@ -1202,19 +1198,21 @@ ${overviewHtml}
   <button class="query-btn" id="doi-run-btn">🔍 Run Crossref DOI Lookup</button>
 </div>
 <div class="stats" id="doi-stats" style="display:none;">
-  <div class="stat"><div class="num" id="doi-stat-already">0</div>Already Had DOI</div>
+  <div class="stat"><div class="num" id="doi-stat-already">0</div>Already in Word</div>
+  <div class="stat"><div class="num" style="color:#16a34a;" id="doi-stat-existing-verified">0</div>Word DOI Verified</div>
+  <div class="stat"><div class="num" style="color:#d97706;" id="doi-stat-existing-review">0</div>Word DOI Needs Review</div>
   <div class="stat"><div class="num" style="color:#16a34a;" id="doi-stat-green">0</div>Auto-matched (≥85%)</div>
   <div class="stat"><div class="num" style="color:#d97706;" id="doi-stat-yellow">0</div>Needs QC (60-84%)</div>
   <div class="stat"><div class="num" style="color:#dc2626;" id="doi-stat-red">0</div>Not Found</div>
   <div class="stat"><div class="num" style="color:#0369a1;" id="doi-stat-pubmed">0</div>Found via PubMed</div>
 </div>
-<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Type</th><th>Status</th><th>Crossref Match</th><th>PubMed</th><th>DOI</th></tr></thead>
+<table><thead><tr><th>Bib ID</th><th>Reference</th><th>Type</th><th>Status</th><th>Crossref Match</th><th>PubMed</th><th>Word DOI</th><th>Matched DOI</th></tr></thead>
 <tbody id="doi-tbody">${doiRows}</tbody></table>
 <div class="doi-export" id="doi-export">
   <strong style="color:#14532d;font-size:13px;">Download Reference List</strong>
   <button class="query-btn" id="doi-export-html-btn">⬇ Download as HTML</button>
   <button class="query-btn" id="doi-export-doc-btn">⬇ Download as Word (.doc)</button>
-  <span class="doi-export-note" id="doi-export-note">Same order, same wording as the source doc - DOIs appended where found.</span>
+  <span class="doi-export-note" id="doi-export-note">Word DOIs are preserved; use the Matched DOI link when a correction needs to be copied into the document.</span>
 </div>
 </section>
 <div class="report-footer">✨ <strong>SelvaPrabhu</strong> · Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong>
@@ -1232,7 +1230,7 @@ ${overviewHtml}
   var unlinkedSection = document.querySelector('[data-section="unlinked"]');
   var orphanSection = document.querySelector('[data-section="orphan"]');
   var doiSection = document.querySelector('[data-section="doi"]');
-  var allRows = document.querySelectorAll('.linked-row, .unlinked-row, .orphan-row');
+  var allRows = document.querySelectorAll('.linked-row, .unlinked-row, .orphan-row, .doi-row');
   var currentFilter = 'all';
 
   function applyRowVisibility() {
@@ -1429,6 +1427,8 @@ ${overviewHtml}
   var pubmedToggle = document.getElementById('doi-pubmed-toggle');
   var statsBox = document.getElementById('doi-stats');
   var statAlready = document.getElementById('doi-stat-already');
+  var statExistingVerified = document.getElementById('doi-stat-existing-verified');
+  var statExistingReview = document.getElementById('doi-stat-existing-review');
   var statGreen = document.getElementById('doi-stat-green');
   var statYellow = document.getElementById('doi-stat-yellow');
   var statRed = document.getElementById('doi-stat-red');
@@ -1443,6 +1443,19 @@ ${overviewHtml}
 
   function norm(s) {
     return String(s || '').toLowerCase().replace(/[^\\p{L}\\p{N}\\s]/gu, ' ').replace(/\\s+/g, ' ').trim();
+  }
+
+  function normalizeDoi(value) {
+    return String(value || '')
+      .trim()
+      .replace(/^https?:\\/\\/(?:dx\\.)?doi\\.org\\//i, '')
+      .replace(/^doi:\\s*/i, '')
+      .replace(/[.,;)\\]]+$/, '')
+      .toLowerCase();
+  }
+
+  function sameDoi(left, right) {
+    return !!normalizeDoi(left) && normalizeDoi(left) === normalizeDoi(right);
   }
 
   // Wraps the first case-insensitive occurrence of any given term (plain
@@ -1533,7 +1546,69 @@ ${overviewHtml}
     return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">🔴 not found</span>';
   }
 
-  var counts = { already: 0, green: 0, yellow: 0, red: 0, pubmed: 0 };
+  function existingStatusBadge(state, score) {
+    var scoreText = score == null ? '' : ' (' + score + '%)';
+    if (state === 'verified') return '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;">Word DOI matches' + scoreText + '</span>';
+    if (state === 'review') return '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;">Word DOI needs review' + scoreText + '</span>';
+    if (state === 'missing') return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">Word DOI not found in Crossref</span>';
+    if (state === 'mismatch') return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">Word DOI does not match this reference</span>';
+    return '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;">Word DOI check failed</span>';
+  }
+
+  function setCrossrefType(row, item) {
+    var typeInfo = item ? CROSSREF_TYPE_LABELS[item.type] : null;
+    var typeCell = cell(row, '.doi-type-cell');
+    if (typeInfo && typeCell) {
+      typeCell.innerHTML = '<span class="type-badge type-confirmed">' + typeInfo.emoji + ' ' + esc(typeInfo.label) + '</span>';
+    }
+  }
+
+  function crossrefMatchHtml(item, entry, score, label) {
+    if (!item) return '<span style="color:#94a3b8;">No confident Crossref match</span>';
+    var foundTitle = (item.title && item.title[0]) || '(untitled)';
+    var foundJournal = (item['container-title'] && item['container-title'][0]) || '';
+    var issued = item.issued && item.issued['date-parts'] && item.issued['date-parts'][0];
+    var foundYear = issued && issued[0] ? String(issued[0]) : '';
+    var titleHtml = hasEncodingCorruption(foundTitle)
+      ? '<span style="color:#94a3b8;font-style:italic;">Crossref title unreadable</span>'
+      : highlightHit(esc(foundTitle), entry.surnames);
+    var journalHtml = hasEncodingCorruption(foundJournal)
+      ? '<span style="color:#94a3b8;font-style:italic;">journal name unreadable</span>'
+      : highlightHit(esc(foundJournal), entry.surnames);
+    var yearHtml = esc(foundYear);
+    if (foundYear && String(foundYear) === String(entry.year)) {
+      yearHtml = '<mark class="doi-match-hit">' + yearHtml + '</mark>';
+    }
+    var labelHtml = label ? '<div style="font-weight:700;color:#334155;margin-bottom:3px;">' + esc(label) + '</div>' : '';
+    var scoreHtml = score == null ? '' : '<span style="color:#64748b;font-size:11px;"> · ' + score + '% citation match</span>';
+    return labelHtml + '<div style="font-weight:600;">' + titleHtml + scoreHtml + '</div><div style="color:#64748b;font-size:12px;">' + journalHtml + (foundYear ? ' · ' + yearHtml : '') + '</div>';
+  }
+
+  function removeDoiText(text) {
+    return String(text || '')
+      .replace(/https?:\\/\\/(?:dx\\.)?doi\\.org\\/10\\.\\d{4,9}\\/[^\\s"'<>]+/ig, '')
+      .replace(/(?:doi:\\s*)?\\b10\\.\\d{4,9}\\/[^\\s"'<>]+/ig, '')
+      .replace(/\\s{2,}/g, ' ')
+      .trim();
+  }
+
+  function referenceWithDoi(entry, doi) {
+    var text = String(entry.cleanText || '');
+    if (entry.existingDoi && !sameDoi(entry.existingDoi, doi)) text = removeDoiText(text);
+    text = text.replace(/\\s+$/, '');
+    if (!/[.]\\s*$/.test(text)) text += '.';
+    return text + ' https://doi.org/' + normalizeDoi(doi);
+  }
+
+  function matchedDoiLink(doi, entry, title) {
+    var normalized = normalizeDoi(doi);
+    if (!normalized) return '-';
+    var isCorrection = entry.existingDoi && !sameDoi(entry.existingDoi, normalized);
+    var linkTitle = title || (isCorrection ? 'Matched DOI differs from the Word DOI; click to copy the reference with the suggested DOI' : 'Click to copy reference + DOI');
+    return '<a href="https://doi.org/' + esc(normalized) + '" target="_blank" rel="noopener" class="ctx-copy" title="' + esc(linkTitle) + '" data-copy="' + esc(referenceWithDoi(entry, normalized)) + '">https://doi.org/' + esc(normalized) + '</a>';
+  }
+
+  var counts = { already: 0, existingVerified: 0, existingReview: 0, green: 0, yellow: 0, red: 0, pubmed: 0 };
   entries.forEach(function (e) { if (e.existingDoi) counts.already++; });
 
   // DOIs found by a completed lookup, keyed by entry id - kept separately
@@ -1546,6 +1621,7 @@ ${overviewHtml}
   // adding the new one, instead of double-counting.
   var entryTier = {};
   var entryPubmedFound = {};
+  var entryExistingCheck = {};
   function setTier(id, tier) {
     if (entryTier[id] && counts[entryTier[id]] > 0) counts[entryTier[id]]--;
     counts[tier] = (counts[tier] || 0) + 1;
@@ -1555,6 +1631,14 @@ ${overviewHtml}
     if (entryPubmedFound[id] && !found) counts.pubmed--;
     if (!entryPubmedFound[id] && found) counts.pubmed++;
     entryPubmedFound[id] = found;
+  }
+  function setExistingCheck(id, state) {
+    var previous = entryExistingCheck[id];
+    if (previous === 'verified' && counts.existingVerified > 0) counts.existingVerified--;
+    if (previous === 'review' && counts.existingReview > 0) counts.existingReview--;
+    entryExistingCheck[id] = state || null;
+    if (state === 'verified') counts.existingVerified++;
+    if (state === 'review') counts.existingReview++;
   }
 
   // Cleans up common copy/paste artifacts where punctuation is glued
@@ -1573,7 +1657,7 @@ ${overviewHtml}
   function sanitizeQueryText(text) {
     return String(text || '')
       .replace(/[.:](?=[A-Za-z])/g, function (m) { return m + ' '; })
-      .replace(/\s+/g, ' ')
+      .replace(/\\s+/g, ' ')
       .trim();
   }
 
@@ -1593,6 +1677,8 @@ ${overviewHtml}
   function bumpStats() {
     statsBox.style.display = '';
     statAlready.textContent = counts.already;
+    statExistingVerified.textContent = counts.existingVerified;
+    statExistingReview.textContent = counts.existingReview;
     statGreen.textContent = counts.green;
     statYellow.textContent = counts.yellow;
     statRed.textContent = counts.red;
@@ -1613,7 +1699,7 @@ ${overviewHtml}
   function updateExportNote() {
     if (!exportNote) return;
     var withDoi = entries.filter(function (e) { return e.existingDoi || foundDoi[e.id]; }).length;
-    exportNote.textContent = withDoi + ' of ' + entries.length + ' references have a DOI - same order, same wording, DOIs appended where found.';
+    exportNote.textContent = withDoi + ' of ' + entries.length + ' references have a DOI. Word DOIs are preserved; use the Matched DOI link when a correction needs to be copied into the document.';
   }
   updateExportNote();
 
@@ -1693,6 +1779,38 @@ ${overviewHtml}
     return res;
   }
 
+  async function searchCrossref(entry, queryText, email) {
+    var q = encodeURIComponent(sanitizeQueryText(queryText || entry.cleanText).slice(0, 300));
+    var url = 'https://api.crossref.org/works?query.bibliographic=' + q + '&rows=3' + (email ? '&mailto=' + encodeURIComponent(email) : '');
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    var items = (data.message && data.message.items) || [];
+    var best = null;
+    var bestScore = -1;
+    items.forEach(function (item) {
+      var score = scoreItem(entry, item, queryText);
+      if (score > bestScore) {
+        bestScore = score;
+        best = item;
+      }
+    });
+    return { best: best, bestScore: bestScore };
+  }
+
+  async function fetchExistingCrossrefWork(doi, email) {
+    var normalized = normalizeDoi(doi);
+    if (!normalized) return { state: 'missing', work: null };
+    var encodedDoi = normalized.split('/').map(function (part) { return encodeURIComponent(part); }).join('/');
+    var url = 'https://api.crossref.org/works/' + encodedDoi + (email ? '?mailto=' + encodeURIComponent(email) : '');
+    var res = await fetch(url);
+    if (res.status === 404) return { state: 'missing', work: null };
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    if (!data.message) throw new Error('Missing Crossref record');
+    return { state: 'found', work: data.message };
+  }
+
   // ---- PubMed fallback - called for entries Crossref left uncertain
   // (yellow or red/errored). PubMed's esearch does its own relevance
   // ranking, so we just take its top hit and pull the DOI out of
@@ -1718,147 +1836,143 @@ ${overviewHtml}
     return { pmid: pmid, doi: doi, title: rec.title || '' };
   }
 
-  // Runs Crossref (then PubMed, if applicable) for a single entry and
-  // writes the result into that entry's row. opts.queryText lets a manual
-  // retry search on edited text instead of the parsed e.cleanText, without
-  // changing what's shown or exported for the reference itself.
   async function lookupEntry(e, row, opts) {
     var email = (opts && opts.email) || '';
     var usePubmed = !!(opts && opts.usePubmed);
     var queryText = (opts && opts.queryText) || e.cleanText;
-    cell(row, '.doi-status-cell').innerHTML = '<span style="color:#0369a1;">🔄 checking…</span>';
+    var originalDoi = normalizeDoi(e.existingDoi);
+    var comparisonText = originalDoi ? removeDoiText(queryText) : queryText;
+    cell(row, '.doi-status-cell').innerHTML = '<span style="color:#0369a1;">Checking DOI and citation…</span>';
     cell(row, '.doi-match-cell').innerHTML = '-';
     cell(row, '.doi-pubmed-cell').innerHTML = '-';
+    cell(row, '.doi-doi-cell').innerHTML = '-';
+    setExistingCheck(e.id, null);
+    setPubmedFound(e.id, false);
     delete foundDoi[e.id];
+
+    var searchTask = searchCrossref(e, comparisonText, email).catch(function (error) { return { error: error }; });
+    var existingTask = originalDoi
+      ? fetchExistingCrossrefWork(originalDoi, email).catch(function (error) { return { error: error }; })
+      : Promise.resolve(null);
+    var lookupResults = await Promise.all([searchTask, existingTask]);
+    var searchResult = lookupResults[0] || null;
+    var exactResult = lookupResults[1] || null;
+    var searchError = searchResult && searchResult.error ? searchResult.error : null;
+    var best = searchResult && !searchResult.error ? searchResult.best : null;
+    var bestScore = searchResult && !searchResult.error ? searchResult.bestScore : -1;
     var crossrefDoi = '';
     var crossrefTier = 'red';
-    try {
-      var q = encodeURIComponent(sanitizeQueryText(queryText).slice(0, 300));
-      var url = 'https://api.crossref.org/works?query.bibliographic=' + q + '&rows=3' + (email ? '&mailto=' + encodeURIComponent(email) : '');
-      var res = await fetch(url);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var data = await res.json();
-      var items = (data.message && data.message.items) || [];
-      var best = null, bestScore = -1;
-      items.forEach(function (item) {
-        var s = scoreItem(e, item, queryText);
-        if (s > bestScore) { bestScore = s; best = item; }
-      });
-      if (best && bestScore > 0) {
+
+    if (!originalDoi) {
+      if (searchError) {
+        setTier(e.id, 'red');
+        cell(row, '.doi-status-cell').innerHTML = '<span style="color:#991b1b;">Crossref lookup failed</span>';
+        cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">' + esc(searchError.message || 'network error') + '</span>';
+      } else if (best && bestScore > 0) {
         var tier = tierFor(bestScore);
         crossrefTier = tier;
         setTier(e.id, tier);
         cell(row, '.doi-status-cell').innerHTML = tierBadge(tier, bestScore);
-        var foundTitle = (best.title && best.title[0]) || '(untitled)';
-        var foundJournal = (best['container-title'] && best['container-title'][0]) || '';
-        var foundYear = (best.issued && best.issued['date-parts'] && best.issued['date-parts'][0] && best.issued['date-parts'][0][0]) || '';
-        // Highlight why this was picked: the author surname wherever it
-        // shows up in the matched title/journal, and the year when it
-        // exactly matches this entry's year - the same signals scoreItem()
-        // used to pick this result.
-        var titleHtml = hasEncodingCorruption(foundTitle)
-          ? '<span style="color:#94a3b8;font-style:italic;" title="This Crossref record has a corrupted title in its own stored metadata (invalid UTF-8 at the source) - not something a re-search here can fix.">⚠ title unreadable - source metadata is corrupted</span>'
-          : highlightHit(esc(foundTitle), e.surnames);
-        var journalHtml = hasEncodingCorruption(foundJournal)
-          ? '<span style="color:#94a3b8;font-style:italic;">journal name unreadable</span>'
-          : highlightHit(esc(foundJournal), e.surnames);
-        var yearHtml = esc(String(foundYear));
-        if (foundYear && String(foundYear) === String(e.year)) {
-          yearHtml = '<mark class="doi-match-hit">' + yearHtml + '</mark>';
-        }
-        cell(row, '.doi-match-cell').innerHTML = '<div style="font-weight:600;">' + titleHtml + '</div><div style="color:#64748b;font-size:12px;">' + journalHtml + (foundYear ? ' · ' + yearHtml : '') + '</div>';
-        // Swap the pre-lookup text guess for Crossref's own type field,
-        // now that we have a real answer for this entry.
-        var crType = CROSSREF_TYPE_LABELS[best.type];
-        var typeCellEl = cell(row, '.doi-type-cell');
-        if (crType && typeCellEl) {
-          typeCellEl.innerHTML = '<span class="type-badge type-confirmed">' + crType.emoji + ' ' + esc(crType.label) + '</span>';
-        }
-        // A red-tier "match" (score under 60) is Crossref's best guess,
-        // not a usable result - it's shown above for context only.
-        // Trusting its DOI here would silently attach the wrong paper
-        // (e.g. an unrelated conference paper just because the year
-        // matched), and would also block the PubMed fallback below from
-        // ever running. Only green/yellow DOIs get written through.
+        cell(row, '.doi-match-cell').innerHTML = crossrefMatchHtml(best, e, bestScore, tier === 'red' ? 'Closest result (not enough confidence)' : '');
         if (tier !== 'red') {
-          crossrefDoi = best.DOI || '';
+          crossrefDoi = normalizeDoi(best.DOI);
           if (crossrefDoi) foundDoi[e.id] = crossrefDoi;
         }
-        var copyLine = e.cleanText.replace(/\\s+$/, '');
-        if (!/[.]\\s*$/.test(copyLine)) copyLine += '.';
-        copyLine += ' https://doi.org/' + crossrefDoi;
-        cell(row, '.doi-doi-cell').innerHTML = crossrefDoi
-          ? '<a href="https://doi.org/' + esc(crossrefDoi) + '" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy reference + DOI · opens link" data-copy="' + esc(copyLine) + '">https://doi.org/' + esc(crossrefDoi) + '</a>'
-          : '-';
+        cell(row, '.doi-doi-cell').innerHTML = matchedDoiLink(crossrefDoi, e);
+        if (crossrefDoi) setCrossrefType(row, best);
       } else {
         setTier(e.id, 'red');
         cell(row, '.doi-status-cell').innerHTML = tierBadge('red', 0);
         cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">No confident Crossref match</span>';
-        cell(row, '.doi-doi-cell').innerHTML = '-';
       }
-    } catch (err) {
-      cell(row, '.doi-status-cell').innerHTML = '<span style="color:#991b1b;">⚠ lookup failed</span>';
-      cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">' + esc(err.message || 'network error') + '</span>';
+    } else {
+      var exactWork = exactResult && exactResult.work ? exactResult.work : null;
+      var exactScore = exactWork ? scoreItem(e, exactWork, comparisonText) : null;
+      var suggestedDoi = best && bestScore >= 60 && best.DOI ? normalizeDoi(best.DOI) : '';
+      var hasSuggestion = !!suggestedDoi && !sameDoi(suggestedDoi, originalDoi);
+      var useSuggestion = hasSuggestion && (exactScore == null || exactScore < 60 || (exactScore < 85 && bestScore >= 85));
+      var existingState = 'error';
+      var exactError = exactResult && exactResult.error ? exactResult.error : null;
+
+      if (!exactError && exactResult && exactResult.state === 'found' && exactWork) {
+        if (exactScore >= 85 && !useSuggestion) existingState = 'verified';
+        else if (exactScore >= 60 && !useSuggestion) existingState = 'review';
+        else existingState = 'mismatch';
+      } else if (!exactError && exactResult && exactResult.state === 'missing') {
+        existingState = 'missing';
+      }
+
+      setExistingCheck(e.id, existingState === 'verified' ? 'verified' : 'review');
+      var statusScore = existingState === 'verified' || existingState === 'review' ? exactScore : (useSuggestion ? bestScore : null);
+      cell(row, '.doi-status-cell').innerHTML = existingStatusBadge(existingState, statusScore);
+
+      if (useSuggestion) {
+        crossrefDoi = suggestedDoi;
+        crossrefTier = tierFor(bestScore);
+        cell(row, '.doi-match-cell').innerHTML = crossrefMatchHtml(best, e, bestScore, 'Best match for this reference');
+        setCrossrefType(row, best);
+      } else if (exactWork) {
+        cell(row, '.doi-match-cell').innerHTML = crossrefMatchHtml(exactWork, e, exactScore, 'Record for the DOI in the Word file');
+        if (exactScore >= 60) {
+          crossrefDoi = originalDoi;
+          crossrefTier = tierFor(exactScore);
+          setCrossrefType(row, exactWork);
+        }
+      } else if (best && bestScore > 0) {
+        cell(row, '.doi-match-cell').innerHTML = crossrefMatchHtml(best, e, bestScore, 'Closest result (not enough confidence)');
+      } else if (exactError) {
+        cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">' + esc(exactError.message || 'network error') + '</span>';
+      } else {
+        cell(row, '.doi-match-cell').innerHTML = '<span style="color:#94a3b8;">No confident Crossref match</span>';
+      }
+
+      if (crossrefDoi) foundDoi[e.id] = crossrefDoi;
+      cell(row, '.doi-doi-cell').innerHTML = matchedDoiLink(crossrefDoi, e);
     }
 
-    // Spend a PubMed call on anything Crossref left uncertain: red (no
-    // usable DOI at all) AND yellow (a DOI exists but still needs QC) -
-    // errored counts as red since crossrefTier stays 'red' on catch.
-    // Green is skipped; a >=85% Crossref match doesn't need corroborating.
     if (usePubmed && crossrefTier !== 'green') {
       var pmCell = cell(row, '.doi-pubmed-cell');
-      if (pmCell) pmCell.innerHTML = '<span style="color:#0369a1;">🔄…</span>';
+      if (pmCell) pmCell.innerHTML = '<span style="color:#0369a1;">Checking PubMed…</span>';
       try {
-        var pm = await checkPubMed(e, queryText);
+        var pm = await checkPubMed(e, comparisonText);
         if (pm && pm.pmid) {
-          // Show the PMID as soon as we have one - it's a citable,
-          // reliable identifier on its own, even for the (common) case
-          // where the journal never registered a DOI with Crossref.
           if (pmCell) {
-            pmCell.innerHTML = '<a href="https://pubmed.ncbi.nlm.nih.gov/' + esc(pm.pmid) + '/" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy PMID · opens PubMed record" data-copy="PMID: ' + esc(pm.pmid) + '" style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:10px;font-size:11px;text-decoration:none;">🔵 PMID ' + esc(pm.pmid) + '</a>';
+            pmCell.innerHTML = '<a href="https://pubmed.ncbi.nlm.nih.gov/' + esc(pm.pmid) + '/" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy PMID" data-copy="PMID: ' + esc(pm.pmid) + '" style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:10px;font-size:11px;text-decoration:none;">PMID ' + esc(pm.pmid) + '</a>';
           }
           if (pm.doi) {
+            var pubmedDoi = normalizeDoi(pm.doi);
             if (crossrefDoi) {
-              // Crossref already produced a yellow-tier DOI - don't
-              // silently swap it for PubMed's top hit (PubMed isn't
-              // scored the way Crossref results are here). Just note
-              // agreement/disagreement next to the PMID for the QC pass.
               if (pmCell) {
-                var agrees = String(pm.doi).toLowerCase() === String(crossrefDoi).toLowerCase();
-                pmCell.innerHTML += ' <span style="color:' + (agrees ? '#15803d' : '#b45309') + ';font-size:11px;">' + (agrees ? '✓ DOI matches Crossref' : '⚠ PubMed DOI differs - check') + '</span>';
+                var agrees = sameDoi(pubmedDoi, crossrefDoi);
+                pmCell.innerHTML += ' <span style="color:' + (agrees ? '#15803d' : '#b45309') + ';font-size:11px;">' + (agrees ? 'DOI matches Crossref' : 'PubMed DOI differs - check') + '</span>';
               }
             } else {
-              foundDoi[e.id] = pm.doi;
+              foundDoi[e.id] = pubmedDoi;
               setPubmedFound(e.id, true);
-              var doiCellNow = cell(row, '.doi-doi-cell');
-              if (doiCellNow) {
-                var pmCopyLine = e.cleanText.replace(/\\s+$/, '');
-                if (!/[.]\\s*$/.test(pmCopyLine)) pmCopyLine += '.';
-                pmCopyLine += ' https://doi.org/' + pm.doi;
-                doiCellNow.innerHTML = '<a href="https://doi.org/' + esc(pm.doi) + '" target="_blank" rel="noopener" class="ctx-copy" title="Click to copy reference + DOI (via PubMed) · opens link" data-copy="' + esc(pmCopyLine) + '">https://doi.org/' + esc(pm.doi) + '</a>';
-              }
+              cell(row, '.doi-doi-cell').innerHTML = matchedDoiLink(pubmedDoi, e, 'Click to copy the reference with the DOI found in PubMed');
               var statusCellNow = cell(row, '.doi-status-cell');
               if (statusCellNow) {
-                statusCellNow.innerHTML = '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:11px;">🔵 found via PubMed</span>';
+                if (originalDoi && sameDoi(pubmedDoi, originalDoi)) {
+                  statusCellNow.innerHTML = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;">PubMed agrees with Word DOI; Crossref record unresolved</span>';
+                } else if (originalDoi) {
+                  statusCellNow.innerHTML = '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:11px;">PubMed suggests a different DOI; review Word DOI</span>';
+                } else {
+                  statusCellNow.innerHTML = '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:11px;">Found via PubMed</span>';
+                }
               }
             }
           } else if (!crossrefDoi) {
-            // Found the article on PubMed, but it has no DOI on record
-            // (common for smaller/regional journals) - flag that clearly
-            // rather than implying nothing was found at all.
             var doiCellNoDoi = cell(row, '.doi-doi-cell');
             if (doiCellNoDoi && doiCellNoDoi.innerHTML === '-') {
-              doiCellNoDoi.innerHTML = '<span style="color:#94a3b8;font-style:italic;" title="' + esc(pm.title || '') + '">on PubMed, no DOI on record</span>';
+              doiCellNoDoi.innerHTML = '<span style="color:#94a3b8;font-style:italic;" title="' + esc(pm.title || '') + '">On PubMed, no DOI on record</span>';
             }
           }
         } else if (pmCell) {
-          pmCell.innerHTML = '<span style="color:#94a3b8;">no match</span>';
+          pmCell.innerHTML = '<span style="color:#94a3b8;">No match</span>';
         }
       } catch (pmErr) {
-        if (pmCell) pmCell.innerHTML = '<span style="color:#991b1b;">⚠ ' + esc(pmErr.message || 'error') + '</span>';
+        if (pmCell) pmCell.innerHTML = '<span style="color:#991b1b;">' + esc(pmErr.message || 'error') + '</span>';
       }
-    } else if (!usePubmed && entryPubmedFound[e.id]) {
-      setPubmedFound(e.id, false);
     }
     bumpStats();
   }
@@ -1867,7 +1981,7 @@ ${overviewHtml}
     runBtn.disabled = true;
     var email = (emailInput.value || '').trim();
     var usePubmed = !!(pubmedToggle && pubmedToggle.checked);
-    var todo = entries.filter(function (e) { return !e.existingDoi; });
+    var todo = entries.slice();
     for (var i = 0; i < todo.length; i++) {
       var e = todo[i];
       var row = document.getElementById('doi-row-' + e.id);
