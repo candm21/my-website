@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Indian Rupee Toolkit 💰</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    color: #fff;
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 24px 0;
+    overflow-x: hidden;
+  }
+  .app { width: 100%; max-width: 820px; padding: 24px; }
+  .card {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: fadeUp 0.6s ease;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 4px; }
+  .subtitle { text-align: center; color: #9db4c9; margin-bottom: 22px; font-size: 0.9rem; }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 22px; }
+  .tab-btn { padding: 8px 16px; font-size: 0.85rem; border-radius: 999px; background: rgba(255,255,255,0.08); color: #cde6f5; }
+  .tab-btn.active { background: linear-gradient(135deg, #4fc3a1, #66d9c2); color: #0f3460; font-weight: 700; }
+
+  input, select {
+    padding: 12px 16px; font-size: 1.05rem; border-radius: 12px; width: 100%;
+    border: 2px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.3); color: #fff;
+    outline: none; transition: border 0.3s, box-shadow 0.3s;
+  }
+  input:focus, select:focus { border-color: #4fc3a1; box-shadow: 0 0 20px rgba(79,195,161,0.3); }
+  select option { background: #16213e; }
+  input[type="checkbox"] { width: auto; flex: none; accent-color: #4fc3a1; transform: scale(1.2); }
+
+  button {
+    padding: 12px 22px; font-size: 0.95rem; font-weight: 600; border: none;
+    border-radius: 12px; cursor: pointer; color: #0f3460;
+    background: linear-gradient(135deg, #4fc3a1, #66d9c2);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  button:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 20px rgba(79,195,161,0.4); }
+  button:active { transform: scale(0.96); }
+
+  .input-row { display: flex; gap: 12px; }
+  .input-row input { flex: 1; width: auto; font-size: 1.2rem; padding: 14px 18px; }
+
+  .field label { display: block; font-size: 0.75rem; color: #9db4c9; margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 560px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  .result-box { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; margin-top: 16px; animation: fadeUp 0.4s ease; }
+  .result-box h3 { font-size: 0.9rem; color: #9db4c9; margin-bottom: 8px; font-weight: 600; }
+  .big-number { text-align: center; font-size: 2.1rem; font-weight: 700; margin: 20px 0 8px; color: #ffd36e; text-shadow: 0 0 30px rgba(255,211,110,0.4); animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1); word-break: break-all; }
+  .big-number.small { font-size: 1.55rem; margin: 4px 0 10px; }
+  @keyframes pop { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .words { text-align: center; color: #cde6f5; font-size: 1rem; margin-bottom: 20px; line-height: 1.6; }
+  .result-box .words { margin-bottom: 12px; }
+  .stat { display: flex; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 1px dashed rgba(255,255,255,0.1); font-size: 0.93rem; }
+  .stat:last-child { border-bottom: none; }
+  .stat .k { color: #9db4c9; }
+  .stat .v { font-weight: 600; color: #ffd36e; text-align: right; }
+  .badge { background: rgba(255,211,110,0.14); color: #ffd36e; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; }
+  .copy-btn { margin-left: 8px; padding: 4px 12px; font-size: 0.78rem; background: rgba(255,255,255,0.1); color: #cde6f5; border-radius: 999px; }
+
+  .chips { text-align: center; }
+  .chip {
+    display: inline-block; margin: 6px; padding: 12px 18px; border-radius: 14px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    animation: slideIn 0.4s ease backwards; cursor: default;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .chip:hover { transform: translateY(-4px) scale(1.05); background: rgba(79,195,161,0.2); }
+  .chip .label { font-size: 1.15rem; font-weight: 700; color: #ffd36e; }
+  .chip .unit { font-size: 0.85rem; color: #9db4c9; margin-left: 6px; }
+  .chip .words-s { display: block; font-size: 0.8rem; color: #a8d5c5; margin-top: 4px; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+
+  .denom-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .denom { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 8px 12px; font-size: 0.9rem; }
+  .denom b { color: #ffd36e; }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #9db4c9; text-align: left; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.15); white-space: nowrap; }
+  td { padding: 7px 6px; border-bottom: 1px dashed rgba(255,255,255,0.08); font-size: 0.92rem; }
+  td input { padding: 8px 10px; font-size: 0.95rem; min-width: 70px; }
+  td input[type="text"] { min-width: 110px; }
+  td select { width: auto; min-width: 58px; padding: 8px 6px; font-size: 0.9rem; }
+  .amt-cell { color: #ffd36e; font-weight: 600; white-space: nowrap; }
+
+  .subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .subtabs button { padding: 7px 13px; font-size: 0.78rem; border-radius: 999px; background: rgba(255,255,255,0.08); color: #cde6f5; }
+  .subtabs button.active { background: linear-gradient(135deg, #ffd36e, #ffb347); color: #5a3a00; font-weight: 700; }
+  .del { background: rgba(255,123,123,0.15); color: #ff9b9b; padding: 6px 10px; font-size: 0.8rem; }
+  .ghost { background: rgba(255,255,255,0.08); color: #cde6f5; font-size: 0.8rem; padding: 8px 14px; }
+  .send { background: rgba(79,195,161,0.18); color: #a8f0dc; font-size: 0.8rem; padding: 8px 14px; }
+  .row-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .stp { display: flex; align-items: center; gap: 6px; }
+  .stp button { padding: 5px 10px; font-size: 0.95rem; background: rgba(255,255,255,0.1); color: #fff; }
+  .stp input { width: 58px; min-width: 0; text-align: center; padding: 8px 4px; }
+  .stp input.wide { width: 76px; }
+  /* Per-row mode toggle: ⚖️ weight / 🥚 count */
+  .mode-btn { padding: 6px 10px; font-size: 0.8rem; border-radius: 999px; background: rgba(255,255,255,0.1); color: #cde6f5; white-space: nowrap; }
+  .mode-btn.count { background: rgba(255,211,110,0.18); color: #ffd36e; }
+  .total-big {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: rgba(255,211,110,0.07); border: 1px solid rgba(255,211,110,0.25);
+    border-radius: 14px; padding: 14px 18px; margin-top: 14px;
+  }
+  .total-big .amt { font-size: 1.5rem; font-weight: 700; color: #ffd36e; }
+  .date-row { text-align: center; color: #9db4c9; font-size: 0.85rem; margin-bottom: 6px; }
+  .mini { font-size: 0.78rem; color: #9db4c9; }
+  .detail-cell { font-size: 0.78rem; color: #a8d5c5; white-space: nowrap; }
+
+  .calc-display { background: rgba(0,0,0,0.35); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 12px 16px; margin-top: 4px; }
+  .calc-display input { background: transparent; border: none; text-align: right; font-size: 1.5rem; color: #ffd36e; padding: 0; box-shadow: none; }
+  .calc-display input:focus { box-shadow: none; }
+  .calc-display .preview { text-align: right; color: #4fc3a1; font-size: 0.95rem; min-height: 1.3em; margin-top: 4px; }
+  .keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .keypad button { padding: 13px 0; font-size: 1.05rem; background: rgba(255,255,255,0.08); color: #fff; }
+  .keypad button:hover { background: rgba(255,255,255,0.16); }
+  .keypad button.op { background: rgba(79,195,161,0.22); color: #a8f0dc; }
+  .keypad button.danger { background: rgba(255,123,123,0.18); color: #ffb3b3; }
+  .keypad button.eq { background: linear-gradient(135deg, #4fc3a1, #66d9c2); color: #0f3460; grid-column: span 4; font-size: 1.1rem; }
+
+  .bar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin: 12px 0 6px; background: rgba(255,255,255,0.08); }
+  .bar .principal { background: #4fc3a1; transition: width 0.5s ease; }
+  .bar .interest { background: #ff7b7b; transition: width 0.5s ease; }
+  .legend { display: flex; gap: 18px; font-size: 0.8rem; color: #9db4c9; flex-wrap: wrap; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+  .presets button { font-size: 0.8rem; padding: 8px 14px; background: rgba(255,255,255,0.1); color: #cde6f5; }
+  .presets button.active-rate { background: linear-gradient(135deg, #4fc3a1, #66d9c2); color: #0f3460; font-weight: 700; }
+  .toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .toggle button { flex: 1; padding: 10px; font-size: 0.85rem; background: rgba(255,255,255,0.08); color: #cde6f5; }
+  .toggle button.active { background: linear-gradient(135deg, #4fc3a1, #66d9c2); color: #0f3460; font-weight: 700; }
+
+  .error { text-align: center; color: #ff7b7b; margin-top: 14px; animation: shake 0.4s; font-size: 0.9rem; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .h-title { font-size: 0.78rem; color: #9db4c9; margin: 24px 0 8px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .history { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .h-item { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: rgba(255,255,255,0.07); color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 14px; font-size: 0.85rem; }
+  .h-item .h-label { color: #9db4c9; font-size: 0.72rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .h-item .h-val { color: #ffd36e; font-weight: 700; }
+  .h-item:hover { background: rgba(79,195,161,0.18); }
+  .coin { position: fixed; top: -40px; font-size: 1.6rem; animation: fall linear forwards; pointer-events: none; z-index: 0; opacity: 0.5; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ============================================================
+   1. NUMBER & FORMAT HELPERS
+   ============================================================ */
+function numberToWords(n) {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+    'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+    'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  if (n < 20) return ones[n];
+  if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? '-' + ones[n % 10] : '');
+  return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numberToWords(n % 100) : '');
+}
+
+function indianGroup(intStr) {
+  if (intStr.length <= 3) return intStr;
+  const last3 = intStr.slice(-3);
+  let rest = intStr.slice(0, -3);
+  const groups = [];
+  while (rest.length > 2) { groups.unshift(rest.slice(-2)); rest = rest.slice(0, -2); }
+  if (rest) groups.unshift(rest);
+  return groups.join(',') + ',' + last3;
+}
+
+function formatIndian(number, decimals = 2) {
+  const neg = number < 0;
+  const abs = Math.abs(number);
+  const parts = abs.toFixed(decimals).split('.');
+  return (neg ? '-' : '') + indianGroup(parts[0]) + (parts[1] ? '.' + parts[1] : '');
+}
+
+const fmt2 = n => formatIndian(n, 2);
+
+function formatShort(n) {
+  const abs = Math.abs(n), sign = n < 0 ? '-' : '';
+  if (abs >= 1e7) return sign + '₹' + (abs / 1e7).toFixed(2) + ' Cr';
+  if (abs >= 1e5) return sign + '₹' + (abs / 1e5).toFixed(2) + ' L';
+  if (abs >= 1e3) return sign + '₹' + (abs / 1e3).toFixed(2) + ' K';
+  return sign + '₹' + abs.toFixed(2);
+}
+
+function breakdown(number) {
+  const numStr = Math.abs(number).toFixed(2);
+  const [intPart, decPart] = numStr.split('.');
+  const padded = intPart.padStart(7, '0');
+  const ones = parseInt(padded.slice(-3), 10);
+  const thousands = parseInt(padded.slice(-5, -3), 10);
+  const lakhs = parseInt(padded.slice(-7, -5), 10);
+  const crores = parseInt(padded.slice(0, -7), 10) || 0;
+  const paise = parseInt(decPart, 10);
+  const parts = [];
+  if (crores) parts.push({ value: crores, unit: 'Crore', words: numberToWords(crores) });
+  if (lakhs) parts.push({ value: lakhs, unit: 'Lakh', words: numberToWords(lakhs) });
+  if (thousands) parts.push({ value: thousands, unit: 'Thousand', words: numberToWords(thousands) });
+  if (ones) parts.push({ value: ones, unit: '', words: numberToWords(ones) });
+  if (paise) parts.push({ value: paise, unit: 'Paise', words: numberToWords(paise) });
+  return parts;
+}
+
+function fullWords(number) {
+  const parts = breakdown(number);
+  const rupeeParts = parts.filter(p => p.unit !== 'Paise');
+  const paiseParts = parts.filter(p => p.unit === 'Paise');
+  let str = rupeeParts.map(p => (p.unit ? p.words + ' ' + p.unit : p.words)).join(' ');
+  if (paiseParts.length) {
+    const pw = paiseParts[0].words + ' Paise';
+    str = str ? str + ' and ' + pw : pw;
+  }
+  return (number < 0 ? 'Minus ' : '') + (str || 'Zero');
+}
+
+/* ============================================================
+   2. CASH HELPERS (₹500 = highest note, NO ₹2000)
+   ============================================================ */
+const DENOMS = [
+  { v: 500, label: '₹500', note: true },
+  { v: 200, label: '₹200', note: true },
+  { v: 100, label: '₹100', note: true },
+  { v: 50,  label: '₹50',  note: true },
+  { v: 20,  label: '₹20',  note: true },
+  { v: 10,  label: '₹10',  note: true },
+  { v: 5,   label: '₹5',   note: false },
+  { v: 2,   label: '₹2',   note: false },
+  { v: 1,   label: '₹1',   note: false },
+];
+
+function denominations(amount) {
+  let rem = Math.floor(Math.abs(amount));
+  const out = [];
+  for (const d of DENOMS) {
+    const c = Math.floor(rem / d.v);
+    if (c > 0) { out.push({ ...d, count: c }); rem -= c * d.v; }
+  }
+  return out;
+}
+
+function cashString(amount) {
+  const d = denominations(amount);
+  if (!d.length) return 'Less than ₹1 — paise only';
+  return d.map(x => (x.note ? '💵' : '🪙') + ' ' + x.count + ' × ' + x.label).join(' + ');
+}
+
+/* ============================================================
+   3. ROBUST CLIPBOARD (works on file:// — 3-step fallback)
+   ============================================================ */
+function copyText(text, onDone) {
+  const finish = () => { if (onDone) onDone(); };
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (ok) { finish(); return; }
+    } catch (e) {}
+    try { window.prompt('Press Ctrl+C to copy:', text); } catch (e) {}
+    finish();
+  };
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(finish).catch(fallback);
+    } else {
+      fallback();
+    }
+  } catch (e) { fallback(); }
+}
+
+function evalExpr(expr) {
+  let clean = expr.replace(/×/g, '*').replace(/÷/g, '/');
+  if (!clean.trim()) return null;
+  if (!/^[0-9+\-*/().%\s]+$/.test(clean)) return null;
+  /* Strict-mode JS rejects leading-zero integers (e.g. "01") as legacy octals — strip
+     redundant leading zeros from each number so keys like 0 → 1 keep working. */
+  clean = clean.replace(/\d+\.?\d*/g, m => m.replace(/^0+(?=\d)/, ''));
+  try {
+    const val = Function('"use strict";return (' + clean + ')')();
+    return (typeof val === 'number' && isFinite(val)) ? val : null;
+  } catch (e) { return null; }
+}
+
+function calcEMI(P, annualRate, months) {
+  if (P <= 0 || months <= 0) return 0;
+  const r = annualRate / 1200;
+  if (r === 0) return P / months;
+  const f = Math.pow(1 + r, months);
+  return P * r * f / (f - 1);
+}
+
+const AREA_UNITS = {
+  ft: { label: 'Feet', toM: 0.3048 },
+  m:  { label: 'Meters', toM: 1 },
+  cm: { label: 'Centimeters', toM: 0.01 },
+  in: { label: 'Inches', toM: 0.0254 },
+  yd: { label: 'Yards', toM: 0.9144 },
+};
+
+const MASS_UNITS = [
+  { k: 'mg', label: 'Milligram (mg)', f: 0.000001 },
+  { k: 'g',  label: 'Gram (g)', f: 0.001 },
+  { k: 'kg', label: 'Kilogram (kg)', f: 1 },
+  { k: 'quintal', label: 'Quintal (100 kg)', f: 100 },
+  { k: 't',  label: 'Tonne (1000 kg)', f: 1000 },
+];
+
+const CARD_WEIGHTS = [50, 100, 200, 250, 500, 750, 1000, 2000];
+
+const MILK_DEFAULTS = [
+  { id: 'fcm', name: 'FCM Milk', price: '34' },
+  { id: 'orange', name: 'Orange Milk', price: '30' },
+  { id: 'green', name: 'Green Milk', price: '22' },
+  { id: 'blue', name: 'Blue Milk', price: '20' },
+  { id: 'curd10', name: 'Curd (₹10)', price: '8.5' },
+  { id: 'milk10', name: 'Milk (₹10)', price: '9' },
+  { id: 'curdhalf', name: '½L Curd', price: '' },
+  { id: 'tea', name: 'Tea Packet', price: '' },
+  { id: 'extra', name: 'Extra', price: '' },
+];
+
+function useLocalStorage(key, initial) {
+  const [val, setVal] = useState(() => {
+    try {
+      const s = localStorage.getItem(key);
+      return s !== null ? JSON.parse(s) : initial;
+    } catch (e) { return initial; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }, [key, val]);
+  return [val, setVal];
+}
+
+/* ============================================================
+   4. SHARED UI
+   ============================================================ */
+function CopyCashBtn({ amount, label = '📋 Copy + 💵' }) {
+  const [ok, setOk] = useState(false);
+  const text =
+    '₹ ' + fmt2(amount) +
+    '\nWords: ' + fullWords(amount) +
+    '\nPay: ' + cashString(amount);
+  const copy = () => copyText(text, () => { setOk(true); setTimeout(() => setOk(false), 1500); });
+  return <button className="copy-btn" onClick={copy}>{ok ? '✓ Copied!' : label}</button>;
+}
+
+/* Copy button that also lists the GST break-up (used by Provision Shop) */
+function CopyCashWithGSTBtn({ itemCount, subtotal, gstRate, gstAmt, total, label = '📋 Copy + 💵' }) {
+  const [ok, setOk] = useState(false);
+  const lines = [];
+  if (itemCount !== undefined) lines.push('Total item count (' + itemCount + ')');
+  lines.push('Subtotal: ₹ ' + fmt2(subtotal));
+  if (gstRate > 0) {
+    lines.push('GST (' + gstRate + '%): ₹ ' + fmt2(gstAmt));
+    lines.push('Total (incl. GST): ₹ ' + fmt2(total));
+  } else {
+    lines.push('Total: ₹ ' + fmt2(total));
+  }
+  lines.push('Words: ' + fullWords(total));
+  lines.push('Pay: ' + cashString(total));
+  const text = lines.join('\n');
+  const copy = () => copyText(text, () => { setOk(true); setTimeout(() => setOk(false), 1500); });
+  return <button className="copy-btn" onClick={copy}>{ok ? '✓ Copied!' : label}</button>;
+}
+
+/* Copy button that lists each item line above the total (used by Item Counter & Shop Bill) */
+function CopyCashWithItemsBtn({ itemLines, total, label = '📋 Copy + 💵' }) {
+  const [ok, setOk] = useState(false);
+  const lines = [...itemLines, 'Total: ₹ ' + fmt2(total), 'Words: ' + fullWords(total), 'Pay: ' + cashString(total)];
+  const text = lines.join('\n');
+  const copy = () => copyText(text, () => { setOk(true); setTimeout(() => setOk(false), 1500); });
+  return <button className="copy-btn" onClick={copy}>{ok ? '✓ Copied!' : label}</button>;
+}
+
+/* Plain-text copy button for reference tools that have no cash total (Rate Finder, Rate Card, Converter) */
+function CopyTextBtn({ lines, label = '📋 Copy' }) {
+  const [ok, setOk] = useState(false);
+  const text = lines.join('\n');
+  const copy = () => copyText(text, () => { setOk(true); setTimeout(() => setOk(false), 1500); });
+  return <button className="copy-btn" onClick={copy}>{ok ? '✓ Copied!' : label}</button>;
+}
+
+function CashBreakdown({ amount, compact = false }) {
+  const denoms = denominations(amount);
+  if (!denoms.length) {
+    return (
+      <div className="result-box">
+        <h3>💵 CASH BREAKDOWN (HOW TO PAY)</h3>
+        <p style={{ color: '#9db4c9', fontSize: '.9rem' }}>Amount is less than ₹1 — paise only 🙂</p>
+      </div>
+    );
+  }
+  return (
+    <div className="result-box">
+      <h3>💵 CASH BREAKDOWN (HOW TO PAY)</h3>
+      <p className="mini" style={{ marginBottom: 8 }}>Highest note used: ₹500 (no ₹2000)</p>
+      <div className="denom-grid">
+        {denoms.map(d => (
+          <div key={d.v} className="denom" style={compact ? { fontSize: '.82rem', padding: '6px 10px' } : null}>
+            {d.note ? '💵' : '🪙'} <b>{d.count}</b> × {d.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MoneyStats({ value, size = '', extraLines = [] }) {
+  if (value === null || value === undefined || isNaN(value)) return null;
+  const chips = breakdown(value);
+  const chipLines = chips.map(p => (p.unit ? p.value + ' ' + p.unit : p.value) + ' = ' + p.words + (p.unit ? ' ' + p.unit : ''));
+  return (
+    <React.Fragment>
+      <div className="result-box" key={value}>
+        <div className={'big-number ' + size}>₹ {formatIndian(value)}</div>
+        <div style={{ textAlign: 'center', marginBottom: 14 }}>
+          <span className="badge">{formatShort(value)}</span>
+          <CopyCashWithItemsBtn itemLines={[...extraLines, ...chipLines]} total={value} />
+        </div>
+        <p className="words">"{fullWords(value)}"</p>
+        <div className="chips">
+          {chips.map((p, i) => (
+            <span key={i} className="chip" style={{ animationDelay: (i * 0.12) + 's' }}>
+              <span className="label">{p.value}</span>
+              {p.unit && <span className="unit">{p.unit}</span>}
+              <span className="words-s">{p.words}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <CashBreakdown amount={value} />
+    </React.Fragment>
+  );
+}
+
+/* ============================================================
+   5. TAB: BREAKDOWN
+   ============================================================ */
+function BreakdownTab({ seed, rain, pushHistory }) {
+  const [input, setInput] = useState('');
+  const [number, setNumber] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (seed) { setInput(String(seed.v)); setNumber(seed.v); setError(''); }
+  }, [seed]);
+
+  const submit = (val) => {
+    const cleaned = String(val).replace(/,/g, '').trim();
+    if (cleaned === '' || isNaN(parseFloat(cleaned))) {
+      setError('Invalid input! Please enter a valid number.');
+      setNumber(null);
+      return;
+    }
+    setError('');
+    const num = parseFloat(cleaned);
+    setNumber(num);
+    rain();
+    pushHistory('💰', 'Amount', num);
+  };
+
+  return (
+    <div>
+      <div className="input-row">
+        <input
+          type="text"
+          placeholder="e.g. 16426979.29"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && submit(input)}
+        />
+        <button onClick={() => submit(input)}>Convert</button>
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => { setInput(''); setNumber(null); setError(''); }}>🧹 Clear all</button>
+      </div>
+
+      {error && <p className="error">⚠️ {error}</p>}
+      {number !== null && !error && <MoneyStats value={number} />}
+
+      <div className="presets">
+        {['1', '99.99', '125000', '16426979.29', '123456789', '1000000000'].map(v => (
+          <button key={v} onClick={() => { setInput(v); submit(v); }}>{v}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   6. TAB: CALCULATOR
+   ============================================================ */
+function CalculatorTab({ rain, pushHistory }) {
+  const [expr, setExpr] = useState('');
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+
+  const preview = evalExpr(expr);
+
+  const press = (k) => {
+    setError('');
+    if (k === 'C') { setExpr(''); setResult(null); return; }
+    if (k === '⌫') { setExpr(e => e.slice(0, -1)); setResult(null); return; }
+    setExpr(e => e + k);
+    setResult(null);
+  };
+
+  const equals = () => {
+    const v = evalExpr(expr);
+    if (v === null) { setError('Invalid expression!'); setResult(null); return; }
+    setError('');
+    setResult(v);
+    rain();
+    pushHistory('🧮', expr, v);
+  };
+
+  const clearAll = () => { setExpr(''); setResult(null); setError(''); };
+
+  /* Numpad keys are read via e.code so they work even when NumLock is off
+     (the physical key is still recognised, and we insert the right symbol ourselves). */
+  const NUMPAD_MAP = {
+    Numpad0: '0', Numpad1: '1', Numpad2: '2', Numpad3: '3', Numpad4: '4',
+    Numpad5: '5', Numpad6: '6', Numpad7: '7', Numpad8: '8', Numpad9: '9',
+    NumpadDecimal: '.', NumpadAdd: '+', NumpadSubtract: '-',
+    NumpadMultiply: '×', NumpadDivide: '÷',
+  };
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); equals(); return; }
+    if (NUMPAD_MAP[e.code]) {
+      e.preventDefault();
+      setExpr(x => x + NUMPAD_MAP[e.code]);
+      setResult(null);
+      setError('');
+    }
+  };
+
+  const keys = ['7','8','9','÷','4','5','6','×','1','2','3','-','0','.','(',')','+','%','C','⌫'];
+  const ops = ['÷','×','-','+','%'];
+
+  return (
+    <div>
+      <div className="calc-display">
+        <input
+          value={expr}
+          onChange={e => { setExpr(e.target.value); setResult(null); setError(''); }}
+          onKeyDown={handleKeyDown}
+          placeholder="0"
+        />
+        <div className="preview">{preview !== null ? '= ' + formatIndian(preview) : ''}</div>
+      </div>
+
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={clearAll}>🧹 Clear all</button>
+      </div>
+
+      {error && <p className="error">⚠️ {error}</p>}
+
+      <div className="keypad">
+        {keys.map(k => (
+          <button
+            key={k}
+            className={k === 'C' || k === '⌫' ? 'danger' : (ops.indexOf(k) >= 0 ? 'op' : '')}
+            onClick={() => press(k)}
+          >{k}</button>
+        ))}
+        <button className="eq" onClick={equals}>= &nbsp;See Rupee Breakdown</button>
+      </div>
+
+      {result !== null && !error && (
+        <MoneyStats value={result} extraLines={['Expression: ' + expr + ' = ' + formatIndian(result)]} />
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   7. TAB: AREA & COST
+   ============================================================ */
+function AreaTab({ sendToBreakdown }) {
+  const [len, setLen] = useState('');
+  const [wid, setWid] = useState('');
+  const [unit, setUnit] = useState('ft');
+  const [rate, setRate] = useState('');
+
+  const l = parseFloat(len), w = parseFloat(wid);
+  const valid = !isNaN(l) && !isNaN(w) && l > 0 && w > 0;
+  const u = AREA_UNITS[unit];
+  const area = valid ? l * w : 0;
+  const sqm = valid ? (l * u.toM) * (w * u.toM) : 0;
+  const sqft = sqm * 10.76391;
+  const gaj = sqm * 1.19599;
+  const acre = sqm / 4046.856;
+  const hect = sqm / 10000;
+  const per = valid ? 2 * (l + w) : 0;
+  const r = parseFloat(rate);
+  const hasCost = valid && !isNaN(r) && r > 0;
+  const cost = hasCost ? area * r : null;
+
+  const AREA_PRESETS = [
+    { label: '🛏 Room 12×10 ft', l: '12', w: '10', u: 'ft' },
+    { label: '🏠 Plot 30×40 ft', l: '30', w: '40', u: 'ft' },
+    { label: '🌾 Field 50×30 m', l: '50', w: '30', u: 'm' },
+    { label: '🏢 Flat 30×35 ft', l: '30', w: '35', u: 'ft' },
+  ];
+
+  return (
+    <div>
+      <div className="grid3">
+        <div className="field">
+          <label>Length</label>
+          <input type="number" placeholder="e.g. 30" value={len} onChange={e => setLen(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Width</label>
+          <input type="number" placeholder="e.g. 20" value={wid} onChange={e => setWid(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Unit</label>
+          <select value={unit} onChange={e => setUnit(e.target.value)}>
+            {Object.keys(AREA_UNITS).map(k => (
+              <option key={k} value={k}>{AREA_UNITS[k].label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="field">
+        <label>Rate per sq {unit} (₹) — optional, for cost estimate</label>
+        <input type="number" placeholder="e.g. 2500" value={rate} onChange={e => setRate(e.target.value)} />
+      </div>
+
+      <div className="presets">
+        {AREA_PRESETS.map(p => (
+          <button key={p.label} onClick={() => { setLen(p.l); setWid(p.w); setUnit(p.u); }}>{p.label}</button>
+        ))}
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => { setLen(''); setWid(''); setUnit('ft'); setRate(''); }}>🧹 Clear all</button>
+      </div>
+
+      {valid && (
+        <React.Fragment>
+          <div className="result-box" key={len + '|' + wid + '|' + unit}>
+            <div className="big-number small">{formatIndian(area)} sq {unit}²</div>
+            <div className="stat"><span className="k">Square meters</span><span className="v">{formatIndian(sqm)}</span></div>
+            <div className="stat"><span className="k">Square feet</span><span className="v">{formatIndian(sqft)}</span></div>
+            <div className="stat"><span className="k">Gaj (sq yards)</span><span className="v">{formatIndian(gaj)}</span></div>
+            <div className="stat"><span className="k">Acre</span><span className="v">{formatIndian(acre, 4)}</span></div>
+            <div className="stat"><span className="k">Hectare</span><span className="v">{formatIndian(hect, 4)}</span></div>
+            <div className="stat"><span className="k">Perimeter</span><span className="v">{formatIndian(per)} {unit}</span></div>
+          </div>
+          {hasCost && (
+            <div>
+              <p style={{ textAlign: 'center', marginTop: 18, color: '#9db4c9', fontSize: '.85rem' }}>
+                🏷 Total cost @ ₹{formatIndian(r)} / sq {unit}
+              </p>
+              <MoneyStats
+                value={cost}
+                extraLines={[
+                  'Area: ' + formatIndian(area) + ' sq ' + unit,
+                  'Rate: ₹ ' + formatIndian(r) + ' / sq ' + unit,
+                ]}
+              />
+              <div className="row-actions" style={{ justifyContent: 'center' }}>
+                <button className="send" onClick={() => sendToBreakdown('📐', 'Area cost', cost)}>🔗 Full breakdown</button>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
+      )}
+      {!valid && (len !== '' || wid !== '') && (
+        <p className="error">⚠️ Enter positive numbers for length &amp; width</p>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   8. TAB: EMI
+   ============================================================ */
+function EMITab({ sendToBreakdown }) {
+  const [P, setP] = useState('');
+  const [rate, setRate] = useState('');
+  const [years, setYears] = useState('');
+
+  const Pn = parseFloat(P), rn = parseFloat(rate), yn = parseFloat(years);
+  const valid = Pn > 0 && rn >= 0 && yn > 0;
+  const months = valid ? Math.round(yn * 12) : 0;
+  const emi = valid ? calcEMI(Pn, rn, months) : 0;
+  const totalPay = emi * months;
+  const interest = totalPay - Pn;
+  const pPct = totalPay > 0 ? (Pn / totalPay) * 100 : 50;
+
+  const LOANS = [
+    { label: '🏠 Home ₹50L @8.5% 20y', p: '5000000', r: '8.5', y: '20' },
+    { label: '🚗 Car ₹8L @9% 7y', p: '800000', r: '9', y: '7' },
+    { label: '🏍 Bike ₹1.5L @11% 3y', p: '150000', r: '11', y: '3' },
+    { label: '💳 Personal ₹5L @12% 5y', p: '500000', r: '12', y: '5' },
+  ];
+
+  return (
+    <div>
+      <div className="grid3">
+        <div className="field">
+          <label>Loan amount (₹)</label>
+          <input type="number" placeholder="e.g. 500000" value={P} onChange={e => setP(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Interest (% / year)</label>
+          <input type="number" placeholder="e.g. 8.5" value={rate} onChange={e => setRate(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Tenure (years)</label>
+          <input type="number" placeholder="e.g. 20" value={years} onChange={e => setYears(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="presets">
+        {LOANS.map(x => (
+          <button key={x.label} onClick={() => { setP(x.p); setRate(x.r); setYears(x.y); }}>{x.label}</button>
+        ))}
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => { setP(''); setRate(''); setYears(''); }}>🧹 Clear all</button>
+      </div>
+
+      {valid && (
+        <div className="result-box" key={P + '|' + rate + '|' + years}>
+          <h3>📅 MONTHLY EMI</h3>
+          <div className="big-number small">₹ {formatIndian(emi)}</div>
+          <p className="words" style={{ marginBottom: 14 }}>"{fullWords(emi)}"</p>
+          <div className="bar">
+            <div className="principal" style={{ width: pPct + '%' }}></div>
+            <div className="interest" style={{ width: (100 - pPct) + '%' }}></div>
+          </div>
+          <div className="legend">
+            <span><span className="dot" style={{ background: '#4fc3a1' }}></span>Principal {pPct.toFixed(1)}%</span>
+            <span><span className="dot" style={{ background: '#ff7b7b' }}></span>Interest {(100 - pPct).toFixed(1)}%</span>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <div className="stat"><span className="k">Principal</span><span className="v">₹ {formatIndian(Pn)}</span></div>
+            <div className="stat"><span className="k">Total interest</span><span className="v">₹ {formatIndian(interest)}</span></div>
+            <div className="stat"><span className="k">Total payment ({months} months)</span><span className="v">₹ {formatIndian(totalPay)}</span></div>
+          </div>
+          <div className="row-actions" style={{ justifyContent: 'center' }}>
+            <CopyCashWithItemsBtn
+              itemLines={[
+                'Loan amount: ₹ ' + formatIndian(Pn),
+                'Interest rate: ' + rate + '% / year',
+                'Tenure: ' + years + ' years (' + months + ' months)',
+                'Monthly EMI: ₹ ' + formatIndian(emi),
+                'Total interest: ₹ ' + formatIndian(interest),
+              ]}
+              total={totalPay}
+              label="📋 Copy loan details"
+            />
+            <button className="send" onClick={() => sendToBreakdown('🏦', 'EMI × ' + months, totalPay)}>🔗 Total payment breakdown</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   9. TAB: GST
+   ============================================================ */
+function GSTTab({ sendToBreakdown }) {
+  const [amount, setAmount] = useState('');
+  const [rate, setRate] = useState(18);
+  const [custom, setCustom] = useState('');
+  const [mode, setMode] = useState('add');
+
+  const a = parseFloat(amount);
+  const valid = !isNaN(a) && a > 0;
+  const effRate = custom !== '' && !isNaN(parseFloat(custom)) ? parseFloat(custom) : rate;
+  let base = 0, gst = 0, total = 0;
+  if (valid) {
+    if (mode === 'add') { base = a; gst = a * effRate / 100; total = a + gst; }
+    else { total = a; base = a / (1 + effRate / 100); gst = total - base; }
+  }
+
+  return (
+    <div>
+      <div className="toggle">
+        <button className={mode === 'add' ? 'active' : ''} onClick={() => setMode('add')}>➕ Add GST</button>
+        <button className={mode === 'remove' ? 'active' : ''} onClick={() => setMode('remove')}>➖ Remove GST (inclusive)</button>
+      </div>
+
+      <div className="grid2">
+        <div className="field">
+          <label>{mode === 'add' ? 'Amount before GST (₹)' : 'Amount including GST (₹)'}</label>
+          <input type="number" placeholder="e.g. 10000" value={amount} onChange={e => setAmount(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Custom rate (%)</label>
+          <input type="number" placeholder="e.g. 18" value={custom} onChange={e => setCustom(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="presets">
+        {[5, 12, 18, 28].map(r => (
+          <button
+            key={r}
+            className={custom === '' && effRate === r ? 'active-rate' : ''}
+            onClick={() => { setRate(r); setCustom(''); }}
+          >{r}% GST</button>
+        ))}
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => { setAmount(''); setRate(18); setCustom(''); setMode('add'); }}>🧹 Clear all</button>
+      </div>
+
+      {valid && (
+        <div className="result-box" key={amount + '|' + effRate + '|' + mode}>
+          <div className="stat"><span className="k">Base amount</span><span className="v">₹ {formatIndian(base)}</span></div>
+          <div className="stat"><span className="k">CGST ({effRate / 2}%)</span><span className="v">₹ {formatIndian(gst / 2)}</span></div>
+          <div className="stat"><span className="k">SGST ({effRate / 2}%)</span><span className="v">₹ {formatIndian(gst / 2)}</span></div>
+          <div className="stat"><span className="k">Total GST</span><span className="v">₹ {formatIndian(gst)}</span></div>
+          <div className="big-number small" style={{ marginTop: 14 }}>
+            {mode === 'add' ? 'Total payable' : 'Base price'}: ₹ {formatIndian(mode === 'add' ? total : base)}
+          </div>
+          <div className="row-actions" style={{ justifyContent: 'center' }}>
+            <CopyCashWithItemsBtn
+              itemLines={[
+                'Base amount: ₹ ' + formatIndian(base),
+                'GST rate: ' + effRate + '%',
+                'CGST (' + (effRate / 2) + '%): ₹ ' + formatIndian(gst / 2),
+                'SGST (' + (effRate / 2) + '%): ₹ ' + formatIndian(gst / 2),
+                'Total GST: ₹ ' + formatIndian(gst),
+              ]}
+              total={mode === 'add' ? total : a}
+              label="📋 Copy GST details"
+            />
+            <button className="send" onClick={() => sendToBreakdown('🧾', 'GST ' + effRate + '%', mode === 'add' ? total : a)}>🔗 Full breakdown</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   10. TAB: SPLIT BILL
+   ============================================================ */
+function SplitTab({ sendToBreakdown }) {
+  const [bill, setBill] = useState('');
+  const [people, setPeople] = useState('');
+  const [tip, setTip] = useState(0);
+  const [roundUp, setRoundUp] = useState(false);
+
+  const b = parseFloat(bill), p = parseInt(people, 10);
+  const valid = b > 0 && p > 0;
+  const tipAmt = valid ? b * tip / 100 : 0;
+  const grand = valid ? b + tipAmt : 0;
+  const per = valid ? grand / p : 0;
+  const perFinal = roundUp ? Math.ceil(per) : per;
+  const extra = roundUp ? perFinal * p - grand : 0;
+
+  return (
+    <div>
+      <div className="grid2">
+        <div className="field">
+          <label>Total bill (₹)</label>
+          <input type="number" placeholder="e.g. 2450" value={bill} onChange={e => setBill(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Number of people</label>
+          <input type="number" placeholder="e.g. 4" value={people} onChange={e => setPeople(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="field"><label>Tip</label></div>
+      <div className="presets" style={{ marginTop: 0 }}>
+        {[0, 5, 10, 15].map(t => (
+          <button key={t} className={tip === t ? 'active-rate' : ''} onClick={() => setTip(t)}>
+            {t === 0 ? 'No tip' : t + '% tip'}
+          </button>
+        ))}
+      </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, cursor: 'pointer', fontSize: '.9rem', color: '#cde6f5' }}>
+        <input type="checkbox" checked={roundUp} onChange={e => setRoundUp(e.target.checked)} />
+        Round each share UP to the nearest rupee 🔼
+      </label>
+
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 12, marginBottom: 0 }}>
+        <button className="ghost" onClick={() => { setBill(''); setPeople(''); setTip(0); setRoundUp(false); }}>🧹 Clear all</button>
+      </div>
+
+      {valid && (
+        <div className="result-box" key={bill + '|' + people + '|' + tip + '|' + roundUp}>
+          <h3>👤 EACH PERSON PAYS</h3>
+          <div className="big-number small">₹ {formatIndian(perFinal)}</div>
+          <p className="words" style={{ marginBottom: 12 }}>"{fullWords(perFinal)}"</p>
+          <div className="stat"><span className="k">Bill</span><span className="v">₹ {formatIndian(b)}</span></div>
+          <div className="stat"><span className="k">Tip ({tip}%)</span><span className="v">₹ {formatIndian(tipAmt)}</span></div>
+          <div className="stat"><span className="k">Grand total</span><span className="v">₹ {formatIndian(grand)}</span></div>
+          <div className="stat"><span className="k">People</span><span className="v">{p}</span></div>
+          {roundUp && extra > 0 && (
+            <div className="stat"><span className="k">Extra collected (tip jar 🪙)</span><span className="v">₹ {formatIndian(extra)}</span></div>
+          )}
+          <div className="row-actions" style={{ justifyContent: 'center' }}>
+            <CopyCashWithItemsBtn
+              itemLines={[
+                'Bill: ₹ ' + formatIndian(b),
+                'Tip (' + tip + '%): ₹ ' + formatIndian(tipAmt),
+                'Grand total: ₹ ' + formatIndian(grand),
+                'People: ' + p,
+              ]}
+              total={perFinal}
+              label="📋 Copy split details"
+            />
+            <button className="send" onClick={() => sendToBreakdown('👥', 'Split bill', grand)}>🔗 Grand total breakdown</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   11. TAB: RATE CALC
+   ============================================================ */
+
+/* ---- 11a. 🛒 PROVISION SHOP — ONE bill, weight + count rows together.
+   Each row toggles: ⚖️ (₹/kg × g|kg)  |  🥚 (₹/pc × count)
+   ✔ Type name → Enter → cursor on Rate field
+   ✔ Egg quick buttons add count rows (₹7.5 × 6 = ₹45 ready)
+   ✔ One grand total → cash breakdown + copy with pay details        ---- */
+function ProvisionShop({ sendToBreakdown }) {
+  const [raw, setRows] = useLocalStorage('provisionV1', null);
+  const rows = Array.isArray(raw) && raw.length
+    ? raw.map(r => ({ name: '', mode: 'count', price: '', qty: '', unit: 'g', ...r }))
+    : [{ id: 1, name: '', mode: 'count', price: '', qty: '', unit: 'g' }];
+  const [quick, setQuick] = useState('');
+  const [lastAdded, setLastAdded] = useState(null);
+  const [gstRate, setGstRate] = useLocalStorage('provisionGstV1', 0);
+  const [gstCustom, setGstCustom] = useState('');
+
+  const upd = (id, k, v) => setRows(rows.map(r => (r.id === id ? { ...r, [k]: v } : r)));
+
+  const delRow = (id) => setRows(
+    rows.length > 1
+      ? rows.filter(r => r.id !== id)
+      : [{ id: 1, name: '', mode: 'count', price: '', qty: '', unit: 'g' }]
+  );
+
+  const addRow = (mode, name = '', price = '', qty = '') => {
+    const id = Date.now() + Math.random();
+    setRows([...rows, { id, name, mode, price, qty, unit: 'g' }]);
+    setLastAdded(id);
+  };
+
+  /* Type "Pepper" → Enter → pc (count) row, cursor on Rate */
+  const quickAdd = () => {
+    const name = quick.trim();
+    if (!name) return;
+    addRow('count', name);
+    setQuick('');
+  };
+
+  /* Egg buttons: count row with rate × 6 ready (₹7.5 × 6 = ₹45) */
+  const addEgg = (rate) => addRow('count', '🥚 Egg', rate, '6');
+
+  /* Wipe every row back to one blank pc row, and reset GST to 0% */
+  const clearAll = () => {
+    setRows([{ id: Date.now(), name: '', mode: 'count', price: '', qty: '', unit: 'g' }]);
+    setGstRate(0);
+    setGstCustom('');
+  };
+  /* Keep items & rates, just zero out the quantities so totals recalc from scratch */
+  const clearQty = () => setRows(rows.map(r => ({ ...r, qty: '' })));
+
+  const toggleMode = (r) => {
+    const newMode = r.mode === 'weight' ? 'count' : 'weight';
+    upd(r.id, 'mode', newMode);
+    if (newMode === 'count' && r.qty !== '') {
+      upd(r.id, 'qty', String(Math.max(0, Math.floor(parseFloat(r.qty) || 0))));
+    }
+  };
+
+  const calc = (r) => {
+    const p = parseFloat(r.price), q = parseFloat(r.qty);
+    if (isNaN(p) || isNaN(q) || q <= 0) return { ok: false, amt: 0, detail: '' };
+    if (r.mode === 'count') {
+      const n = Math.floor(q);
+      return { ok: true, amt: p * n, detail: fmt2(p) + ' × ' + n + ' pc' };
+    }
+    const kg = (r.unit === 'kg') ? q : q / 1000;
+    return { ok: true, amt: p * kg, detail: '₹' + fmt2(p / 10) + ' /100g' };
+  };
+
+  const subtotal = rows.reduce((s, r) => s + calc(r).amt, 0);
+  const anyOk = rows.some(r => calc(r).ok);
+  const wCount = rows.filter(r => r.mode === 'weight' && calc(r).ok).length;
+  const cCount = rows.filter(r => r.mode === 'count' && calc(r).ok).length;
+
+  const effGst = gstCustom !== '' && !isNaN(parseFloat(gstCustom)) ? parseFloat(gstCustom) : (parseFloat(gstRate) || 0);
+  const gstAmt = subtotal * effGst / 100;
+  const total = subtotal + gstAmt;
+
+  const setQty = (r, q) => upd(r.id, 'qty', String(Math.max(0, q)));
+
+  /* Typing a rate on a pc row with no qty yet assumes 1 pc, so it starts working right away */
+  const updPrice = (r, v) => setRows(rows.map(x => (
+    x.id === r.id
+      ? { ...x, price: v, qty: (x.mode === 'count' && x.qty === '' && v !== '') ? '1' : x.qty }
+      : x
+  )));
+
+  return (
+    <div>
+      {/* Quick add: type name → Enter or + (weight mode) */}
+      <div className="input-row" style={{ marginBottom: 8 }}>
+        <input
+          type="text"
+          placeholder='Item name → Enter adds 🥚 pc row (toggle to ⚖️ anytime)'
+          value={quick}
+          onChange={e => setQuick(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && quickAdd()}
+        />
+        <button onClick={quickAdd}>+ Add item</button>
+      </div>
+
+      {/* Count quick buttons — egg tray ready to go */}
+      <div className="row-actions" style={{ marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => addRow('weight')}>+ ⚖️ Weight row</button>
+        <button className="ghost" onClick={() => addRow('count')}>+ 🥚 Count row</button>
+        <button className="ghost" onClick={() => addEgg('7.5')}>🥚 ₹7.5 ×6 = ₹45</button>
+        <button className="ghost" onClick={() => addEgg('6.5')}>🥚 ₹6.5 ×6</button>
+        <button className="ghost" onClick={() => addEgg('6')}>🥚 ₹6 ×6</button>
+      </div>
+      <div className="row-actions" style={{ marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={clearQty}>🧹 Clear quantities</button>
+        <button className="ghost" onClick={clearAll}>↺ Clear all items</button>
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Type</th><th>Rate</th><th>Qty</th><th>Detail</th><th>Amount (₹)</th><th></th></tr>
+          </thead>
+          <tbody>
+            {rows.map(r => {
+              const c = calc(r);
+              const isCount = r.mode === 'count';
+              return (
+                <tr key={r.id}>
+                  <td><input type="text" placeholder="Item" value={r.name} onChange={e => upd(r.id, 'name', e.target.value)} /></td>
+                  <td>
+                    <button
+                      className={'mode-btn' + (isCount ? ' count' : '')}
+                      onClick={() => toggleMode(r)}
+                      title="Toggle between weight and count"
+                    >{isCount ? '🥚 pc' : '⚖️ kg'}</button>
+                  </td>
+                  <td>
+                    <input
+                      type="number" step="0.01" placeholder={isCount ? '₹/pc' : '₹/kg'}
+                      value={r.price}
+                      autoFocus={r.id === lastAdded}
+                      onChange={e => updPrice(r, e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addRow(r.mode)}
+                    />
+                  </td>
+                  <td>
+                    {isCount ? (
+                      <div className="stp">
+                        <button onClick={() => setQty(r, (parseInt(r.qty, 10) || 0) - 1)}>−</button>
+                        <input
+                          type="number" placeholder="0"
+                          value={r.qty}
+                          onChange={e => upd(r.id, 'qty', e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addRow(r.mode)}
+                        />
+                        <button onClick={() => setQty(r, (parseInt(r.qty, 10) || 0) + 1)}>+</button>
+                      </div>
+                    ) : (
+                      <div className="stp">
+                        <input
+                          className="wide"
+                          type="number" step="0.01" placeholder="0"
+                          value={r.qty}
+                          onChange={e => upd(r.id, 'qty', e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addRow(r.mode)}
+                        />
+                        <select value={r.unit || 'g'} onChange={e => upd(r.id, 'unit', e.target.value)}>
+                          <option value="g">g</option>
+                          <option value="kg">kg</option>
+                        </select>
+                      </div>
+                    )}
+                  </td>
+                  <td className="detail-cell">{c.ok ? c.detail : '—'}</td>
+                  <td className="amt-cell">{c.ok ? fmt2(c.amt) : '—'}</td>
+                  <td><button className="del" onClick={() => delRow(r.id)}>✕</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {anyOk && (
+        <React.Fragment>
+          <div className="mini" style={{ textAlign: 'center', marginTop: 10, marginBottom: 4 }}>🧾 GST on total</div>
+          <div className="presets" style={{ marginTop: 0 }}>
+            {[0, 5, 12, 18, 28].map(r => (
+              <button
+                key={r}
+                className={gstCustom === '' && effGst === r ? 'active-rate' : ''}
+                onClick={() => { setGstRate(r); setGstCustom(''); }}
+              >{r}% GST</button>
+            ))}
+            <input
+              type="number" step="0.01" placeholder="Custom %"
+              value={gstCustom}
+              onChange={e => setGstCustom(e.target.value)}
+              style={{ width: 100 }}
+            />
+          </div>
+
+          <div className="total-big">
+            <div>
+              <div className="mini">Grand total ({wCount} weight + {cCount} count items)</div>
+              {effGst > 0 && (
+                <div className="mini">Subtotal ₹ {fmt2(subtotal)} + GST ({effGst}%) ₹ {fmt2(gstAmt)}</div>
+              )}
+              <div className="amt">₹ {fmt2(total)}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <CopyCashWithGSTBtn itemCount={wCount + cCount} subtotal={subtotal} gstRate={effGst} gstAmt={gstAmt} total={total} />
+              <button className="send" onClick={() => sendToBreakdown('🛒', 'Provision shop', total)}>🔗 Breakdown</button>
+            </div>
+          </div>
+          <CashBreakdown amount={total} compact />
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+/* ---- 11b. Rate Finder ---- */
+function RateFinder({ sendToBreakdown }) {
+  const [paid, setPaid] = useState('');
+  const [w, setW] = useState('');
+  const [unit, setUnit] = useState('g');
+
+  const a = parseFloat(paid), wt = parseFloat(w);
+  const grams = (!isNaN(wt) && wt > 0) ? (unit === 'kg' ? wt * 1000 : wt) : 0;
+  const ok = !isNaN(a) && a > 0 && grams > 0;
+  const perG = ok ? a / grams : 0;
+
+  return (
+    <div>
+      <div className="grid3">
+        <div className="field">
+          <label>Amount paid (₹)</label>
+          <input type="number" step="0.01" placeholder="e.g. 90" value={paid} onChange={e => setPaid(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Weight</label>
+          <input type="number" step="0.01" placeholder="e.g. 250" value={w} onChange={e => setW(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Unit</label>
+          <select value={unit} onChange={e => setUnit(e.target.value)}>
+            <option value="g">Grams (g)</option>
+            <option value="kg">Kilograms (kg)</option>
+          </select>
+        </div>
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => { setPaid(''); setW(''); setUnit('g'); }}>🧹 Clear all</button>
+      </div>
+
+      {ok && (
+        <div className="result-box" key={paid + '|' + w + '|' + unit}>
+          <h3>🔍 ACTUAL RATE YOU PAID</h3>
+          <div className="stat"><span className="k">Per gram</span><span className="v">₹ {formatIndian(perG, 4)}</span></div>
+          <div className="stat"><span className="k">Per 100 g</span><span className="v">₹ {fmt2(perG * 100)}</span></div>
+          <div className="stat"><span className="k">Per kg</span><span className="v">₹ {fmt2(perG * 1000)}</span></div>
+          <div className="row-actions" style={{ justifyContent: 'center' }}>
+            <CopyTextBtn
+              label="📋 Copy rate"
+              lines={[
+                'Amount paid: ₹ ' + fmt2(a),
+                'Weight: ' + w + ' ' + unit,
+                'Per gram: ₹ ' + formatIndian(perG, 4),
+                'Per 100 g: ₹ ' + fmt2(perG * 100),
+                'Per kg: ₹ ' + fmt2(perG * 1000),
+              ]}
+            />
+            <button className="send" onClick={() => sendToBreakdown('🔍', 'Rate ₹' + fmt2(perG * 1000) + '/kg', perG * 1000)}>
+              🔗 Rate as breakdown
+            </button>
+          </div>
+        </div>
+      )}
+      {!ok && (paid !== '' || w !== '') && <p className="error">⚠️ Enter amount &amp; positive weight</p>}
+    </div>
+  );
+}
+
+/* ---- 11c. Rate Card ---- */
+function RateCard() {
+  const [pk, setPk] = useState('');
+  const p = parseFloat(pk);
+  const ok = !isNaN(p) && p > 0;
+
+  return (
+    <div>
+      <div className="input-row">
+        <input type="number" placeholder="Price per kg, e.g. 750" value={pk} onChange={e => setPk(e.target.value)} />
+      </div>
+      <div className="presets">
+        {[350, 500, 750, 900, 1200].map(x => (
+          <button key={x} className={pk === String(x) ? 'active-rate' : ''} onClick={() => setPk(String(x))}>₹{x}/kg</button>
+        ))}
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => setPk('')}>🧹 Clear all</button>
+      </div>
+
+      {ok && (
+        <div className="result-box" key={pk}>
+          <div className="stat"><span className="k">Per gram</span><span className="v">₹ {formatIndian(p / 1000, 4)}</span></div>
+          <div className="stat"><span className="k">Per 100 g</span><span className="v">₹ {fmt2(p / 10)}</span></div>
+          <div className="tbl-wrap">
+            <table>
+              <thead><tr><th>Weight</th><th>Amount (₹)</th></tr></thead>
+              <tbody>
+                {CARD_WEIGHTS.map(g => (
+                  <tr key={g}>
+                    <td>{g >= 1000 ? (g / 1000) + ' kg' : g + ' g'}</td>
+                    <td className="amt-cell">₹ {fmt2((p * g) / 1000)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="row-actions" style={{ justifyContent: 'center' }}>
+            <CopyTextBtn
+              label="📋 Copy rate card"
+              lines={[
+                'Price per kg: ₹ ' + fmt2(p),
+                'Per gram: ₹ ' + formatIndian(p / 1000, 4),
+                'Per 100 g: ₹ ' + fmt2(p / 10),
+                ...CARD_WEIGHTS.map(g => (g >= 1000 ? (g / 1000) + ' kg' : g + ' g') + ': ₹ ' + fmt2((p * g) / 1000)),
+              ]}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- 11d. Kg ⇄ g mass converter ---- */
+function Converter() {
+  const [val, setVal] = useState('');
+  const [unit, setUnit] = useState('kg');
+  const n = parseFloat(val);
+  const ok = val !== '' && !isNaN(n);
+  const kg = ok ? n * MASS_UNITS.find(m => m.k === unit).f : 0;
+  const dec = x => (Math.abs(x) >= 1000 ? 2 : Math.abs(x) >= 1 ? 3 : Math.abs(x) >= 0.001 ? 4 : 6);
+
+  return (
+    <div>
+      <div className="grid2">
+        <div className="field">
+          <label>Value</label>
+          <input type="number" placeholder="e.g. 1.25" value={val} onChange={e => setVal(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>From unit</label>
+          <select value={unit} onChange={e => setUnit(e.target.value)}>
+            {MASS_UNITS.map(m => <option key={m.k} value={m.k}>{m.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 0, marginBottom: 6 }}>
+        <button className="ghost" onClick={() => { setVal(''); setUnit('kg'); }}>🧹 Clear all</button>
+      </div>
+      {ok && (
+        <div className="result-box" key={val + unit}>
+          {MASS_UNITS.map(m => (
+            <div className="stat" key={m.k}>
+              <span className="k">{m.label}</span>
+              <span className="v">{formatIndian(kg / m.f, dec(kg / m.f))}</span>
+            </div>
+          ))}
+          <div className="row-actions" style={{ justifyContent: 'center' }}>
+            <CopyTextBtn
+              label="📋 Copy conversion"
+              lines={[
+                'From: ' + val + ' ' + MASS_UNITS.find(m => m.k === unit).label,
+                ...MASS_UNITS.map(m => m.label + ': ' + formatIndian(kg / m.f, dec(kg / m.f))),
+              ]}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---- 11e. Item Counter ---- */
+function Counter({ sendToBreakdown }) {
+  const [raw, setItems] = useLocalStorage('counterItemsV1', null);
+  const items = Array.isArray(raw) ? raw : [];
+  const [v, setV] = useState('');
+
+  const add = () => {
+    const n = parseFloat(v);
+    if (isNaN(n)) return;
+    setItems([...items, { id: Date.now() + Math.random(), v: n }]);
+    setV('');
+  };
+  const total = items.reduce((s, i) => s + i.v, 0);
+  const avg = items.length ? total / items.length : 0;
+
+  return (
+    <div>
+      <div className="input-row">
+        <input
+          type="number" step="0.01"
+          placeholder="Enter item value (₹) → Enter adds"
+          value={v}
+          onChange={e => setV(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && add()}
+        />
+        <button onClick={add}>+ Add</button>
+      </div>
+
+      {items.length > 0 && (
+        <React.Fragment>
+          <div className="tbl-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Value (₹)</th><th></th></tr></thead>
+              <tbody>
+                {items.map((it, idx) => (
+                  <tr key={it.id}>
+                    <td className="mini">{idx + 1}</td>
+                    <td className="amt-cell">{fmt2(it.v)}</td>
+                    <td><button className="del" onClick={() => setItems(items.filter(x => x.id !== it.id))}>✕</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="result-box">
+            <div className="stat"><span className="k">Total items</span><span className="v">{items.length}</span></div>
+            <div className="stat"><span className="k">Total value</span><span className="v">₹ {fmt2(total)}</span></div>
+            <div className="stat"><span className="k">Average</span><span className="v">₹ {fmt2(avg)}</span></div>
+            <p className="words" style={{ margin: '10px 0 0' }}>"{fullWords(total)}"</p>
+            <div className="row-actions" style={{ justifyContent: 'center' }}>
+              <CopyCashWithItemsBtn
+                itemLines={[
+                  ...items.map((it, idx) => (idx + 1) + '. ₹ ' + fmt2(it.v)),
+                  'Total items: ' + items.length,
+                  'Average: ₹ ' + fmt2(avg),
+                ]}
+                total={total}
+              />
+              <button className="send" onClick={() => sendToBreakdown('📝', 'Item counter', total)}>🔗 Full breakdown</button>
+              <button className="ghost" onClick={() => setItems([])}>🧹 Clear all</button>
+            </div>
+          </div>
+          <CashBreakdown amount={total} compact />
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+/* ---- 11f. Shop Bill (daily milk route) ---- */
+function ShopBill({ sendToBreakdown }) {
+  const [raw, setItems] = useLocalStorage('shopBillV1', null);
+  const items = Array.isArray(raw) && raw.length
+    ? raw.map(i => ({ name: '', price: '', qty: 0, ...i }))
+    : MILK_DEFAULTS.map(d => ({ ...d, qty: 0 }));
+  const [round, setRound] = useState(false);
+  const [quick, setQuick] = useState('');
+  const [lastAdded, setLastAdded] = useState(null);
+
+  const upd = (id, k, v) => setItems(items.map(i => (i.id === id ? { ...i, [k]: v } : i)));
+  const setQty = (id, q) => upd(id, 'qty', Math.max(0, q));
+  const rowTotal = (i) => {
+    const p = parseFloat(i.price), q = parseInt(i.qty, 10) || 0;
+    return (!isNaN(p) && q > 0) ? p * q : 0;
+  };
+  const total = items.reduce((s, i) => s + rowTotal(i), 0);
+  const pay = round ? Math.round(total) : total;
+  const diff = pay - total;
+  const hasAny = items.some(i => rowTotal(i) > 0);
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+  const quickAdd = () => {
+    const name = quick.trim();
+    const id = 'x' + Date.now();
+    setItems([...items, { id, name, price: '', qty: 0 }]);
+    setQuick('');
+    setLastAdded(id);
+  };
+  const delRow = (id) => setItems(items.filter(i => i.id !== id));
+  const clearQty = () => setItems(items.map(i => ({ ...i, qty: 0 })));
+  const resetAll = () => setItems(MILK_DEFAULTS.map(d => ({ ...d, qty: 0 })));
+
+  return (
+    <div>
+      <p className="date-row">🧾 Shop bill — {today}</p>
+      <p className="mini" style={{ textAlign: 'center', marginBottom: 8 }}>Rates are saved automatically on this device 💾</p>
+
+      <div className="input-row" style={{ marginBottom: 8 }}>
+        <input
+          type="text"
+          placeholder='New item name → press Enter or + Add item'
+          value={quick}
+          onChange={e => setQuick(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && quickAdd()}
+        />
+        <button onClick={quickAdd}>+ Add item</button>
+      </div>
+
+      <div className="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Price (₹)</th><th>Qty</th><th>Total (₹)</th><th></th></tr>
+          </thead>
+          <tbody>
+            {items.map(i => (
+              <tr key={i.id}>
+                <td><input type="text" placeholder="Item" value={i.name} onChange={e => upd(i.id, 'name', e.target.value)} /></td>
+                <td>
+                  <input
+                    type="number" step="0.01" placeholder="0"
+                    value={i.price}
+                    autoFocus={i.id === lastAdded}
+                    onChange={e => upd(i.id, 'price', e.target.value)}
+                  />
+                </td>
+                <td>
+                  <div className="stp">
+                    <button onClick={() => setQty(i.id, (parseInt(i.qty, 10) || 0) - 1)}>−</button>
+                    <input type="number" value={i.qty} onChange={e => upd(i.id, 'qty', e.target.value)} />
+                    <button onClick={() => setQty(i.id, (parseInt(i.qty, 10) || 0) + 1)}>+</button>
+                  </div>
+                </td>
+                <td className="amt-cell">{fmt2(rowTotal(i))}</td>
+                <td><button className="del" onClick={() => delRow(i.id)}>✕</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="row-actions">
+        <button className="ghost" onClick={clearQty}>🧹 Clear quantities</button>
+        <button className="ghost" onClick={resetAll}>↺ Reset defaults</button>
+      </div>
+
+      {hasAny && (
+        <React.Fragment>
+          <div className="total-big">
+            <div>
+              <div className="mini">Grand total</div>
+              <div className="amt">₹ {fmt2(total)}</div>
+              {round && diff !== 0 && <div className="mini">Round off: {diff > 0 ? '+' : ''}{fmt2(diff)}</div>}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '.82rem', color: '#cde6f5' }}>
+                <input type="checkbox" checked={round} onChange={e => setRound(e.target.checked)} /> Round off
+              </label>
+              {round && <div className="amt" style={{ fontSize: '1.2rem' }}>Pay ₹ {fmt2(pay)}</div>}
+              <CopyCashWithItemsBtn
+                itemLines={items.filter(i => rowTotal(i) > 0).map(i => (
+                  (i.name || 'Item') + ': ₹ ' + fmt2(i.price) + ' × ' + (parseInt(i.qty, 10) || 0) + ' = ₹ ' + fmt2(rowTotal(i))
+                ))}
+                total={pay}
+              />
+              <button className="send" onClick={() => sendToBreakdown('🥛', 'Shop bill', pay)}>🔗 Breakdown</button>
+            </div>
+          </div>
+          <p className="words" style={{ marginTop: 12 }}>"{fullWords(pay)}"</p>
+          <CashBreakdown amount={pay} compact />
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
+/* ---- Rate tab wrapper — Provision Shop first (weight + count in ONE) ---- */
+function RateTab({ sendToBreakdown }) {
+  const [sub, setSub] = useState('prov');
+  const SUBS = [
+    { id: 'prov', label: '🛒 Provision Shop' },
+    { id: 'finder', label: '🔍 Rate Finder' },
+    { id: 'card', label: '📇 Rate Card' },
+    { id: 'conv', label: '⚖️ Kg ⇄ g' },
+    { id: 'counter', label: '📝 Item Counter' },
+    { id: 'shop', label: '🥛 Shop Bill' },
+  ];
+  return (
+    <div>
+      <div className="subtabs">
+        {SUBS.map(s => (
+          <button key={s.id} className={sub === s.id ? 'active' : ''} onClick={() => setSub(s.id)}>{s.label}</button>
+        ))}
+      </div>
+      {sub === 'prov' && <ProvisionShop sendToBreakdown={sendToBreakdown} />}
+      {sub === 'finder' && <RateFinder sendToBreakdown={sendToBreakdown} />}
+      {sub === 'card' && <RateCard />}
+      {sub === 'conv' && <Converter />}
+      {sub === 'counter' && <Counter sendToBreakdown={sendToBreakdown} />}
+      {sub === 'shop' && <ShopBill sendToBreakdown={sendToBreakdown} />}
+    </div>
+  );
+}
+
+/* ============================================================
+   12. TAB: FUN — Tic-Tac-Toe & Stone Paper Scissors (pure time-pass)
+   ============================================================ */
+function TicTacToe() {
+  const empty = Array(9).fill(null);
+  const [board, setBoard] = useState(empty);
+  const [turn, setTurn] = useState('X');
+  const [scores, setScores] = useLocalStorage('tttScoresV1', { X: 0, O: 0, draw: 0 });
+
+  const LINES = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6],
+  ];
+
+  const findWin = (b) => {
+    for (const [a, x, c] of LINES) {
+      if (b[a] && b[a] === b[x] && b[a] === b[c]) return { winner: b[a], line: [a, x, c] };
+    }
+    return null;
+  };
+  const win = findWin(board);
+  const isDraw = !win && board.every(c => c);
+
+  const play = (i) => {
+    if (board[i] || win) return;
+    const next = board.slice();
+    next[i] = turn;
+    setBoard(next);
+    const w = findWin(next);
+    if (w) setScores(s => ({ ...s, [w.winner]: s[w.winner] + 1 }));
+    else if (next.every(c => c)) setScores(s => ({ ...s, draw: s.draw + 1 }));
+    else setTurn(turn === 'X' ? 'O' : 'X');
+  };
+
+  const reset = () => { setBoard(empty); setTurn('X'); };
+
+  return (
+    <div>
+      <p className="mini" style={{ textAlign: 'center', marginBottom: 10, fontSize: '.95rem' }}>
+        {win ? win.winner + ' wins! 🎉' : isDraw ? "It's a draw 🤝" : turn + "'s turn"}
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxWidth: 260, margin: '0 auto' }}>
+        {board.map((c, i) => (
+          <button
+            key={i}
+            onClick={() => play(i)}
+            style={{
+              aspectRatio: '1', fontSize: '1.9rem', fontWeight: 700, padding: 0,
+              background: win && win.line.includes(i) ? 'rgba(79,195,161,0.35)' : 'rgba(255,255,255,0.08)',
+              color: c === 'X' ? '#ffd36e' : '#a8f0dc',
+            }}
+          >{c}</button>
+        ))}
+      </div>
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 16 }}>
+        <button className="ghost" onClick={reset}>🔄 New round</button>
+        <button className="ghost" onClick={() => setScores({ X: 0, O: 0, draw: 0 })}>🧹 Clear scores</button>
+      </div>
+      <div className="result-box" style={{ marginTop: 14 }}>
+        <div className="stat"><span className="k">❌ X wins</span><span className="v">{scores.X}</span></div>
+        <div className="stat"><span className="k">⭕ O wins</span><span className="v">{scores.O}</span></div>
+        <div className="stat"><span className="k">🤝 Draws</span><span className="v">{scores.draw}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function StonePaperScissors() {
+  const CHOICES = [
+    { k: 'stone', label: '🪨 Stone' },
+    { k: 'paper', label: '📄 Paper' },
+    { k: 'scissors', label: '✂️ Scissors' },
+  ];
+  const beats = { stone: 'scissors', paper: 'stone', scissors: 'paper' };
+  const label = (k) => (CHOICES.find(c => c.k === k) || {}).label || '';
+  const [you, setYou] = useState(null);
+  const [cpu, setCpu] = useState(null);
+  const [result, setResult] = useState('');
+  const [scores, setScores] = useLocalStorage('spsScoresV1', { you: 0, cpu: 0, draw: 0 });
+
+  const play = (choice) => {
+    const cpuChoice = CHOICES[Math.floor(Math.random() * 3)].k;
+    setYou(choice);
+    setCpu(cpuChoice);
+    if (choice === cpuChoice) { setResult("It's a tie 🤝"); setScores(s => ({ ...s, draw: s.draw + 1 })); }
+    else if (beats[choice] === cpuChoice) { setResult('You win! 🎉'); setScores(s => ({ ...s, you: s.you + 1 })); }
+    else { setResult('Computer wins 🤖'); setScores(s => ({ ...s, cpu: s.cpu + 1 })); }
+  };
+
+  return (
+    <div>
+      <div className="presets" style={{ marginTop: 0 }}>
+        {CHOICES.map(c => <button key={c.k} onClick={() => play(c.k)}>{c.label}</button>)}
+      </div>
+      {you && (
+        <div className="result-box" style={{ textAlign: 'center' }}>
+          <div className="stat"><span className="k">You</span><span className="v">{label(you)}</span></div>
+          <div className="stat"><span className="k">Computer</span><span className="v">{label(cpu)}</span></div>
+          <p className="words" style={{ margin: '10px 0 0' }}>{result}</p>
+        </div>
+      )}
+      <div className="row-actions" style={{ justifyContent: 'center', marginTop: 14 }}>
+        <button className="ghost" onClick={() => setScores({ you: 0, cpu: 0, draw: 0 })}>🧹 Clear scores</button>
+      </div>
+      <div className="result-box" style={{ marginTop: 14 }}>
+        <div className="stat"><span className="k">🙂 You</span><span className="v">{scores.you}</span></div>
+        <div className="stat"><span className="k">🤖 Computer</span><span className="v">{scores.cpu}</span></div>
+        <div className="stat"><span className="k">🤝 Draws</span><span className="v">{scores.draw}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function FunTab() {
+  const [sub, setSub] = useState('ttt');
+  return (
+    <div>
+      <div className="subtabs">
+        <button className={sub === 'ttt' ? 'active' : ''} onClick={() => setSub('ttt')}>❌⭕ Tic-Tac-Toe</button>
+        <button className={sub === 'sps' ? 'active' : ''} onClick={() => setSub('sps')}>🪨📄✂️ Stone Paper Scissors</button>
+      </div>
+      {sub === 'ttt' && <TicTacToe />}
+      {sub === 'sps' && <StonePaperScissors />}
+    </div>
+  );
+}
+
+/* ============================================================
+   13. APP SHELL
+   ============================================================ */
+const TABS = [
+  { id: 'breakdown', label: '💰 Breakdown' },
+  { id: 'calc', label: '🧮 Calculator' },
+  { id: 'area', label: '📐 Area & Cost' },
+  { id: 'emi', label: '🏦 EMI' },
+  { id: 'gst', label: '🧾 GST' },
+  { id: 'split', label: '👥 Split Bill' },
+  { id: 'rate', label: '🛒 Rate Calc' },
+  { id: 'fun', label: '🎮 Fun' },
+];
+
+function App() {
+  const [tab, setTab] = useState('breakdown');
+  const [coins, setCoins] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [seed, setSeed] = useState(null);
+  const coinTimer = useRef(null);
+
+  const rain = () => {
+    const nc = Array.from({ length: 15 }, (_, i) => ({
+      id: Date.now() + i,
+      left: Math.random() * 100,
+      dur: 2 + Math.random() * 2,
+    }));
+    setCoins(nc);
+    if (coinTimer.current) clearTimeout(coinTimer.current);
+    coinTimer.current = setTimeout(() => setCoins([]), 4600);
+  };
+
+  const pushHistory = (icon, label, value) => {
+    setHistory(h => [{ id: Date.now() + Math.random(), icon, label, value }, ...h].slice(0, 6));
+  };
+
+  const viewBreakdown = (value) => { setSeed({ v: value, ts: Date.now() }); setTab('breakdown'); };
+  const sendToBreakdown = (icon, label, value) => { pushHistory(icon, label, value); rain(); viewBreakdown(value); };
+
+  return (
+    <div className="app">
+      {coins.map(c => (
+        <span key={c.id} className="coin" style={{ left: c.left + '%', animationDuration: c.dur + 's' }}>🪙</span>
+      ))}
+      <div className="card">
+        <h1>💰 Indian Rupee Toolkit</h1>
+        <p className="subtitle">Breakdown • Calculator • Area • EMI • GST • Split • Provision Shop — everything money, one place</p>
+
+        <div className="tabs">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              className={'tab-btn' + (tab === t.id ? ' active' : '')}
+              onClick={() => setTab(t.id)}
+            >{t.label}</button>
+          ))}
+        </div>
+
+        {tab === 'breakdown' && <BreakdownTab seed={seed} rain={rain} pushHistory={pushHistory} />}
+        {tab === 'calc' && <CalculatorTab rain={rain} pushHistory={pushHistory} />}
+        {tab === 'area' && <AreaTab sendToBreakdown={sendToBreakdown} />}
+        {tab === 'emi' && <EMITab sendToBreakdown={sendToBreakdown} />}
+        {tab === 'gst' && <GSTTab sendToBreakdown={sendToBreakdown} />}
+        {tab === 'split' && <SplitTab sendToBreakdown={sendToBreakdown} />}
+        {tab === 'rate' && <RateTab sendToBreakdown={sendToBreakdown} />}
+        {tab === 'fun' && <FunTab />}
+
+        {history.length > 0 && (
+          <React.Fragment>
+            <div className="h-title">🕘 Recent results — click to see full breakdown</div>
+            <div className="history">
+              {history.map(h => (
+                <button key={h.id} className="h-item" onClick={() => viewBreakdown(h.value)}>
+                  <span className="h-label">{h.icon} {h.label}</span>
+                  <span className="h-val">{formatShort(h.value)}</span>
+                </button>
+              ))}
+            </div>
+          </React.Fragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
