@@ -774,29 +774,37 @@ function buildManuscriptOverview(meta) {
   }
 
   return `<section class="report-section ov-overview" data-section="overview">
-    <h2>📄 Manuscript Overview <span class="ov-sub">(from the .docx structure, JATS-style)</span></h2>
-    <p style="color:#64748b;font-size:13px;">Metadata, section tree, structural counts and style inventory read directly from the Word file's XML. Math recognition includes both native Office Math and MathType/Equation Editor objects. These are a copyediting snapshot — <strong>not</strong> a content check.</p>
-    ${f.title || f.subtitle ? `<div class="ov-title">${f.titleRich || (f.title ? esc(f.title) : "")}${f.subtitle ? `<div class="ov-subtitle">${f.subtitleRich || esc(f.subtitle)}</div>` : ""}</div>` : ""}
-    <div class="ov-grid">
-      ${authorsHtml}
-      ${secDetail ? `<div class="ov-block" data-ov-target="sections"><div class="ov-label">Sections (${b.headings.length}) <span class="ov-dim">· click for details</span></div>${sectionHtml}</div>` : ""}
-      ${figuresHtml}
-      ${tablesHtml}
-      ${eqHtml}
-      ${countsHtml}
-      ${styleChips ? `<div class="ov-block"><div class="ov-label">Word styles used (${s.inventory.length} types)</div><div style="line-height:1.9;">${styleChips.slice(0, styleChips.indexOf("</span>") + 8)} … <span class="ov-dim">show all below</span></div></div>` : ""}
-    </div>
-    ${detailsBody ? `
-    <div class="ov-dropdown">
-      <button type="button" class="ov-dropdown-btn" id="ov-detail-toggle" aria-expanded="false" aria-controls="ov-details">
-        <span class="ov-dropdown-label">Show all metadata details</span>
-        <span class="ov-dropdown-arrow">▾</span>
+    <div class="ov-section-head">
+      <h2>📄 Manuscript Overview <span class="ov-sub">(from the .docx structure, JATS-style)</span></h2>
+      <button type="button" class="ov-section-toggle" id="ov-section-toggle" aria-expanded="false" aria-controls="ov-overview-content">
+        <span class="ov-section-toggle-label">Show overview</span>
+        <span class="ov-section-toggle-arrow" aria-hidden="true">▾</span>
       </button>
-      <div class="ov-dropdown-body" id="ov-details" hidden>
-        ${detailsBody}
-        ${warnHtml}
+    </div>
+    <div id="ov-overview-content" hidden>
+      <p style="color:#64748b;font-size:13px;">Metadata, section tree, structural counts and style inventory read directly from the Word file's XML. Math recognition includes both native Office Math and MathType/Equation Editor objects. These are a copyediting snapshot — <strong>not</strong> a content check.</p>
+      ${f.title || f.subtitle ? `<div class="ov-title">${f.titleRich || (f.title ? esc(f.title) : "")}${f.subtitle ? `<div class="ov-subtitle">${f.subtitleRich || esc(f.subtitle)}</div>` : ""}</div>` : ""}
+      <div class="ov-grid">
+        ${authorsHtml}
+        ${secDetail ? `<div class="ov-block" data-ov-target="sections"><div class="ov-label">Sections (${b.headings.length}) <span class="ov-dim">· click for details</span></div>${sectionHtml}</div>` : ""}
+        ${figuresHtml}
+        ${tablesHtml}
+        ${eqHtml}
+        ${countsHtml}
+        ${styleChips ? `<div class="ov-block"><div class="ov-label">Word styles used (${s.inventory.length} types)</div><div style="line-height:1.9;">${styleChips.slice(0, styleChips.indexOf("</span>") + 8)} … <span class="ov-dim">show all below</span></div></div>` : ""}
       </div>
-    </div>` : warnHtml}
+      ${detailsBody ? `
+      <div class="ov-dropdown">
+        <button type="button" class="ov-dropdown-btn" id="ov-detail-toggle" aria-expanded="false" aria-controls="ov-details">
+          <span class="ov-dropdown-label">Show all metadata details</span>
+          <span class="ov-dropdown-arrow">▾</span>
+        </button>
+        <div class="ov-dropdown-body" id="ov-details" hidden>
+          ${detailsBody}
+          ${warnHtml}
+        </div>
+      </div>` : warnHtml}
+    </div>
   </section>`;
 }
 
@@ -1005,6 +1013,8 @@ mark{padding:1px 2px;border-radius:3px;}
 .filter-btn:hover{background:#e2e8f0;}
 .filter-btn.active{background:#0f172a;color:#fff;border-color:#0f172a;}
 .report-section{scroll-margin-top:150px;}
+.report-section > h2,.ov-section-head h2{border-left:4px solid #2563eb;padding-left:12px;}
+.report-section[data-section="doi"]{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;margin-top:20px;}
 .live-search{margin-left:0;padding:8px 14px;border:1px solid #e2e8f0;border-radius:20px;font-size:13px;min-width:240px;outline:none;}
 .live-search:focus{border-color:#0f172a;}
 .check-cell{width:34px;text-align:center;}
@@ -1021,8 +1031,10 @@ mark{padding:1px 2px;border-radius:3px;}
 .report-toolbar{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0f172a;padding:10px 14px;border-radius:10px;margin:20px 0 0;}
 .report-toolbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
 .report-toolbar-title{color:#e2e8f0;font-size:13px;font-weight:700;letter-spacing:.02em;white-space:nowrap;}
-.sidebar-toggle-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22);color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background .15s ease;}
-.sidebar-toggle-btn:hover{background:rgba(255,255,255,.18);}
+.sidebar-toggle-btn{background:#1e3a8a;border:1px solid #60a5fa;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background .15s ease,border-color .15s ease;}
+.sidebar-toggle-btn:hover{background:#1e40af;border-color:#93c5fd;}
+.sidebar-toggle-btn[aria-expanded="true"]{background:#166534;border-color:#22c55e;}
+.sidebar-toggle-btn[aria-expanded="true"]:hover{background:#15803d;}
 .report-toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;}
 .report-toolbar .live-search{background:#fff;min-width:230px;}
 .report-toolbar .size-toggle{margin-left:0;border-color:rgba(255,255,255,.25);}
@@ -1062,10 +1074,20 @@ mark{padding:1px 2px;border-radius:3px;}
 .type-confirmed{background:#dbeafe;color:#1e40af;}
 .doi-match-hit{background:#bbf7d0;padding:1px 2px;border-radius:3px;}
 .doi-export{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 8px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;}
+.doi-export-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.doi-export-actions .query-btn{width:auto;min-width:170px;text-align:center;}
 .doi-export-note{font-size:12px;color:#166534;}
 /* ---- Manuscript Overview (JATS-like structural snapshot) ---- */
 .ov-overview{scroll-margin-top:150px;}
 .ov-sub{color:#94a3b8;font-size:13px;font-weight:400;}
+.ov-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.ov-section-head h2{margin:0;}
+.ov-section-toggle{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;background:#1e3a8a;color:#fff;border:1px solid #1e3a8a;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;}
+.ov-section-toggle:hover{background:#1e40af;border-color:#1e40af;}
+.ov-section-toggle[aria-expanded="true"]{background:#166534;border-color:#166534;}
+.ov-section-toggle[aria-expanded="true"]:hover{background:#15803d;}
+.ov-section-toggle-arrow{font-size:12px;transition:transform .2s ease;}
+.ov-section-toggle[aria-expanded="true"] .ov-section-toggle-arrow{transform:rotate(180deg);}
 .ov-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin:14px 0;}
 .ov-block{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;}
 .ov-label{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#0f172a;margin-bottom:8px;}
@@ -1136,7 +1158,7 @@ mark{padding:1px 2px;border-radius:3px;}
 ${overviewHtml}
 <div class="report-toolbar">
   <div class="report-toolbar-left">
-    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-expanded="true" aria-controls="filter-bar">☰ <span id="sidebar-toggle-label">Hide Filters</span></button>
+    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" aria-expanded="false" aria-controls="filter-bar">☰ <span id="sidebar-toggle-label">Show Filters</span></button>
     <span class="report-toolbar-title">Reference cross-ref and DOI checker can make mistakes - please manually check all results once more on <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google</a> </span>
   </div>
   <div class="report-toolbar-right">
@@ -1149,7 +1171,7 @@ ${overviewHtml}
   </div>
 </div>
 <div class="report-shell">
-  <aside class="filter-sidebar" id="filter-bar">
+  <aside class="filter-sidebar is-hidden" id="filter-bar">
     <div class="filter-sidebar-label">Filter</div>
     <button class="filter-btn active" data-filter="all">All</button>
     <button class="filter-btn" data-filter="loose">Loose Match (${looseCount})</button>
@@ -1210,12 +1232,14 @@ ${overviewHtml}
 <tbody id="doi-tbody">${doiRows}</tbody></table>
 <div class="doi-export" id="doi-export">
   <strong style="color:#14532d;font-size:13px;">Download Reference List</strong>
-  <button class="query-btn" id="doi-export-html-btn">⬇ Download as HTML</button>
-  <button class="query-btn" id="doi-export-doc-btn">⬇ Download as Word (.doc)</button>
+  <div class="doi-export-actions">
+    <button class="query-btn" id="doi-export-html-btn">⬇ Download as HTML</button>
+    <button class="query-btn" id="doi-export-doc-btn">⬇ Download as Word (.doc)</button>
+  </div>
   <span class="doi-export-note" id="doi-export-note">Word DOIs are preserved; use the Matched DOI link when a correction needs to be copied into the document.</span>
 </div>
 </section>
-<div class="report-footer">✨ <strong>SelvaPrabhu</strong> · Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong>
+<div class="report-footer">✨ Reference Cross-Link Checker · <strong>C&amp;M Digitals</strong>
   <div class="report-footer-note">Reference cross-ref and DOI checker <a href="https://scholar.google.com/" target="_blank" rel="noopener">can make mistakes</a> - please manually check all results once more.</div>
 </div>
   </div>
@@ -1281,6 +1305,18 @@ ${overviewHtml}
       document.body.classList.add('density-' + btn.getAttribute('data-size'));
     });
   });
+
+  var ovSectionToggle = document.getElementById('ov-section-toggle');
+  var ovOverviewContent = document.getElementById('ov-overview-content');
+  var ovSectionLabel = ovSectionToggle ? ovSectionToggle.querySelector('.ov-section-toggle-label') : null;
+  if (ovSectionToggle && ovOverviewContent) {
+    ovSectionToggle.addEventListener('click', function () {
+      var expanded = ovSectionToggle.getAttribute('aria-expanded') === 'true';
+      ovSectionToggle.setAttribute('aria-expanded', String(!expanded));
+      ovOverviewContent.hidden = expanded;
+      if (ovSectionLabel) ovSectionLabel.textContent = expanded ? 'Show overview' : 'Hide overview';
+    });
+  }
 
   // Manuscript Overview: "Show all metadata details" dropdown
   var ovToggle = document.getElementById('ov-detail-toggle');
